@@ -1,15 +1,15 @@
 # 🤖 CONTEXT.md - Guía de Contexto y Estándares para Agentes de Código
 
-Este documento establece el contexto operativo, reglas de negocio, directivas de arquitectura y buenas prácticas de codificación para cualquier agente de IA o desarrollador que genere o refactorice código en el proyecto **Emuná Pilates**[span_43](start_span)[span_43](end_span)[span_44](start_span)[span_44](end_span).
+Este documento establece el contexto operativo, reglas de negocio, directivas de arquitectura y buenas prácticas de codificación para cualquier agente de IA o desarrollador que genere o refactorice código en el proyecto **Emuná Pilates**.
 
 ---
 
 ## 1. Misión del Proyecto y Roles
 
-El objetivo es desarrollar la plataforma web de gestión para **Emuná Pilates**, un estudio con cupo físico de **4 camas reformer**[span_45](start_span)[span_45](end_span)[span_46](start_span)[span_46](end_span).
+El objetivo es desarrollar la plataforma web de gestión para **Emuná Pilates**, un estudio con cupo físico de **4 camas reformer**.
 Existen dos roles bien diferenciados:
-- **`alumno`**: Visualiza calendario en tiempo real, reserva camas, cancela con hasta 2 hs de anticipación y consulta su saldo de clases[span_47](start_span)[span_47](end_span)[span_48](start_span)[span_48](end_span).
-- **`administradora`**: Visualiza matriz horaria de 4 camas, realiza check-in (presente/ausente), gestiona recuperos manuales y valida comprobantes de pago[span_49](start_span)[span_49](end_span)[span_50](start_span)[span_50](end_span).
+- **`alumno`**: Visualiza calendario en tiempo real, reserva camas, cancela con hasta 2 hs de anticipación y consulta su saldo de clases.
+- **`administradora`**: Visualiza matriz horaria de 4 camas, realiza check-in (presente/ausente), gestiona recuperos manuales y valida comprobantes de pago.
 
 ---
 
