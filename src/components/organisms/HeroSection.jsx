@@ -37,7 +37,7 @@ export default function HeroSection() {
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-3 pt-space-xs w-full sm:w-auto">
               <Button
-                href="#contacto"
+                to="/login"
                 variant="primary"
                 size="lg"
                 className="w-full sm:w-auto"

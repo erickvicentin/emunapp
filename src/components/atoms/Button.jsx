@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 /**
  * Reusable Button component (Atom)
@@ -8,6 +9,7 @@ export default function Button({
   children,
   variant = 'primary',
   size = 'md',
+  to,
   href,
   onClick,
   type = 'button',
@@ -41,6 +43,19 @@ export default function Button({
   const combinedStyles = `${baseStyles} ${sizeStyles[size] || sizeStyles.md} ${
     variantStyles[variant] || variantStyles.primary
   } ${className}`;
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={combinedStyles}
+        aria-label={ariaLabel}
+        {...props}
+      >
+        {children}
+      </Link>
+    );
+  }
 
   if (href) {
     return (
