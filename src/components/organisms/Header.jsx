@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
 import logo from '../../assets/logo.jpeg'
@@ -56,7 +57,7 @@ export default function Header() {
         {/* CTA Actions */}
         <div className="flex items-center gap-3 sm:gap-space-md">
           <Button
-            href="#contacto"
+            to="/login"
             variant="primary"
             size="md"
             className="hidden sm:inline-flex text-xs md:text-sm py-2 px-4 md:px-5"
@@ -64,13 +65,13 @@ export default function Header() {
             Iniciar Sesión / Reservar
           </Button>
 
-          <a
-            href="#contacto"
+          <Link
+            to="/login"
             aria-label="Perfil y cuenta de alumno"
             className="w-9 h-9 rounded-full bg-primary flex items-center justify-center hover:bg-primary-container transition-colors shadow-xs"
           >
             <Icon name="person" className="text-on-primary text-[19px]" />
-          </a>
+          </Link>
 
           {/* Mobile Menu Toggle Button */}
           <button
@@ -101,7 +102,7 @@ export default function Header() {
             ))}
             <div className="pt-4 border-t border-surface-container-high flex flex-col gap-3">
               <Button
-                href="#contacto"
+                to="/login"
                 variant="primary"
                 size="lg"
                 className="w-full text-center"
