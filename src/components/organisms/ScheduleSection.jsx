@@ -18,7 +18,7 @@ export default function ScheduleSection() {
   const handleReserveSelected = () => {
     if (!selectedSlot) return;
     const msg = `Hola! Quisiera consultar disponibilidad para sumarme al turno de ${selectedSlot.discipline} (${selectedSlot.day} a las ${selectedSlot.time}) en Emuná Pilates.`;
-    const url = `https://wa.me/543624890123?text=${encodeURIComponent(msg)}`;
+    const url = `https://wa.me/543704578354?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 

@@ -9,16 +9,15 @@ export const STUDIO_INFO = {
   city: 'Resistencia, Chaco',
   address: 'Fray Luis Beltrán 245, H3500 Resistencia, Chaco',
   addressReference: 'Frente a plazoleta arbolada • Fácil estacionamiento',
-  phone: '+54 362 489-0123',
-  whatsappUrl: 'https://wa.me/543624890123?text=Hola!%20Quisiera%20consultar%20por%20clases%20de%20Pilates%20Reformer%20en%20Emun%C3%A1',
+  phone: '+54 (3704) 578354',
+  whatsappUrl: 'https://wa.me/543704578354?text=Hola!%20Quisiera%20consultar%20por%20clases%20de%20Pilates%20Reformer%20en%20Emun%C3%A1',
   email: 'info@emunapilates.com',
-  instagram: '@emuna.estudiopilates',
+  instagram: '@emuna.pilatess',
   maxBedsPerSlot: 4,
   classDurationMinutes: 55,
   cancelationWindowHours: 2, // Conforme regla estricta de CONTEXT.md
   hours: {
-    weekdays: 'Lunes a Viernes: 07:00 a 21:00 hs',
-    saturday: 'Sábados: 08:30 a 13:00 hs',
+    weekdays: 'Lunes a Viernes: 15:30 a 21:20 hs',
   },
 };
 
@@ -28,15 +27,15 @@ export const METRICS = [
     description: 'Cupo estricto por turno',
   },
   {
-    title: '55 min',
+    title: '50 min',
     description: 'Duración de clase consciente',
   },
   {
-    title: '100%',
-    description: 'Kinesiólogas e instructoras cert.',
+    title: 'Personalizado',
+    description: 'Instructora a tu servicio',
   },
   {
-    title: 'App Móvil',
+    title: 'Autogestion',
     description: 'Gestión ágil de turnos y créditos',
   },
 ];

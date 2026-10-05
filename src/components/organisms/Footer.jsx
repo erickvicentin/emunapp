@@ -1,6 +1,7 @@
 import React from 'react';
 import Icon from '../atoms/Icon';
 import { STUDIO_INFO } from '../../data/landingData';
+import logo from '../../assets/logo.jpeg'
 
 /**
  * Footer Organism
@@ -25,31 +26,6 @@ export default function Footer() {
               Un santuario de movimiento consciente, alineación y bienestar
               integral en Resistencia. Redescubrí tu fuerza desde la calma y la
               precisión.
-            </p>
-          </div>
-
-          {/* Location & Hours Col */}
-          <div className="md:col-span-4 flex flex-col gap-space-xs">
-            <span className="font-label-lg text-label-lg text-primary uppercase tracking-wider mb-space-xs font-semibold">
-              Ubicación & Horarios
-            </span>
-            <p className="font-body-md text-body-md flex items-start gap-space-xs">
-              <Icon
-                name="location_on"
-                className="text-[18px] text-secondary mt-0.5 shrink-0"
-              />
-              <span>{STUDIO_INFO.address}</span>
-            </p>
-            <p className="font-body-md text-body-md flex items-start gap-space-xs mt-2">
-              <Icon
-                name="schedule"
-                className="text-[18px] text-secondary mt-0.5 shrink-0"
-              />
-              <span>
-                {STUDIO_INFO.hours.weekdays}
-                <br />
-                {STUDIO_INFO.hours.saturday}
-              </span>
             </p>
           </div>
 
