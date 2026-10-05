@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import GoogleIcon from '../atoms/GoogleIcon';
 import StudioBanner from '../molecules/StudioBanner';
@@ -11,6 +11,7 @@ import StudioBanner from '../molecules/StudioBanner';
  * Google OAuth entry, and direct navigation to registration.
  */
 export default function LoginForm({ onSubmit, onGoogleLogin }) {
+  const navigate = useNavigate();
   const [role, setRole] = useState('alumna'); // 'alumna' | 'equipo'
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -38,12 +39,21 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
     } else {
       setTimeout(() => {
         setLoading(false);
-      }, 600);
+        navigate(role === 'alumna' ? '/customer' : '/administrator');
+      }, 500);
     }
   };
 
   const handleForgotPassword = () => {
     alert('Para recuperar tu contraseña, comunicate con la administración de Emuná por WhatsApp o acercate a la recepción.');
+  };
+
+  const handleGoogleClick = () => {
+    if (onGoogleLogin) {
+      onGoogleLogin();
+    } else {
+      navigate('/customer');
+    }
   };
 
   return (
@@ -257,7 +267,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
               {/* Google OAuth Button */}
               <button
                 type="button"
-                onClick={onGoogleLogin}
+                onClick={handleGoogleClick}
                 className="w-full py-3 px-space-lg rounded-full bg-surface-container-lowest border border-outline-variant hover:bg-surface-container-low text-on-surface font-label-md text-label-md transition-colors flex items-center justify-center gap-space-sm shadow-sm cursor-pointer"
               >
                 <GoogleIcon />

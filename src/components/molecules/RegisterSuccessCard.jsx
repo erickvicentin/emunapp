@@ -16,15 +16,21 @@ export default function RegisterSuccessCard({ nombre }) {
         ¡Bienvenida a Emuná Pilates, {nombre}!
       </h3>
       <p className="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto">
-        Tu registro fue completado exitosamente. Ya podés iniciar sesión para autogestionar tus reservas y consultar tus créditos de clases.
+        Tu registro fue completado exitosamente como alumna (rol: customer). Ya podés ingresar a tu panel para autogestionar tus turnos y créditos de clases.
       </p>
-      <div className="pt-4 flex justify-center gap-3">
+      <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+        <Link
+          to="/customer"
+          className="inline-flex items-center gap-2 py-3 px-6 rounded-full bg-primary-container hover:bg-primary text-on-primary font-label-md transition-colors shadow-md hover:shadow-lg"
+        >
+          <span>Ir a mi Espacio de Alumna</span>
+          <Icon name="arrow_forward" className="text-[18px]" />
+        </Link>
         <Link
           to="/login"
-          className="inline-flex items-center gap-2 py-3 px-8 rounded-full bg-primary-container hover:bg-primary text-on-primary font-label-lg transition-colors shadow-md hover:shadow-lg"
+          className="inline-flex items-center gap-1.5 py-3 px-6 rounded-full border border-outline-variant hover:bg-surface-container text-on-surface font-label-md transition-colors"
         >
-          <span>Ir al Inicio de Sesión</span>
-          <Icon name="arrow_forward" className="text-[18px]" />
+          <span>Iniciar Sesión</span>
         </Link>
       </div>
     </div>
