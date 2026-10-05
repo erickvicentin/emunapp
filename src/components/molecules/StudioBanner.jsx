@@ -33,16 +33,13 @@ export default function StudioBanner({
 
       {/* Center Logo Showcase */}
       <div className="relative z-10 flex flex-col items-center justify-center max-w-[280px] w-full p-space-md text-center">
-        <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full p-1 bg-surface-container-lowest/90 shadow-md mb-4 flex items-center justify-center overflow-hidden">
+        <div className="w-50 h-50 sm:w-50 sm:h-50 rounded-full p-1 bg-surface-container-lowest/90 shadow-md mb-4 flex items-center justify-center overflow-hidden">
           <img
             src={logo}
             alt="Emuná Estudio Pilates"
             className="w-full h-full object-cover rounded-full"
           />
         </div>
-        <h2 className="font-headline-md text-headline-md text-primary font-semibold">
-          {headline}
-        </h2>
         <p className="font-body-sm text-body-sm text-on-surface-variant mt-1 max-w-[220px]">
           {description}
         </p>

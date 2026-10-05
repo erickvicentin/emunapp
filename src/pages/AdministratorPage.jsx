@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Icon from '../components/atoms/Icon';
+import { useAuth } from '../hooks/useAuth';
 
 const INITIAL_BEDS = [
   { id: 1, name: 'Cama 1', alumno: 'Sofía Martínez', status: 'presente' },
@@ -20,8 +21,15 @@ const INITIAL_PENDING_PAYMENTS = [
  * Workspace for users with role="staff" (instructor / admin)
  */
 export default function AdministratorPage() {
+  const { user, userProfile } = useAuth();
   const [beds, setBeds] = useState(INITIAL_BEDS);
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+
+  const staffName = userProfile?.nombre
+    ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
+    : user?.displayName || 'Administradora';
+
+  const staffEmail = userProfile?.email || user?.email || 'admin@emuna.com';
 
   const toggleCheckIn = (bedId) => {
     setBeds((prev) =>
@@ -43,8 +51,8 @@ export default function AdministratorPage() {
     <DashboardLayout
       roleName="Instructora / Admin"
       roleBadge="staff"
-      userName="Carolina Staff"
-      userEmail="admin@emunaestudio.com"
+      userName={staffName}
+      userEmail={staffEmail}
     >
       <div className="space-y-6">
         {/* Welcome & Shift Selector */}

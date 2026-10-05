@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
-import Input from '../atoms/Input';
-import GoogleIcon from '../atoms/GoogleIcon';
 import StudioBanner from '../molecules/StudioBanner';
-import GenderSelector from '../molecules/GenderSelector';
+import RegisterProfileFields from '../molecules/RegisterProfileFields';
 import GoogleOnboardingBanner from '../molecules/GoogleOnboardingBanner';
+import GoogleRegisterButton from '../molecules/GoogleRegisterButton';
 import RegisterSuccessCard from '../molecules/RegisterSuccessCard';
 import AccountCredentialsFields from '../molecules/AccountCredentialsFields';
 import TermsNotice from '../molecules/TermsNotice';
 import { calculateAge } from '../../utils/dateUtils';
 import { validateRegistration } from '../../utils/registrationValidator';
+import { useAuth } from '../../hooks/useAuth';
 
 const INITIAL_FORM_STATE = {
   nombre: '',
@@ -31,6 +31,8 @@ const INITIAL_FORM_STATE = {
  * From Google: only profile picture, name, and birthdate (for age).
  */
 export default function RegisterForm({ onSubmit }) {
+  const navigate = useNavigate();
+  const { user, userProfile, loginWithGoogle, registerWithEmail, completeGoogleRegistration, logout } = useAuth();
   const [isGoogleMode, setIsGoogleMode] = useState(false);
   const [googleUser, setGoogleUser] = useState(null);
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
@@ -40,27 +42,75 @@ export default function RegisterForm({ onSubmit }) {
 
   const currentAge = calculateAge(formData.fechaNacimiento);
 
-  const handleGoogleRegister = () => {
-    const mockProfile = {
-      nombre: 'Lucía',
-      apellido: '',
-      email: 'lucia.alumna@gmail.com',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
-      fechaNacimiento: '1996-05-18',
-    };
-    setGoogleUser(mockProfile);
-    setIsGoogleMode(true);
-    setFormData((prev) => ({
-      ...prev,
-      nombre: mockProfile.nombre,
-      email: mockProfile.email,
-      fechaNacimiento: mockProfile.fechaNacimiento,
-    }));
-    setErrors({});
+  // Auto-complete Google data when an authenticated user arrives at /register with incomplete registration
+  useEffect(() => {
+    if (user && !userProfile?.registroCompleto) {
+      const isGoogle = user.providerData?.some((p) => p.providerId === 'google.com');
+      if (!isGoogle) return;
+
+      const names = (user.displayName || '').trim().split(' ');
+      const firstName = names[0] || '';
+      const lastName = names.slice(1).join(' ') || '';
+
+      const profile = {
+        nombre: firstName,
+        apellido: lastName,
+        email: user.email || '',
+        avatarUrl: user.photoURL || '',
+      };
+
+      setGoogleUser(profile);
+      setIsGoogleMode(true);
+      setFormData((prev) => ({
+        ...prev,
+        nombre: prev.nombre || firstName,
+        apellido: prev.apellido || lastName,
+        email: prev.email || user.email || '',
+      }));
+    }
+  }, [user, userProfile]);
+
+  const handleGoogleRegister = async () => {
+    try {
+      const res = await loginWithGoogle();
+      const profile = res?.profile;
+
+      // If user is already registered in Emuná, navigate directly to their portal
+      if (profile && profile.registroCompleto) {
+        navigate(profile.rol === 'staff' ? '/administrator' : '/customer');
+        return;
+      }
+
+      const gUser = res.user;
+      const names = (gUser.displayName || '').trim().split(' ');
+      const firstName = names[0] || '';
+      const lastName = names.slice(1).join(' ') || '';
+
+      const googleInfo = {
+        nombre: firstName,
+        apellido: lastName,
+        email: gUser.email || '',
+        avatarUrl: gUser.photoURL || '',
+      };
+
+      setGoogleUser(googleInfo);
+      setIsGoogleMode(true);
+      setFormData((prev) => ({
+        ...prev,
+        nombre: firstName || prev.nombre,
+        apellido: lastName || prev.apellido,
+        email: gUser.email || prev.email,
+      }));
+      setErrors({});
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        alert('Error al conectar con Google: ' + (err.message || 'Intentá de nuevo'));
+      }
+    }
   };
 
-  const handleResetGoogle = () => {
+  const handleResetGoogle = async () => {
+    await logout();
     setIsGoogleMode(false);
     setGoogleUser(null);
     setFormData(INITIAL_FORM_STATE);
@@ -83,7 +133,7 @@ export default function RegisterForm({ onSubmit }) {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateRegistration(formData, isGoogleMode);
     if (Object.keys(validationErrors).length > 0) {
@@ -99,13 +149,25 @@ export default function RegisterForm({ onSubmit }) {
       edad: currentAge,
     };
 
-    if (onSubmit) {
-      onSubmit(submissionPayload);
-    } else {
-      setTimeout(() => {
-        setLoading(false);
-        setSuccess(true);
-      }, 700);
+    try {
+      if (onSubmit) {
+        await onSubmit(submissionPayload);
+      } else if (isGoogleMode) {
+        await completeGoogleRegistration(submissionPayload);
+      } else {
+        await registerWithEmail(formData.email, formData.password, submissionPayload);
+      }
+      setSuccess(true);
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        setErrors({ email: 'Este correo electrónico ya se encuentra registrado.' });
+      } else if (err.code === 'auth/weak-password') {
+        setErrors({ password: 'La contraseña debe tener al menos 6 caracteres.' });
+      } else {
+        alert('Error al registrar: ' + (err.message || 'Verificá los datos ingresados.'));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -160,95 +222,17 @@ export default function RegisterForm({ onSubmit }) {
                   onReset={handleResetGoogle}
                 />
               ) : (
-                <div className="mt-space-md">
-                  <button
-                    type="button"
-                    onClick={handleGoogleRegister}
-                    className="w-full py-3 px-space-lg rounded-full bg-surface-container-lowest border border-outline-variant hover:bg-surface-container-low text-on-surface font-label-md text-label-md transition-colors flex items-center justify-center gap-space-sm shadow-sm cursor-pointer"
-                  >
-                    <GoogleIcon />
-                    <span>Registrate con Google</span>
-                  </button>
-                  <p className="text-center font-body-sm text-[12px] text-on-surface-variant mt-1.5 px-space-xs leading-snug">
-                    De Google solo tomamos foto de perfil, nombre y fecha de nacimiento para el cálculo de tu edad.
-                  </p>
-
-                  <div className="relative flex items-center justify-center my-3">
-                    <span className="w-full h-[1px] bg-surface-container-high" />
-                    <span className="absolute bg-surface-container-lowest px-space-sm font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      o completá el formulario
-                    </span>
-                  </div>
-                </div>
+                <GoogleRegisterButton onClick={handleGoogleRegister} />
               )}
 
               {/* Form Elements */}
               <form onSubmit={handleSubmit} className="mt-space-md space-y-space-md" noValidate>
-                {/* Nombre & Apellido */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-                  <Input
-                    id="register-nombre"
-                    name="nombre"
-                    label="Nombre"
-                    value={formData.nombre}
-                    onChange={handleChange}
-                    placeholder="Ej. Lucía"
-                    icon="person"
-                    required
-                    error={errors.nombre}
-                    autoComplete="given-name"
-                  />
-                  <Input
-                    id="register-apellido"
-                    name="apellido"
-                    label="Apellido"
-                    value={formData.apellido}
-                    onChange={handleChange}
-                    placeholder="Ej. González"
-                    icon="person"
-                    required
-                    error={errors.apellido}
-                    autoComplete="family-name"
-                  />
-                </div>
-
-                {/* Teléfono */}
-                <Input
-                  id="register-telefono"
-                  name="telefono"
-                  type="tel"
-                  label="Teléfono / WhatsApp"
-                  value={formData.telefono}
+                <RegisterProfileFields
+                  formData={formData}
                   onChange={handleChange}
-                  placeholder="Ej. +54 9 362 4123456"
-                  icon="call"
-                  required
-                  error={errors.telefono}
-                  helperText="Para avisos de tus turnos y lista de espera."
-                  autoComplete="tel"
+                  errors={errors}
+                  birthdateHelper={getBirthdateHelper()}
                 />
-
-                {/* Fecha de Nacimiento & Género (Dropdown) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-                  <Input
-                    id="register-fecha-nacimiento"
-                    name="fechaNacimiento"
-                    type="date"
-                    label="Fecha de Nacimiento"
-                    value={formData.fechaNacimiento}
-                    onChange={handleChange}
-                    required
-                    error={errors.fechaNacimiento}
-                    helperText={getBirthdateHelper()}
-                  />
-
-                  <GenderSelector
-                    id="register-genero"
-                    value={formData.genero}
-                    onChange={handleChange}
-                    error={errors.genero}
-                  />
-                </div>
 
                 {/* Email and Password for direct registration */}
                 {!isGoogleMode && (

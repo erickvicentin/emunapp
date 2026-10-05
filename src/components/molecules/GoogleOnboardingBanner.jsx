@@ -13,7 +13,7 @@ export default function GoogleOnboardingBanner({ googleUser, onReset }) {
           <img
             src={googleUser.avatarUrl}
             alt={`Foto de perfil de ${googleUser.nombre}`}
-            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-xs"
+            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xs"
           />
           <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-xs">
             <GoogleIcon className="w-3.5 h-3.5" />

@@ -2,19 +2,30 @@ import React from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Icon from '../components/atoms/Icon';
 import Button from '../components/atoms/Button';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * CustomerPage View
  * Path: /customer
  * Workspace for users with role="customer" (alumnas)
  */
+
 export default function CustomerPage() {
+  const { user, userProfile } = useAuth();
+
+  const fullName = userProfile?.nombre
+    ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
+    : user?.displayName || 'Alumna';
+
+  const firstName = userProfile?.nombre || user?.displayName?.split(' ')[0] || 'Alumna';
+  const email = userProfile?.email || user?.email || '';
+
   return (
     <DashboardLayout
       roleName="Alumna"
       roleBadge="customer"
-      userName="Lucía González"
-      userEmail="lucia.alumna@gmail.com"
+      userName={fullName}
+      userEmail={email}
     >
       <div className="space-y-6">
         {/* Welcome Banner */}
@@ -24,7 +35,7 @@ export default function CustomerPage() {
               Espacio Alumna • Emuná Pilates
             </span>
             <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
-              ¡Hola, Lucía!
+              ¡Hola, {firstName}!
             </h1>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
               Tenés turnos disponibles para reservar en las 4 camas reformer.

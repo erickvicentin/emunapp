@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import GoogleIcon from '../atoms/GoogleIcon';
 import StudioBanner from '../molecules/StudioBanner';
+import RoleSwitcherTabs from '../molecules/RoleSwitcherTabs';
+import { useAuth } from '../../hooks/useAuth';
 
 /**
  * LoginForm Organism
@@ -12,6 +14,7 @@ import StudioBanner from '../molecules/StudioBanner';
  */
 export default function LoginForm({ onSubmit, onGoogleLogin }) {
   const navigate = useNavigate();
+  const { loginWithEmail, loginWithGoogle } = useAuth();
   const [role, setRole] = useState('alumna'); // 'alumna' | 'equipo'
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -20,12 +23,12 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!identifier.trim()) {
-      setError('Por favor ingresá tu DNI o correo electrónico.');
+      setError('Por favor ingresá tu correo electrónico o DNI.');
       return;
     }
     if (!password) {
@@ -36,11 +39,35 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
     setLoading(true);
     if (onSubmit) {
       onSubmit({ role, identifier, password, rememberMe });
-    } else {
-      setTimeout(() => {
-        setLoading(false);
-        navigate(role === 'alumna' ? '/customer' : '/administrator');
-      }, 500);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await loginWithEmail(identifier.trim(), password);
+      const profile = res?.profile;
+
+      // Staff users or Equipo logins always proceed directly to administrator dashboard
+      if (role === 'equipo' || profile?.rol === 'staff' || profile?.rol === 'administradora') {
+        navigate('/administrator');
+        return;
+      }
+
+      if (!profile || !profile.registroCompleto) {
+        navigate('/register');
+        return;
+      }
+      navigate('/customer');
+    } catch (err) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Credenciales inválidas. Verificá tu correo y contraseña.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico no es válido.');
+      } else {
+        setError(err.message || 'Error al iniciar sesión.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,11 +75,31 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
     alert('Para recuperar tu contraseña, comunicate con la administración de Emuná por WhatsApp o acercate a la recepción.');
   };
 
-  const handleGoogleClick = () => {
+  const handleGoogleClick = async () => {
     if (onGoogleLogin) {
       onGoogleLogin();
-    } else {
-      navigate('/customer');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await loginWithGoogle();
+      const profile = res?.profile;
+
+      // If user does not have a complete registered account, redirect to /register
+      if (!profile || !profile.registroCompleto) {
+        navigate('/register');
+        return;
+      }
+
+      const target = profile.rol === 'staff' || role === 'equipo' ? '/administrator' : '/customer';
+      navigate(target);
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError('Error al autenticar con Google: ' + (err.message || 'Intentá nuevamente.'));
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,50 +134,14 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
             </div>
           </div>
 
-          {/* Role Switcher Tabs */}
-          <div
-            className="mt-space-md p-1 bg-surface-container rounded-full flex gap-1 max-w-xs"
-            role="tablist"
-            aria-label="Tipo de usuario"
-          >
-            <button
-              id="tab-alumna"
-              type="button"
-              role="tab"
-              aria-selected={role === 'alumna'}
-              onClick={() => {
-                setRole('alumna');
-                setError('');
-              }}
-              className={`flex-1 py-2 px-space-md rounded-full font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 ${
-                role === 'alumna'
-                  ? 'bg-primary-container text-on-primary shadow-xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <Icon name="person" className="text-[16px]" />
-              <span>Alumna</span>
-            </button>
-
-            <button
-              id="tab-equipo"
-              type="button"
-              role="tab"
-              aria-selected={role === 'equipo'}
-              onClick={() => {
-                setRole('equipo');
-                setError('');
-              }}
-              className={`flex-1 py-2 px-space-md rounded-full font-label-md text-label-md transition-colors flex items-center justify-center gap-1.5 ${
-                role === 'equipo'
-                  ? 'bg-primary-container text-on-primary shadow-xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              <Icon name="badge" className="text-[16px]" />
-              <span>Equipo</span>
-            </button>
-          </div>
+          {/* Role Switcher Tabs Molecule */}
+          <RoleSwitcherTabs
+            role={role}
+            onSelectRole={(newRole) => {
+              setRole(newRole);
+              setError('');
+            }}
+          />
 
           {/* Error notification */}
           {error && (
@@ -166,7 +177,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder={
                     role === 'alumna'
-                      ? 'Ej. 38450123 o tu@email.com'
+                      ? 'Ej. tu@email.com o 38450123'
                       : 'instructora@emunaestudio.com'
                   }
                   required
@@ -175,7 +186,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
               </div>
               <p className="font-body-sm text-body-sm text-on-surface-variant/80">
                 {role === 'alumna'
-                  ? 'Si sos alumna podés ingresar directamente con tu DNI registrado.'
+                  ? 'Si sos alumna podés ingresar con tu email registrado.'
                   : 'Acceso exclusivo para instructoras certificadas y equipo de gestión.'}
               </p>
             </div>

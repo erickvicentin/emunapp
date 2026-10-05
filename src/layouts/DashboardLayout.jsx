@@ -1,7 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../components/atoms/Icon';
 import logo from '../assets/logo.jpeg';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * DashboardLayout
@@ -11,9 +12,25 @@ export default function DashboardLayout({
   children,
   roleName = 'Cliente',
   roleBadge = 'customer',
-  userName = 'Usuario',
-  userEmail = '',
+  userName,
+  userEmail,
 }) {
+  const navigate = useNavigate();
+  const { user, userProfile, logout } = useAuth();
+
+  const effectiveName = userName || userProfile?.nombre || user?.displayName || 'Usuario';
+  const effectiveEmail = userEmail || userProfile?.email || user?.email || roleName;
+  const effectiveBadge = userProfile?.rol || roleBadge;
+  const photoURL = userProfile?.photoURL || user?.photoURL;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-surface font-body-md text-on-surface antialiased selection:bg-secondary-fixed selection:text-secondary-fixed-variant">
       {/* Top Bar Navigation */}
@@ -40,41 +57,50 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3 sm:gap-4">
             <span
               className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm font-semibold uppercase tracking-wider ${
-                roleBadge === 'staff'
+                effectiveBadge === 'staff'
                   ? 'bg-secondary-container text-on-secondary-container'
                   : 'bg-surface-container-highest text-primary'
               }`}
             >
               <Icon
-                name={roleBadge === 'staff' ? 'admin_panel_settings' : 'spa'}
+                name={effectiveBadge === 'staff' ? 'admin_panel_settings' : 'spa'}
                 className="text-[14px]"
               />
-              Rol: {roleBadge}
+              Rol: {effectiveBadge}
             </span>
 
             <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-surface-container-high">
-              <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm shadow-xs">
-                {userName.charAt(0).toUpperCase()}
-              </div>
+              {photoURL ? (
+                <img
+                  src={photoURL}
+                  alt={effectiveName}
+                  className="w-9 h-9 rounded-full object-cover shadow-xs border border-white"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-sm shadow-xs">
+                  {effectiveName.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div className="hidden md:flex flex-col text-left">
                 <span className="font-label-md text-label-md font-semibold text-primary leading-tight">
-                  {userName}
+                  {effectiveName}
                 </span>
                 <span className="font-body-sm text-[11px] text-on-surface-variant leading-tight">
-                  {userEmail || roleName}
+                  {effectiveEmail}
                 </span>
               </div>
             </div>
 
             {/* Logout button */}
-            <Link
-              to="/login"
+            <button
+              type="button"
+              onClick={handleLogout}
               aria-label="Cerrar sesión"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/40 transition-colors font-label-sm text-label-sm ml-1"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/40 transition-colors font-label-sm text-label-sm ml-1 cursor-pointer"
             >
               <Icon name="logout" className="text-[16px]" />
               <span className="hidden sm:inline">Salir</span>
-            </Link>
+            </button>
           </div>
         </div>
       </header>
