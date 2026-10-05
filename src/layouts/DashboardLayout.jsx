@@ -34,7 +34,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-surface font-body-md text-on-surface antialiased selection:bg-secondary-fixed selection:text-secondary-fixed-variant">
       {/* Top Bar Navigation */}
-      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-container-high/60 shadow-xs">
+      <header className="pt-3 pb-3 sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-container-high/60 shadow-xs">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-margin-desktop h-18 flex items-center justify-between">
           {/* Brand */}
           <Link to="/" className="flex items-center gap-3 group">
