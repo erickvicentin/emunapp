@@ -21,7 +21,6 @@ export default function LandingPage() {
         <MethodologySection />
         <StudioExperienceSection />
         <PricingSection />
-        <ScheduleSection />
         <LocationSection />
       </div>
     </MainLayout>

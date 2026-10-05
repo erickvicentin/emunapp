@@ -10,7 +10,7 @@ import { PACKAGES_CATALOG, STUDIO_INFO } from '../../data/landingData';
 export default function PricingSection() {
   const handleSelectPackage = (pkg) => {
     const text = `Hola! Quiero consultar y reservar la membresía de ${pkg.name} (${pkg.frequency}) en Emuná Pilates.`;
-    const url = `https://wa.me/543624890123?text=${encodeURIComponent(text)}`;
+    const url = `https://wa.me/543704578354?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 

@@ -67,27 +67,9 @@ export default function StudioExperienceSection() {
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJXOIJsSqaqYExVsXuC4lW2v8icoAQ49egReU3vZ5C0zV0Y4oxANQSpCISyHCYuf1vGq0s540ieQ9NuAw81-J87jbtims-Uh3S_IWm2F-o1iZxfwJAfuwSWxKv-S1EmseQepUzqN3bTcUozDqlC60FlgvVqVAJ8Vcx4PpXanewLmtx8Z2VI-3HWhdJJXtOgRBQhCicVuY45jxDf1xcKA6L_Fm-u5aNuDRj7Vt0KzvkU8cSb_8CK37l"
               />
             </div>
-            <div className="p-space-md rounded-2xl bg-surface-container-lowest shadow-sm flex flex-col border border-surface-container-high/60">
-              <span className="font-headline-sm text-headline-sm text-primary font-semibold">
-                Horarios Flexibles
-              </span>
-              <span className="font-body-sm text-body-sm text-on-surface-variant mt-1.5 leading-relaxed">
-                Franjas matutinas desde las 07:00 hs y vespertinas hasta las
-                21:00 hs para acompañar tu rutina laboral.
-              </span>
-            </div>
           </div>
 
           <div className="space-y-space-md sm:pt-space-lg">
-            <div className="p-space-md rounded-2xl bg-surface-container-lowest shadow-sm flex flex-col border border-surface-container-high/60">
-              <span className="font-headline-sm text-headline-sm text-primary font-semibold">
-                Vestuario & Lockers
-              </span>
-              <span className="font-body-sm text-body-sm text-on-surface-variant mt-1.5 leading-relaxed">
-                Espacio de cambio íntimo, dispensers de agua purificada y
-                toallas de algodón incluidas.
-              </span>
-            </div>
             <div className="rounded-2xl overflow-hidden shadow-sm bg-surface border border-surface-container-highest/60 group">
               <img
                 className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-105"

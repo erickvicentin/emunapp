@@ -17,10 +17,7 @@ export default function MainLayout({ children }) {
       <main className="flex-1 w-full pt-20 bg-surface">
         {children}
       </main>
-
-      {/* Floating AI Virtual Assistant Drawer */}
-      <ChatbotDrawer />
-
+      
       {/* Footer */}
       <Footer />
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
+import logo from '../../assets/logo.jpeg'
 
 /**
  * Header Organism
@@ -12,8 +13,7 @@ export default function Header() {
   const navLinks = [
     { label: 'Inicio', href: '#inicio' },
     { label: 'Metodología', href: '#metodologia' },
-    { label: 'Tarifas y Horarios', href: '#tarifas' },
-    { label: 'Grilla de Turnos', href: '#horarios' },
+    { label: 'Tarifas', href: '#tarifas' },
     { label: 'Contacto', href: '#contacto' },
   ];
 
@@ -24,8 +24,8 @@ export default function Header() {
         <a href="#inicio" className="flex items-center gap-space-md group">
           <img
             alt="Logo Emuná Estudio Pilates"
-            className="h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
-            src="https://lh3.googleusercontent.com/aida/AEtjO1VPLdHB_3ZhBQplBiA9DPpO7X7y2IGsuEpx1i3O2n1B5tWAVC9llF9bo_ML4MSFhh_6vXX5lEFp8E7gr3mFuR4cbZ9U9myPIsEiqhWZSufWwAovEca4BulDJyxiYHNY5Rblbf9CXhK-gGVSXm0JSD_UvEwDiPa7AAJvMk2q9TsezfhGN0KQjzdMPlMi_vKFk5fGWxCrB0z-23TGtzw2VEAYGMDlPxnTW08xR4WD57vxOxBaLJ6ODiV8mvYRdTOdtqWwE-Z53mZI4w"
+            className="h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-105 rounded-full"
+            src={logo}
           />
           <div className="flex flex-col">
             <span className="font-headline-sm text-headline-sm text-primary tracking-tight font-semibold">
