@@ -165,3 +165,123 @@
     max-height: calc(100dvh - 7.5rem);
   }
 }
+
+/* Responsive Data Table (Students) */
+.StudentsTable-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(620px, 72vh);
+  container-type: inline-size;
+}
+
+.StudentsTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.StudentsTable thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+
+.StudentsTable tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+}
+
+@container (width < 640px) {
+  .StudentsTable,
+  .StudentsTable thead,
+  .StudentsTable tbody,
+  .StudentsTable tr,
+  .StudentsTable th,
+  .StudentsTable td {
+    display: block;
+  }
+
+  .StudentsTable thead {
+    display: none;
+  }
+
+  .StudentsTable tbody tr {
+    margin-block-end: 0.875rem;
+    border: 1px solid #d1c4c0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .StudentsTable tbody tr:last-child {
+    margin-block-end: 0;
+  }
+
+  .StudentsTable tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: #fbf3e4;
+    border-bottom: 1px solid #efe7d9;
+  }
+
+  .StudentsTable tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-block: 0.625rem;
+    padding-inline: 1rem;
+    border-bottom: 1px solid #f5eddf;
+    text-align: right;
+  }
+
+  .StudentsTable tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .StudentsTable {
+    --label-2: "DNI";
+    --label-3: "Edad";
+    --label-4: "Sexo";
+    --label-5: "Asistencia";
+    --label-6: "Acciones";
+  }
+
+  .StudentsTable tbody td::before {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #82533e;
+    text-align: left;
+  }
+
+  .StudentsTable tbody td:nth-child(2)::before {
+    content: var(--label-2);
+  }
+  .StudentsTable tbody td:nth-child(3)::before {
+    content: var(--label-3);
+  }
+  .StudentsTable tbody td:nth-child(4)::before {
+    content: var(--label-4);
+  }
+  .StudentsTable tbody td:nth-child(5)::before {
+    content: var(--label-5);
+  }
+  .StudentsTable tbody td:nth-child(6)::before {
+    content: var(--label-6);
+  }
+}
+
+/* Native modal dialog scroll containment */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  background: rgba(22, 15, 14, 0.45);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}

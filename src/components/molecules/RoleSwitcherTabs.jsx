@@ -14,6 +14,7 @@ export default function RoleSwitcherTabs({ role, onSelectRole }) {
     >
       <button
         id="tab-alumna"
+        data-testid="login-tab-alumna"
         type="button"
         role="tab"
         aria-selected={role === 'alumna'}
@@ -30,6 +31,7 @@ export default function RoleSwitcherTabs({ role, onSelectRole }) {
 
       <button
         id="tab-equipo"
+        data-testid="login-tab-equipo"
         type="button"
         role="tab"
         aria-selected={role === 'equipo'}

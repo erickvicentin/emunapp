@@ -16,7 +16,7 @@ export default function RegisterPage() {
 
   useEffect(() => {
     if (!loading && user && userProfile?.registroCompleto) {
-      const target = userProfile.rol === 'staff' ? '/administrator' : '/customer';
+      const target = userProfile.rol === 'staff' ? '/administrador/dashboard' : '/customer';
       navigate(target, { replace: true });
     }
   }, [user, userProfile, loading, navigate]);

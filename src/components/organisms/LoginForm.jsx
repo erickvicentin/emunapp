@@ -49,7 +49,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
 
       // Staff users or Equipo logins always proceed directly to administrator dashboard
       if (role === 'equipo' || profile?.rol === 'staff' || profile?.rol === 'administradora') {
-        navigate('/administrator');
+        navigate('/administrador/dashboard');
         return;
       }
 
@@ -92,7 +92,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
         return;
       }
 
-      const target = profile.rol === 'staff' || role === 'equipo' ? '/administrator' : '/customer';
+      const target = profile.rol === 'staff' || role === 'equipo' ? '/administrador/dashboard' : '/customer';
       navigate(target);
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user') {
@@ -147,6 +147,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
           {error && (
             <div
               role="alert"
+              data-testid="login-error-alert"
               className="mt-space-md p-3 rounded-xl bg-error-container text-on-error-container text-body-sm flex items-center gap-2"
             >
               <Icon name="error" className="text-[18px] text-error shrink-0" />
@@ -170,6 +171,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
                 </span>
                 <input
                   id="user-identifier"
+                  data-testid="login-identifier-input"
                   name="identifier"
                   type={role === 'equipo' ? 'email' : 'text'}
                   autoComplete={role === 'equipo' ? 'email' : 'username'}
@@ -214,6 +216,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
                 </span>
                 <input
                   id="password-input"
+                  data-testid="login-password-input"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
@@ -261,6 +264,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
             <div className="pt-space-xs space-y-space-sm">
               <button
                 type="submit"
+                data-testid="login-submit-btn"
                 disabled={loading}
                 className="w-full py-3.5 px-space-lg rounded-full bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-space-xs disabled:opacity-60 cursor-pointer"
               >

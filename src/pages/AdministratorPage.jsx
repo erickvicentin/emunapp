@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import AdminSidebar from '../components/organisms/AdminSidebar';
+import StudentsSection from '../components/organisms/StudentsSection';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
@@ -24,12 +26,21 @@ const INITIAL_PENDING_PAYMENTS = [
  */
 export default function AdministratorPage() {
   const { user, userProfile } = useAuth();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const { section } = useParams();
   const [beds, setBeds] = useState(INITIAL_BEDS);
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
 
-  const activeNavItem =
-    ADMIN_NAV_ITEMS.find((item) => item.id === activeSection) || ADMIN_NAV_ITEMS[0];
+  const activeNavItem = ADMIN_NAV_ITEMS.find((item) => item.id === section);
+
+  if (!section) {
+    return <Navigate to="/administrador/dashboard" replace />;
+  }
+
+  if (!activeNavItem) {
+    return <Navigate to="/administrador/dashboard" replace />;
+  }
+
+  const activeSection = activeNavItem.id;
 
   const staffName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
@@ -61,14 +72,17 @@ export default function AdministratorPage() {
       userEmail={staffEmail}
       renderSidebar={(sidebarProps) => (
         <AdminSidebar
-          activeSection={activeSection}
-          onSelectSection={setActiveSection}
           {...sidebarProps}
         />
       )}
     >
-      {activeSection !== 'dashboard' ? (
-        <section className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]">
+      {activeSection === 'alumnos' ? (
+        <StudentsSection />
+      ) : activeSection !== 'dashboard' ? (
+        <section
+          data-testid="admin-placeholder-section"
+          className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]"
+        >
           <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
             <Icon name={activeNavItem.icon} className="text-[28px]" />
           </div>
@@ -93,7 +107,10 @@ export default function AdministratorPage() {
             <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
               Panel de Administración y Sala • Rol: Staff
             </span>
-            <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
+            <h1
+              data-testid="admin-dashboard-title"
+              className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1"
+            >
               Matriz de Sala • Turno 18:00 hs
             </h1>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
@@ -120,13 +137,14 @@ export default function AdministratorPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div data-testid="admin-beds-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {beds.map((bed) => {
               const isAvailable = bed.status === 'disponible';
               const isPresent = bed.status === 'presente';
               return (
                 <div
                   key={bed.id}
+                  data-testid={`admin-bed-card-${bed.id}`}
                   className={`p-5 rounded-2xl border transition-colors shadow-xs flex flex-col justify-between min-h-[160px] ${isAvailable
                       ? 'bg-surface-container-lowest border-dashed border-outline-variant'
                       : isPresent
@@ -170,6 +188,7 @@ export default function AdministratorPage() {
                   {bed.alumno && (
                     <button
                       type="button"
+                      data-testid={`admin-bed-checkin-btn-${bed.id}`}
                       onClick={() => toggleCheckIn(bed.id)}
                       className={`w-full py-1.5 px-3 rounded-full text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer ${isPresent
                           ? 'bg-surface-container hover:bg-surface-container-high text-primary'
@@ -187,7 +206,10 @@ export default function AdministratorPage() {
         </section>
 
         {/* Pending Bank Transfers Validation */}
-        <section className="p-6 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs">
+        <section
+          data-testid="admin-payments-section"
+          className="p-6 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs"
+        >
           <div className="flex items-center justify-between pb-4 border-b border-surface-container">
             <div>
               <h2 className="font-headline-sm text-headline-sm text-primary font-semibold flex items-center gap-2">
