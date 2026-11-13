@@ -8,6 +8,7 @@ import Icon from '../atoms/Icon';
 export default function StudentDeleteDialog({
   dialogRef,
   studentToDelete,
+  isDeleting = false,
   onClose,
   onCancel,
   onConfirm,
@@ -29,14 +30,17 @@ export default function StudentDeleteDialog({
             id="delete-student-title"
             className="font-headline-sm text-headline-sm text-primary font-semibold"
           >
-            ¿Borrar alumno?
+            ¿Eliminar usuario?
           </h2>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+          <p
+            data-testid="student-delete-warning"
+            className="font-body-md text-body-md text-on-surface-variant mt-1"
+          >
             Estás por eliminar a{' '}
             <strong className="text-primary">
               {studentToDelete?.nombreApellido}
-            </strong>{' '}
-            del listado. Esta acción no se puede deshacer.
+            </strong>
+            . Todo lo relacionado al mismo (perfil, reservas, membresías y pagos) será eliminado sin posibilidad de deshacer la acción.
           </p>
         </div>
       </div>
@@ -51,8 +55,9 @@ export default function StudentDeleteDialog({
           value="cancel"
           data-testid="student-delete-cancel-btn"
           onClick={onCancel}
+          disabled={isDeleting}
           autoFocus
-          className="px-4 py-2 rounded-full border border-outline-variant text-primary font-label-md text-[13px] font-semibold hover:bg-surface-container transition-colors cursor-pointer"
+          className="px-4 py-2 rounded-full border border-outline-variant text-primary font-label-md text-[13px] font-semibold hover:bg-surface-container transition-colors cursor-pointer disabled:opacity-50"
         >
           Cancelar
         </button>
@@ -60,9 +65,10 @@ export default function StudentDeleteDialog({
           type="submit"
           value="confirm"
           data-testid="student-delete-confirm-btn"
-          className="px-4 py-2 rounded-full bg-error text-on-error font-label-md text-[13px] font-semibold hover:bg-error/90 transition-colors cursor-pointer"
+          disabled={isDeleting}
+          className="px-4 py-2 rounded-full bg-error text-on-error font-label-md text-[13px] font-semibold hover:bg-error/90 transition-colors cursor-pointer disabled:opacity-50"
         >
-          Borrar alumno
+          {isDeleting ? 'Eliminando...' : 'Eliminar usuario'}
         </button>
       </form>
     </dialog>

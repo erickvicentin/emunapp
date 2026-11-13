@@ -35,6 +35,7 @@ export default function GenderSelector({
 
         <select
           id={id}
+          data-testid="register-genero-select"
           name="genero"
           value={value}
           onChange={onChange}

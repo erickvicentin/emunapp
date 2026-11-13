@@ -3,8 +3,11 @@ import { Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import AdminSidebar from '../components/organisms/AdminSidebar';
 import StudentsSection from '../components/organisms/StudentsSection';
+import StudentCreateSection from '../components/organisms/StudentCreateSection';
+import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
+import { useStudentsManager } from '../hooks/useStudentsManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
@@ -24,29 +27,97 @@ const INITIAL_PENDING_PAYMENTS = [
  * Path: /administrator
  * Workspace for users with role="staff" (instructor / admin)
  */
-export default function AdministratorPage() {
-  const { user, userProfile } = useAuth();
-  const { section } = useParams();
-  const [beds, setBeds] = useState(INITIAL_BEDS);
-  const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
-
+function resolveAdminRoute(section, action) {
   const activeNavItem = ADMIN_NAV_ITEMS.find((item) => item.id === section);
-
-  if (!section) {
-    return <Navigate to="/administrador/dashboard" replace />;
-  }
-
   if (!activeNavItem) {
-    return <Navigate to="/administrador/dashboard" replace />;
+    return { redirectTo: '/administrador/dashboard', activeNavItem: null };
   }
+  if (action && !(activeNavItem.id === 'alumnos' && action === 'nuevo')) {
+    return { redirectTo: `/administrador/${activeNavItem.id}`, activeNavItem: null };
+  }
+  return { redirectTo: null, activeNavItem };
+}
 
-  const activeSection = activeNavItem.id;
+function AdminPlaceholderSection({ activeNavItem }) {
+  return (
+    <section
+      data-testid="admin-placeholder-section"
+      className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
+        <Icon name={activeNavItem.icon} className="text-[28px]" />
+      </div>
+      <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
+        Módulo de Administración
+      </span>
+      <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
+        {activeNavItem.label}
+      </h1>
+      <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md">
+        {activeNavItem.description}
+      </p>
+      <span className="mt-6 px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+        Próximamente
+      </span>
+    </section>
+  );
+}
 
+function getStaffIdentity(user, userProfile) {
   const staffName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
     : user?.displayName || 'Administradora';
-
   const staffEmail = userProfile?.email || user?.email || 'admin@emuna.com';
+  return { staffName, staffEmail };
+}
+
+function AdminSectionContent({
+  activeNavItem,
+  action,
+  students,
+  isDeletingStudent,
+  onCreateStudent,
+  onDeleteStudent,
+  renderDashboard,
+}) {
+  if (activeNavItem.id === 'alumnos' && action === 'nuevo') {
+    return <StudentCreateSection onCreateStudent={onCreateStudent} />;
+  }
+  if (activeNavItem.id === 'alumnos') {
+    return (
+      <StudentsSection
+        students={students}
+        isDeletingStudent={isDeletingStudent}
+        onDeleteStudent={onDeleteStudent}
+      />
+    );
+  }
+  if (activeNavItem.id !== 'dashboard') {
+    return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
+  }
+  return renderDashboard();
+}
+
+export default function AdministratorPage() {
+  const { user, userProfile } = useAuth();
+  const { section, action } = useParams();
+  const [beds, setBeds] = useState(INITIAL_BEDS);
+  const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+  const {
+    students,
+    isDeletingStudent,
+    snackbar,
+    closeSnackbar,
+    createStudent,
+    deleteStudent,
+  } = useStudentsManager();
+
+  const { redirectTo, activeNavItem } = resolveAdminRoute(section, action);
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  const { staffName, staffEmail } = getStaffIdentity(user, userProfile);
 
   const toggleCheckIn = (bedId) => {
     setBeds((prev) =>
@@ -76,30 +147,14 @@ export default function AdministratorPage() {
         />
       )}
     >
-      {activeSection === 'alumnos' ? (
-        <StudentsSection />
-      ) : activeSection !== 'dashboard' ? (
-        <section
-          data-testid="admin-placeholder-section"
-          className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
-            <Icon name={activeNavItem.icon} className="text-[28px]" />
-          </div>
-          <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
-            Módulo de Administración
-          </span>
-          <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
-            {activeNavItem.label}
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md">
-            {activeNavItem.description}
-          </p>
-          <span className="mt-6 px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
-            Próximamente
-          </span>
-        </section>
-      ) : (
+      <AdminSectionContent
+        activeNavItem={activeNavItem}
+        action={action}
+        students={students}
+        isDeletingStudent={isDeletingStudent}
+        onCreateStudent={createStudent}
+        onDeleteStudent={deleteStudent}
+        renderDashboard={() => (
         <div className="space-y-6">
         {/* Welcome & Shift Selector */}
         <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
@@ -256,7 +311,14 @@ export default function AdministratorPage() {
           </div>
         </section>
         </div>
-      )}
+        )}
+      />
+      <Snackbar
+        open={snackbar.open}
+        variant={snackbar.variant}
+        message={snackbar.message}
+        onClose={closeSnackbar}
+      />
     </DashboardLayout>
   );
 }
