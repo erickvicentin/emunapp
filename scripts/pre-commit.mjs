@@ -107,10 +107,11 @@ async function main() {
     process.exit(1);
   }
 
-  const doctorResult = await runStep('Ejecutando React Doctor', 'npm', [
-    'run',
-    'doctor',
-  ]);
+  const doctorResult = await runStep(
+    'Ejecutando React Doctor (mínimo 95%)',
+    'node',
+    ['scripts/check-doctor-score.mjs']
+  );
 
   if (!doctorResult.ok) {
     console.log(

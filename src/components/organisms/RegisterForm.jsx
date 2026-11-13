@@ -77,7 +77,7 @@ export default function RegisterForm({ onSubmit }) {
 
       // If user is already registered in Emuná, navigate directly to their portal
       if (profile && profile.registroCompleto) {
-        navigate(profile.rol === 'staff' ? '/administrator' : '/customer');
+        navigate(profile.rol === 'staff' ? '/administrador/dashboard' : '/customer');
         return;
       }
 
