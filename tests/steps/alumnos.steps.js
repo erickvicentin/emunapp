@@ -1,6 +1,7 @@
 import { When, Then } from '@wdio/cucumber-framework';
 import { expect } from '@wdio/globals';
 import AlumnosPage from '../pages/alumnos.page.js';
+import StudentCreatePage from '../pages/studentCreate.page.js';
 
 Then(
   'the students section should be visible with title {string}',
@@ -114,10 +115,37 @@ Then('an inline notice should display {string}', async (expectedText) => {
   expect(noticeText).toContain(expectedText);
 });
 
-Then('the delete confirmation dialog should be open', async () => {
-  const isOpen = await AlumnosPage.isDeleteDialogOpen();
-  expect(isOpen).toBe(true);
-});
+Then(
+  'the delete confirmation dialog should be open with irreversible warning',
+  async () => {
+    const isOpen = await AlumnosPage.isDeleteDialogOpen();
+    const warningText = await AlumnosPage.getDeleteWarningText();
+
+    expect(isOpen).toBe(true);
+    expect(warningText).toContain('Todo lo relacionado al mismo');
+    expect(warningText).toContain('sin posibilidad de deshacer la acción');
+  }
+);
+
+Then(
+  'a {string} snackbar should appear indicating deletion succeeded',
+  async (expectedVariant) => {
+    const snackbar = await AlumnosPage.getSnackbarState();
+    expect(snackbar.displayed).toBe(true);
+    expect(snackbar.variant).toBe(expectedVariant);
+    expect(snackbar.message).toContain('eliminados correctamente');
+  }
+);
+
+Then(
+  'an {string} snackbar should appear with the error message',
+  async (expectedVariant) => {
+    const snackbar = await StudentCreatePage.getSnackbarState();
+    expect(snackbar.displayed).toBe(true);
+    expect(snackbar.variant).toBe(expectedVariant);
+    expect(snackbar.message.length).toBeGreaterThan(0);
+  }
+);
 
 When('the administrator confirms the student deletion', async () => {
   await AlumnosPage.confirmDeleteStudent();
@@ -128,5 +156,93 @@ Then(
   async (studentId) => {
     const exists = await AlumnosPage.isStudentRowDisplayed(studentId);
     expect(exists).toBe(false);
+  }
+);
+
+Then('the students search bar should be visible', async () => {
+  const isDisplayed = await AlumnosPage.isSearchBarDisplayed();
+  expect(isDisplayed).toBe(true);
+});
+
+When(
+  'the administrator searches for {string} in the students search bar',
+  async (query) => {
+    await AlumnosPage.searchStudents(query);
+  }
+);
+
+Then(
+  'the students table should display {string} matching rows',
+  async (expectedCount) => {
+    const rowsCount = await AlumnosPage.getRowsCount();
+    expect(rowsCount).toBe(Number(expectedCount));
+  }
+);
+
+Then(
+  'the row for student {string} should be visible in the table',
+  async (studentId) => {
+    const isVisible = await AlumnosPage.isStudentRowDisplayed(studentId);
+    expect(isVisible).toBe(true);
+  }
+);
+
+Then('the empty search results state should be visible', async () => {
+  const isDisplayed = await AlumnosPage.isEmptySearchStateDisplayed();
+  expect(isDisplayed).toBe(true);
+});
+
+When('the administrator clicks the "Limpiar" search button', async () => {
+  await AlumnosPage.clickClearSearch();
+});
+
+Then('the students search input should be empty', async () => {
+  const value = await AlumnosPage.getSearchInputValue();
+  expect(value).toBe('');
+});
+
+Then(
+  'the student creation page should be visible with title {string}',
+  async (expectedTitle) => {
+    await StudentCreatePage.waitForPageLoad();
+    const isDisplayed = await StudentCreatePage.isSectionDisplayed();
+    const title = await StudentCreatePage.getTitleText();
+    const url = await StudentCreatePage.getCurrentUrl();
+
+    expect(isDisplayed).toBe(true);
+    expect(title).toBe(expectedTitle);
+    expect(url).toContain('/administrador/alumnos/nuevo');
+  }
+);
+
+Then('the student activation notice should be visible', async () => {
+  const isDisplayed = await StudentCreatePage.isActivationNoticeDisplayed();
+  const noticeText = await StudentCreatePage.getActivationNoticeText();
+
+  expect(isDisplayed).toBe(true);
+  expect(noticeText).toContain('DNI');
+});
+
+When('the administrator completes the new student form with valid data', async () => {
+  await StudentCreatePage.fillStudentForm({
+    nombre: 'Camila',
+    apellido: 'Navarro',
+    telefono: '+54 9 11 5555-9988',
+    fechaNacimiento: '1997-08-20',
+    genero: 'mujer',
+    dni: '40123456',
+    email: 'camila.navarro@emuna.com',
+  });
+});
+
+When('the administrator submits the new student form', async () => {
+  await StudentCreatePage.clickSubmit();
+});
+
+Then(
+  'the student creation form should show validation error {string}',
+  async (expectedError) => {
+    const hasError = await StudentCreatePage.isSectionTextVisible(expectedError);
+    expect(hasError).toBe(true);
   }
 );

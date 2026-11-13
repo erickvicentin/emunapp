@@ -1,13 +1,20 @@
+import BasePage from './base.page.js';
+
 const STUDENTS_SECTION = '[data-testid="students-section"]';
 const STUDENTS_TITLE = '[data-testid="students-title"]';
 const STUDENTS_COUNT_BADGE = '[data-testid="students-count-badge"]';
 const EXPORT_BTN = '[data-testid="students-export-btn"]';
 const CREATE_BTN = '[data-testid="students-create-btn"]';
+const SEARCH_BAR = '[data-testid="students-search-bar"]';
+const SEARCH_INPUT = '[data-testid="students-search-input"]';
+const SEARCH_CLEAR_BTN = '[data-testid="students-search-clear-btn"]';
+const EMPTY_SEARCH_STATE = '[data-testid="students-empty-search"]';
 const NOTICE_BANNER = '[data-testid="students-notice"]';
 const STUDENTS_TABLE = '[data-testid="students-table"]';
 const TABLE_HEADERS = '[data-testid="students-table"] thead th';
 const TABLE_ROWS = '[data-testid="students-table"] tbody tr';
 const DELETE_DIALOG = '[data-testid="student-delete-dialog"]';
+const DELETE_WARNING = '[data-testid="student-delete-warning"]';
 const DELETE_CANCEL_BTN = '[data-testid="student-delete-cancel-btn"]';
 const DELETE_CONFIRM_BTN = '[data-testid="student-delete-confirm-btn"]';
 
@@ -21,61 +28,75 @@ const getViewBtnSelector = (id) => `[data-testid="student-view-btn-${id}"]`;
 const getEditBtnSelector = (id) => `[data-testid="student-edit-btn-${id}"]`;
 const getDeleteBtnSelector = (id) => `[data-testid="student-delete-btn-${id}"]`;
 
-class AlumnosPage {
+class AlumnosPage extends BasePage {
   async waitForPageLoad() {
-    await $(STUDENTS_SECTION).waitForDisplayed();
+    await this.waitForElement(STUDENTS_SECTION);
   }
 
   async isSectionDisplayed() {
-    return $(STUDENTS_SECTION).isDisplayed();
+    return this.isElementDisplayed(STUDENTS_SECTION);
   }
 
   async getTitleText() {
-    const title = await $(STUDENTS_TITLE);
-    await title.waitForDisplayed();
-    return title.getText();
+    return this.getElementText(STUDENTS_TITLE);
   }
 
   async getCountBadgeText() {
-    const badge = await $(STUDENTS_COUNT_BADGE);
-    await badge.waitForDisplayed();
-    return badge.getText();
+    return this.getElementText(STUDENTS_COUNT_BADGE);
   }
 
   async isExportButtonDisplayed() {
-    return $(EXPORT_BTN).isDisplayed();
+    return this.isElementDisplayed(EXPORT_BTN);
   }
 
   async isCreateButtonDisplayed() {
-    return $(CREATE_BTN).isDisplayed();
+    return this.isElementDisplayed(CREATE_BTN);
+  }
+
+  async isSearchBarDisplayed() {
+    await this.waitForElement(SEARCH_BAR);
+    return this.isElementDisplayed(SEARCH_BAR);
+  }
+
+  async searchStudents(query) {
+    await this.typeValue(SEARCH_INPUT, query);
+  }
+
+  async getSearchInputValue() {
+    return this.getInputValue(SEARCH_INPUT);
+  }
+
+  async isClearSearchEnabled() {
+    return this.isElementEnabled(SEARCH_CLEAR_BTN);
+  }
+
+  async clickClearSearch() {
+    await this.clickElement(SEARCH_CLEAR_BTN);
+  }
+
+  async isEmptySearchStateDisplayed() {
+    return this.isElementDisplayed(EMPTY_SEARCH_STATE);
   }
 
   async clickCreateStudent() {
-    const btn = await $(CREATE_BTN);
-    await btn.waitForClickable();
-    await btn.click();
+    await this.clickElement(CREATE_BTN);
   }
 
   async clickExportExcel() {
-    const btn = await $(EXPORT_BTN);
-    await btn.waitForClickable();
-    await btn.click();
+    await this.clickElement(EXPORT_BTN);
   }
 
   async isNoticeDisplayed() {
-    const notice = await $(NOTICE_BANNER);
-    await notice.waitForDisplayed();
-    return notice.isDisplayed();
+    await this.waitForElement(NOTICE_BANNER);
+    return this.isElementDisplayed(NOTICE_BANNER);
   }
 
   async getNoticeText() {
-    const notice = await $(NOTICE_BANNER);
-    await notice.waitForDisplayed();
-    return notice.getText();
+    return this.getElementText(NOTICE_BANNER);
   }
 
   async isTableDisplayed() {
-    return $(STUDENTS_TABLE).isDisplayed();
+    return this.isElementDisplayed(STUDENTS_TABLE);
   }
 
   async getHeaderTexts() {
@@ -93,8 +114,7 @@ class AlumnosPage {
   }
 
   async isStudentRowDisplayed(studentId) {
-    const row = await $(getRowSelector(studentId));
-    return row.isDisplayed();
+    return this.isElementDisplayed(getRowSelector(studentId));
   }
 
   async getStudentRowData(studentId) {
@@ -108,47 +128,40 @@ class AlumnosPage {
   }
 
   async areRowActionButtonsDisplayed(studentId) {
-    const viewDisplayed = await $(getViewBtnSelector(studentId)).isDisplayed();
-    const editDisplayed = await $(getEditBtnSelector(studentId)).isDisplayed();
-    const deleteDisplayed = await $(getDeleteBtnSelector(studentId)).isDisplayed();
+    const viewDisplayed = await this.isElementDisplayed(getViewBtnSelector(studentId));
+    const editDisplayed = await this.isElementDisplayed(getEditBtnSelector(studentId));
+    const deleteDisplayed = await this.isElementDisplayed(getDeleteBtnSelector(studentId));
     return viewDisplayed && editDisplayed && deleteDisplayed;
   }
 
   async clickViewStudent(studentId) {
-    const btn = await $(getViewBtnSelector(studentId));
-    await btn.waitForClickable();
-    await btn.click();
+    await this.clickElement(getViewBtnSelector(studentId));
   }
 
   async clickEditStudent(studentId) {
-    const btn = await $(getEditBtnSelector(studentId));
-    await btn.waitForClickable();
-    await btn.click();
+    await this.clickElement(getEditBtnSelector(studentId));
   }
 
   async clickDeleteStudent(studentId) {
-    const btn = await $(getDeleteBtnSelector(studentId));
-    await btn.waitForClickable();
-    await btn.click();
+    await this.clickElement(getDeleteBtnSelector(studentId));
   }
 
   async isDeleteDialogOpen() {
-    const dialog = await $(DELETE_DIALOG);
-    return dialog.isDisplayed();
+    return this.isElementDisplayed(DELETE_DIALOG);
+  }
+
+  async getDeleteWarningText() {
+    return this.getElementText(DELETE_WARNING);
   }
 
   async confirmDeleteStudent() {
-    const confirmBtn = await $(DELETE_CONFIRM_BTN);
-    await confirmBtn.waitForClickable();
-    await confirmBtn.click();
-    await $(DELETE_DIALOG).waitForDisplayed({ reverse: true });
+    await this.clickElement(DELETE_CONFIRM_BTN);
+    await this.waitForElementToDisappear(DELETE_DIALOG);
   }
 
   async cancelDeleteStudent() {
-    const cancelBtn = await $(DELETE_CANCEL_BTN);
-    await cancelBtn.waitForClickable();
-    await cancelBtn.click();
-    await $(DELETE_DIALOG).waitForDisplayed({ reverse: true });
+    await this.clickElement(DELETE_CANCEL_BTN);
+    await this.waitForElementToDisappear(DELETE_DIALOG);
   }
 }
 
