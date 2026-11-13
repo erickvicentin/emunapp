@@ -1,0 +1,98 @@
+# E2E Automated Tests (WebdriverIO + Cucumber)
+#
+# Required GitHub Repository Secrets (Settings -> Secrets and variables -> Actions):
+#   - ADM_USER
+#   - ADM_PASS
+#   - VITE_FIREBASE_API_KEY
+#   - VITE_FIREBASE_AUTH_DOMAIN
+#   - VITE_FIREBASE_PROJECT_ID
+#   - VITE_FIREBASE_STORAGE_BUCKET
+#   - VITE_FIREBASE_MESSAGING_SENDER_ID
+#   - VITE_FIREBASE_APP_ID
+#   - VITE_FIREBASE_MEASUREMENT_ID
+#   - VITE_FIREBASE_DATABASE_ID
+
+name: E2E Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: WebdriverIO + Cucumber E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start Vite server and run E2E tests
+        env:
+          HEADLESS: "true"
+          BASE_URL: http://localhost:5173
+          ADM_USER: ${{ secrets.ADM_USER }}
+          ADM_PASS: ${{ secrets.ADM_PASS }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_FIREBASE_DATABASE_ID: ${{ secrets.VITE_FIREBASE_DATABASE_ID }}
+        run: |
+          npm run dev -- --port 5173 --strictPort &
+          SERVER_PID=$!
+
+          echo "Waiting for Vite server on http://localhost:5173..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5173 >/dev/null; then
+              echo "Vite server is ready."
+              break
+            fi
+            sleep 1
+          done
+
+          if ! curl -sf http://localhost:5173 >/dev/null; then
+            echo "Vite server failed to start."
+            kill $SERVER_PID || true
+            exit 1
+          fi
+
+          set +e
+          npm run test:e2e:headless
+          TEST_EXIT_CODE=$?
+          set -e
+
+          kill $SERVER_PID || true
+          exit $TEST_EXIT_CODE
+
+      - name: Upload E2E HTML report & video evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emuna-e2e-report-pr-${{ github.event.pull_request.number }}
+          path: tests/reports/html
+          retention-days: 14
+          if-no-files-found: warn
