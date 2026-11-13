@@ -14,8 +14,6 @@ export default function AdminSidebar({
   isDrawerOpen,
   onDrawerOpenChange,
   openBtnRef,
-  setPageInert,
-  registerOpenDrawer,
 }) {
   const drawerRef = useRef(null);
   const scrollerRef = useRef(null);
@@ -33,31 +31,38 @@ export default function AdminSidebar({
     scroller.scrollTo({ left: scroller.offsetWidth, behavior: 'auto' });
   }, []);
 
-  const openDrawer = useCallback(async () => {
+  useEffect(() => {
+    if (!isDrawerOpen || isDesktop || isOpenRef.current) return undefined;
+
     const drawer = drawerRef.current;
     const scroller = scrollerRef.current;
-    if (!drawer || !scroller || isDesktop) return;
+    if (!drawer || !scroller) return undefined;
 
-    drawer.showPopover();
-    setPageInert(true);
-    drawer.setAttribute('aria-modal', 'true');
-    isOpenRef.current = true;
-    onDrawerOpenChange(true);
+    let cancelled = false;
 
-    if (!CSS.supports('scroll-initial-target', 'nearest')) {
-      scroller.scrollTo({ left: scroller.offsetWidth, behavior: 'instant' });
-      await new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve))
-      );
-    }
+    const syncOpenDrawer = async () => {
+      drawer.showPopover();
+      drawer.setAttribute('aria-modal', 'true');
+      isOpenRef.current = true;
 
-    scroller.scrollTo({ left: 0, behavior: 'auto' });
-    closeBtnRef.current?.focus({ preventScroll: true });
-  }, [isDesktop, onDrawerOpenChange, setPageInert]);
+      if (!CSS.supports('scroll-initial-target', 'nearest')) {
+        scroller.scrollTo({ left: scroller.offsetWidth, behavior: 'instant' });
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve))
+        );
+      }
 
-  useEffect(() => {
-    registerOpenDrawer(openDrawer);
-  }, [registerOpenDrawer, openDrawer]);
+      if (cancelled) return;
+      scroller.scrollTo({ left: 0, behavior: 'auto' });
+      closeBtnRef.current?.focus({ preventScroll: true });
+    };
+
+    syncOpenDrawer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isDrawerOpen, isDesktop]);
 
   const finishClose = useCallback(
     (restoreFocus = true) => {
@@ -70,7 +75,6 @@ export default function AdminSidebar({
       } catch {
         // Ignore if popover is already closed
       }
-      setPageInert(false);
       drawer.removeAttribute('aria-modal');
       onDrawerOpenChange(false);
 
@@ -78,7 +82,7 @@ export default function AdminSidebar({
         openBtnRef.current?.focus();
       }
     },
-    [onDrawerOpenChange, openBtnRef, setPageInert]
+    [onDrawerOpenChange, openBtnRef]
   );
 
   // Track desktop vs mobile breakpoint and reset drawer state when switching to desktop
@@ -153,12 +157,20 @@ export default function AdminSidebar({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isDrawerOpen, isDesktop, closeDrawer]);
 
-  const handleDrawerClick = (event) => {
-    if (isDesktop) return;
-    if (sheetRef.current && !sheetRef.current.contains(event.target)) {
-      closeDrawer();
-    }
-  };
+  // Close mobile drawer when clicking the backdrop outside the sheet
+  useEffect(() => {
+    const drawer = drawerRef.current;
+    if (!drawer || isDesktop) return undefined;
+
+    const handleDrawerClick = (event) => {
+      if (sheetRef.current && !sheetRef.current.contains(event.target)) {
+        closeDrawer();
+      }
+    };
+
+    drawer.addEventListener('click', handleDrawerClick);
+    return () => drawer.removeEventListener('click', handleDrawerClick);
+  }, [isDesktop, closeDrawer]);
 
   const handleSelectItem = () => {
     if (!isDesktop) {
@@ -174,7 +186,6 @@ export default function AdminSidebar({
       popover={isDesktop ? undefined : 'manual'}
       role={isDesktop ? undefined : 'dialog'}
       aria-label="Menú de administración"
-      onClick={handleDrawerClick}
       className="AdminDrawer"
     >
       <div ref={scrollerRef} className="AdminDrawer-scroller">

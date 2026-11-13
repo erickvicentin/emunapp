@@ -23,17 +23,13 @@ export default function DashboardLayout({
   const mainRef = useRef(null);
   const footerRef = useRef(null);
   const openBtnRef = useRef(null);
-  const openDrawerRef = useRef(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const registerOpenDrawer = useCallback((fn) => {
-    openDrawerRef.current = fn;
-  }, []);
-
-  const setPageInert = useCallback((inert) => {
-    if (headerRef.current) headerRef.current.inert = inert;
-    if (mainRef.current) mainRef.current.inert = inert;
-    if (footerRef.current) footerRef.current.inert = inert;
+  const handleDrawerOpenChange = useCallback((nextOpen) => {
+    setIsDrawerOpen(nextOpen);
+    if (headerRef.current) headerRef.current.inert = nextOpen;
+    if (mainRef.current) mainRef.current.inert = nextOpen;
+    if (footerRef.current) footerRef.current.inert = nextOpen;
   }, []);
 
   const effectiveName = userName || userProfile?.nombre || user?.displayName || 'Usuario';
@@ -63,7 +59,7 @@ export default function DashboardLayout({
               <button
                 ref={openBtnRef}
                 type="button"
-                onClick={() => openDrawerRef.current?.()}
+                onClick={() => handleDrawerOpenChange(true)}
                 aria-label="Abrir menú"
                 aria-expanded={isDrawerOpen}
                 aria-controls="admin-drawer"
@@ -147,9 +143,7 @@ export default function DashboardLayout({
         {renderSidebar?.({
           openBtnRef,
           isDrawerOpen,
-          onDrawerOpenChange: setIsDrawerOpen,
-          setPageInert,
-          registerOpenDrawer,
+          onDrawerOpenChange: handleDrawerOpenChange,
         })}
         <main ref={mainRef} className="flex-1 min-w-0 w-full">
           {children}
