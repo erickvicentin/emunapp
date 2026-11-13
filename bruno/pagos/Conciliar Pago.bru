@@ -1,0 +1,22 @@
+meta {
+  name: Conciliar Pago
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/pagos/:id/conciliar
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: pago-ejemplo-id
+}
+
+body:json {
+  {
+    "estado": "aprobado",
+    "observaciones": "Transferencia verificada en cuenta bancaria"
+  }
+}

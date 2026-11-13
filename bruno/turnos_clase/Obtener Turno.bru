@@ -1,0 +1,15 @@
+meta {
+  name: Obtener Turno
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/turnos/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: turno-ejemplo-id
+}

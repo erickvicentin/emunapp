@@ -1,0 +1,21 @@
+meta {
+  name: Registrar Pago
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/pagos
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "usuarioId": "{{uid}}",
+    "paqueteId": "paquete-8-clases",
+    "monto": 38500,
+    "comprobante": "TRF-982341",
+    "metodo": "transferencia"
+  }
+}

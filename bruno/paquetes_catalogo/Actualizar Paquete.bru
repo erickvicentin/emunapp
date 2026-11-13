@@ -1,0 +1,22 @@
+meta {
+  name: Actualizar Paquete
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/paquetes/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: paquete-8-clases
+}
+
+body:json {
+  {
+    "precio": 41000,
+    "activo": true
+  }
+}

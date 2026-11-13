@@ -1,0 +1,21 @@
+meta {
+  name: Crear Paquete
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/paquetes
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "nombre": "8 Clases Mensuales",
+    "cantidadClases": 8,
+    "precio": 38500,
+    "vigenciaDias": 30,
+    "activo": true
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Obtener Paquete
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/paquetes/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: paquete-8-clases
+}

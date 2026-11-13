@@ -1,0 +1,22 @@
+meta {
+  name: Asignar Membresia
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/membresias
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "usuarioId": "{{uid}}",
+    "paqueteId": "paquete-8-clases",
+    "creditosTotales": 8,
+    "creditosRestantes": 8,
+    "fechaInicio": "2026-11-13T00:00:00-03:00",
+    "fechaVencimiento": "2026-12-13T23:59:59-03:00"
+  }
+}

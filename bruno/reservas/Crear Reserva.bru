@@ -1,0 +1,20 @@
+meta {
+  name: Crear Reserva
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/reservas
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "turnoId": "turno-ejemplo-id",
+    "usuarioId": "{{uid}}",
+    "membresiaId": "membresia-ejemplo-id",
+    "numeroCama": 1
+  }
+}

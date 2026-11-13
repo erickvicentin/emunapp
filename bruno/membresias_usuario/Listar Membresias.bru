@@ -1,0 +1,16 @@
+meta {
+  name: Listar Membresias
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/membresias
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~usuarioId: {{uid}}
+  ~estado: activa
+}

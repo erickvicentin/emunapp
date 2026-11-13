@@ -1,0 +1,21 @@
+meta {
+  name: Check-in Reserva
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/reservas/:id/checkin
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: reserva-ejemplo-id
+}
+
+body:json {
+  {
+    "asistencia": "presente"
+  }
+}
