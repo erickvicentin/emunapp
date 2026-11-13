@@ -36,28 +36,30 @@ export default function StudentsHeader({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-        <Button
-          variant="outline"
-          size="sm"
-          data-testid="students-export-btn"
-          onClick={onExportExcel}
-          className="gap-2 bg-surface-container-lowest cursor-pointer"
-        >
-          <Icon name="table_view" className="text-[18px] text-secondary" />
-          <span>Exportar plantilla como Excel</span>
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          data-testid="students-create-btn"
-          onClick={onCreateStudent}
-          className="gap-2 cursor-pointer"
-        >
-          <Icon name="person_add" className="text-[18px]" />
-          <span>Crear alumno</span>
-        </Button>
-      </div>
+      <div className="flex flex-col items-end lg:w-100">
+  <div className="flex flex-col gap-3 w-fit">
+    <Button
+      variant="outline"
+      size="sm"
+      data-testid="students-export-btn"
+      onClick={onExportExcel}
+      className="w-full justify-center gap-1 bg-surface-container-lowest cursor-pointer"
+    >
+      <Icon name="table_view" className="text-[18px] text-secondary" />
+      <span>Exportar plantilla como Excel</span>
+    </Button>
+    <Button
+      variant="primary"
+      size="sm"
+      data-testid="students-create-btn"
+      onClick={onCreateStudent}
+      className="w-full justify-center gap-1 cursor-pointer"
+    >
+      <Icon name="person_add" className="text-[18px]" />
+      <span>Crear alumno</span>
+    </Button>
+  </div>
+</div>
     </section>
   );
 }

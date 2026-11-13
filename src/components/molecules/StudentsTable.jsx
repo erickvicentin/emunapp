@@ -28,6 +28,7 @@ function AttendancePercentage({ percentage }) {
  */
 export default function StudentsTable({
   students,
+  hasSearchFilter = false,
   onViewStudent,
   onEditStudent,
   onDeleteStudent,
@@ -35,15 +36,27 @@ export default function StudentsTable({
   return (
     <section className="rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs overflow-hidden">
       {students.length === 0 ? (
-        <div className="p-12 text-center flex flex-col items-center justify-center">
+        <div
+          data-testid={
+            hasSearchFilter ? 'students-empty-search' : 'students-empty-state'
+          }
+          className="p-12 text-center flex flex-col items-center justify-center"
+        >
           <div className="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center text-secondary mb-3">
-            <Icon name="groups" className="text-[26px]" />
+            <Icon
+              name={hasSearchFilter ? 'search_off' : 'groups'}
+              className="text-[26px]"
+            />
           </div>
           <p className="font-headline-sm text-primary font-semibold">
-            No hay alumnos registrados
+            {hasSearchFilter
+              ? 'No se encontraron alumnos'
+              : 'No hay alumnos registrados'}
           </p>
           <p className="font-body-sm text-on-surface-variant mt-1">
-            Crea un nuevo alumno o importa una plantilla para comenzar.
+            {hasSearchFilter
+              ? 'Probá con otro nombre, apellido, DNI o email, o limpiá la búsqueda.'
+              : 'Crea un nuevo alumno o importa una plantilla para comenzar.'}
           </p>
         </div>
       ) : (
