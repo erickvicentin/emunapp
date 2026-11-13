@@ -34,6 +34,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - uses: millionco/react-doctor@v2
         with:
           blocking: error          # Gate level: "none" (advisory, the default) | "warning" | "error"
@@ -44,3 +48,6 @@ jobs:
         #   version: "0.4.0"         # Pin to a specific react-doctor version instead of "latest"
         #   directory: apps/web      # Scan a sub-directory (default: ".")
         #   project: "web,admin"     # In a monorepo, scan specific workspace project(s)
+
+      - name: Enforce React Doctor minimum score (95%)
+        run: node scripts/check-doctor-score.mjs
