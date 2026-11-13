@@ -1,0 +1,22 @@
+meta {
+  name: Actualizar Turno
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/turnos/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: turno-ejemplo-id
+}
+
+body:json {
+  {
+    "estado": "cancelado",
+    "notas": "Feriado nacional"
+  }
+}

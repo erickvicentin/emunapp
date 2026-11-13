@@ -1,0 +1,21 @@
+meta {
+  name: Cancelar Reserva
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/reservas/:id/cancelar
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: reserva-ejemplo-id
+}
+
+body:json {
+  {
+    "motivo": "No llego al horario de la clase"
+  }
+}

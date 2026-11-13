@@ -1,0 +1,21 @@
+meta {
+  name: Crear Turno
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/turnos
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "fechaHoraInicio": "2026-11-16T18:00:00-03:00",
+    "duracionMinutos": 50,
+    "cupo_maximo": 4,
+    "instructoraId": "{{uid}}",
+    "estado": "activo"
+  }
+}

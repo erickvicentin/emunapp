@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
+import AdminSidebar from '../components/organisms/AdminSidebar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
+import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
   { id: 1, name: 'Cama 1', alumno: 'Sofía Martínez', status: 'presente' },
@@ -22,8 +24,12 @@ const INITIAL_PENDING_PAYMENTS = [
  */
 export default function AdministratorPage() {
   const { user, userProfile } = useAuth();
+  const [activeSection, setActiveSection] = useState('dashboard');
   const [beds, setBeds] = useState(INITIAL_BEDS);
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+
+  const activeNavItem =
+    ADMIN_NAV_ITEMS.find((item) => item.id === activeSection) || ADMIN_NAV_ITEMS[0];
 
   const staffName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
@@ -53,8 +59,34 @@ export default function AdministratorPage() {
       roleBadge="staff"
       userName={staffName}
       userEmail={staffEmail}
+      renderSidebar={(sidebarProps) => (
+        <AdminSidebar
+          activeSection={activeSection}
+          onSelectSection={setActiveSection}
+          {...sidebarProps}
+        />
+      )}
     >
-      <div className="space-y-6">
+      {activeSection !== 'dashboard' ? (
+        <section className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]">
+          <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
+            <Icon name={activeNavItem.icon} className="text-[28px]" />
+          </div>
+          <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
+            Módulo de Administración
+          </span>
+          <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
+            {activeNavItem.label}
+          </h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md">
+            {activeNavItem.description}
+          </p>
+          <span className="mt-6 px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+            Próximamente
+          </span>
+        </section>
+      ) : (
+        <div className="space-y-6">
         {/* Welcome & Shift Selector */}
         <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
           <div>
@@ -201,7 +233,8 @@ export default function AdministratorPage() {
             )}
           </div>
         </section>
-      </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

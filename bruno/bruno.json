@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Emuná Pilates API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Obtener Usuario
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/usuarios/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: {{uid}}
+}

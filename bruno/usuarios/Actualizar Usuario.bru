@@ -1,0 +1,23 @@
+meta {
+  name: Actualizar Usuario
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/usuarios/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: {{uid}}
+}
+
+body:json {
+  {
+    "telefono": "+5493624111111",
+    "rol": "staff",
+    "estado": "activo"
+  }
+}

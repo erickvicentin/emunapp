@@ -1,0 +1,15 @@
+meta {
+  name: Obtener Pago
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/pagos/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: pago-ejemplo-id
+}

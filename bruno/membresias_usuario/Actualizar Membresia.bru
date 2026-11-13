@@ -1,0 +1,23 @@
+meta {
+  name: Actualizar Membresia
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/membresias/:id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: membresia-ejemplo-id
+}
+
+body:json {
+  {
+    "creditosRestantes": 7,
+    "fechaVencimiento": "2026-12-20T23:59:59-03:00",
+    "estado": "activa"
+  }
+}

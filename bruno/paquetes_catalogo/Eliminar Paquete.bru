@@ -1,0 +1,15 @@
+meta {
+  name: Eliminar Paquete
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/paquetes/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: paquete-8-clases
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Obtener Reserva
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/reservas/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: reserva-ejemplo-id
+}
