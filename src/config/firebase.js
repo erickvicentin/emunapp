@@ -18,6 +18,6 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
-const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || 'emunapp-db';
+const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || 'emuna-testing';
 export const db = getFirestore(app, databaseId);
 export default app;

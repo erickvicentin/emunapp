@@ -1,0 +1,12 @@
+{
+  "firestore": [
+    {
+      "database": "emuna-testing",
+      "rules": "firestore.rules"
+    },
+    {
+      "database": "emuna-prod",
+      "rules": "firestore.rules"
+    }
+  ]
+}
