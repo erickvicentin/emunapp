@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
@@ -6,17 +7,37 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 initializeApp();
 
 const ALLOWED_DATABASES = new Set(['emuna-testing', 'emuna-prod']);
+const STAFF_ROLES = new Set(['staff', 'administradora']);
 const RELATED_COLLECTIONS = ['reservas', 'membresias_usuario', 'pagos'];
 
-function resolveDatabaseId(databaseId) {
-  const target = databaseId || 'emuna-testing';
+function resolveDatabaseId(requestedDatabaseId) {
+  const configuredDb = process.env.FIREBASE_DATABASE_ID;
+  if (configuredDb) {
+    if (requestedDatabaseId && requestedDatabaseId !== configuredDb) {
+      throw new HttpsError(
+        'permission-denied',
+        'No está permitido operar sobre una base de datos distinta a la configurada.'
+      );
+    }
+    return configuredDb;
+  }
+
+  const target = requestedDatabaseId || 'emuna-testing';
   if (!ALLOWED_DATABASES.has(target)) {
     throw new HttpsError('invalid-argument', 'Base de datos no permitida.');
   }
   return target;
 }
 
-async function assertStaffCaller(request, databaseId) {
+function hasStaffClaim(claims = {}) {
+  return (
+    STAFF_ROLES.has(claims.rol) ||
+    claims.staff === true ||
+    claims.admin === true
+  );
+}
+
+function assertStaffCaller(request) {
   if (!request.auth?.uid) {
     throw new HttpsError(
       'unauthenticated',
@@ -24,18 +45,12 @@ async function assertStaffCaller(request, databaseId) {
     );
   }
 
-  const db = getFirestore(databaseId);
-  const callerSnap = await db.collection('usuarios').doc(request.auth.uid).get();
-  const callerRole = callerSnap.exists ? callerSnap.data()?.rol : null;
-
-  if (callerRole !== 'staff' && callerRole !== 'administradora') {
+  if (!hasStaffClaim(request.auth.token)) {
     throw new HttpsError(
       'permission-denied',
-      'Solo el personal autorizado puede gestionar alumnos.'
+      'Solo el personal autorizado con custom claims de staff puede gestionar alumnos.'
     );
   }
-
-  return db;
 }
 
 function formatDni(rawDni) {
@@ -62,7 +77,7 @@ function validateStudentPayload(data) {
   if (dniDigits.length < 6) {
     throw new HttpsError(
       'invalid-argument',
-      'El DNI debe tener al menos 6 dígitos para usarse como contraseña inicial.'
+      'El DNI debe tener al menos 6 dígitos.'
     );
   }
 
@@ -99,20 +114,26 @@ async function deleteCollectionByUserId(db, collectionName, uid) {
  * con rol `customer` utilizando Firebase Admin SDK.
  */
 export const createStudentAccount = onCall(async (request) => {
+  assertStaffCaller(request);
   const databaseId = resolveDatabaseId(request.data?.databaseId);
-  const db = await assertStaffCaller(request, databaseId);
+  const db = getFirestore(databaseId);
   const payload = validateStudentPayload(request.data);
   const auth = getAuth();
+  const initialRandomPassword = randomBytes(24).toString('base64url');
 
   let userRecord;
   try {
     userRecord = await auth.createUser({
       email: payload.email,
-      password: payload.dniDigits,
+      password: initialRandomPassword,
       displayName: `${payload.nombre} ${payload.apellido}`.trim(),
       emailVerified: false,
     });
+    await auth.setCustomUserClaims(userRecord.uid, { rol: 'customer' });
   } catch (error) {
+    if (userRecord?.uid) {
+      await auth.deleteUser(userRecord.uid).catch(() => {});
+    }
     if (error?.code === 'auth/email-already-exists') {
       throw new HttpsError(
         'already-exists',
@@ -160,26 +181,29 @@ export const createStudentAccount = onCall(async (request) => {
     );
   }
 
-  let activationLink = null;
+  let activationLinkGenerated = false;
   try {
-    activationLink = await auth.generatePasswordResetLink(payload.email);
+    await auth.generatePasswordResetLink(payload.email);
+    activationLinkGenerated = true;
   } catch {
-    // Si no se pudo generar el enlace, el usuario igual queda activo con DNI como clave inicial.
+    activationLinkGenerated = false;
   }
 
   return {
     student: studentProfile,
-    activationLink,
+    activationLinkGenerated,
   };
 });
 
 /**
- * Elimina un usuario de Firestore (perfil y colecciones relacionadas)
+ * Elimina un usuario con rol `customer` de Firestore (perfil y colecciones relacionadas)
  * y de Firebase Authentication utilizando Firebase Admin SDK.
  */
 export const deleteStudentAccount = onCall(async (request) => {
+  assertStaffCaller(request);
   const databaseId = resolveDatabaseId(request.data?.databaseId);
-  const db = await assertStaffCaller(request, databaseId);
+  const db = getFirestore(databaseId);
+  const auth = getAuth();
   const uid = String(request.data?.uid || '').trim();
 
   if (!uid) {
@@ -193,14 +217,45 @@ export const deleteStudentAccount = onCall(async (request) => {
     );
   }
 
+  try {
+    const targetAuthUser = await auth.getUser(uid);
+    if (hasStaffClaim(targetAuthUser.customClaims)) {
+      throw new HttpsError(
+        'permission-denied',
+        'No podés eliminar cuentas de personal o administración.'
+      );
+    }
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    if (error?.code !== 'auth/user-not-found') {
+      throw new HttpsError(
+        'internal',
+        error?.message || 'No se pudo verificar la cuenta objetivo en Firebase Authentication.'
+      );
+    }
+  }
+
+  const targetUserRef = db.collection('usuarios').doc(uid);
+  const targetUserSnap = await targetUserRef.get();
+  if (!targetUserSnap.exists) {
+    throw new HttpsError('not-found', 'El perfil del alumno no existe en Firestore.');
+  }
+
+  if (targetUserSnap.data()?.rol !== 'customer') {
+    throw new HttpsError(
+      'permission-denied',
+      'Solo se permite eliminar cuentas con rol customer.'
+    );
+  }
+
   for (const collectionName of RELATED_COLLECTIONS) {
     await deleteCollectionByUserId(db, collectionName, uid);
   }
 
-  await db.collection('usuarios').doc(uid).delete();
+  await targetUserRef.delete();
 
   try {
-    await getAuth().deleteUser(uid);
+    await auth.deleteUser(uid);
   } catch (error) {
     if (error?.code !== 'auth/user-not-found') {
       throw new HttpsError(

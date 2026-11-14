@@ -145,7 +145,7 @@ export default function StudentCreateSection({ onCreateStudent }) {
                 Activación de cuenta y contraseña inicial
               </p>
               <p className="mt-0.5">
-                El alumno se registrará en Firebase Auth y Firestore con rol <strong>customer</strong> y recibirá un correo electrónico para activar su contraseña. En caso de no utilizar el enlace por email, su contraseña por defecto será su <strong>DNI</strong> y deberá cambiarla en su primer ingreso.
+                El alumno se registrará con rol <strong>customer</strong> utilizando una contraseña aleatoria segura, y recibirá un correo electrónico de activación para crear su propia contraseña.
               </p>
             </div>
           </div>

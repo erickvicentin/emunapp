@@ -65,7 +65,7 @@ export function useStudentsManager() {
         ]);
         const activationNote = emailSent
           ? 'Se envió un email para que active su contraseña.'
-          : 'Su contraseña inicial será su DNI.';
+          : 'Podrá generar su contraseña desde el enlace de recuperación.';
         showSnackbar(
           'success',
           `Alumno "${student.nombreApellido}" registrado correctamente. ${activationNote}`
