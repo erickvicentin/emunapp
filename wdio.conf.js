@@ -10,10 +10,30 @@ const HTML_REPORT_DIR = path.resolve(process.cwd(), "tests/reports/html");
 const BRAND_LOGO_PATH = path.resolve(process.cwd(), "src/assets/logo.jpeg");
 const CUSTOM_STYLE_PATH = path.resolve(
   process.cwd(),
-  "tests/config/emuna-report.css"
+  "tests/config/emuna-report.css",
 );
 
 const isHeadless = process.env.HEADLESS === "true";
+
+// Captura --tag="..." desde la CLI o variable de entorno TAG
+const tagArg = process.argv.find((arg) => arg.startsWith("--tag="));
+const tagExpression = tagArg
+  ? tagArg.replace("--tag=", "")
+  : process.env.TAG || "";
+
+// Códigos de color ANSI nativos para terminal
+const COLORS = {
+  reset: "\x1b[0m",
+  green: "\x1b[32m",
+  red: "\x1b[31m",
+  yellow: "\x1b[33m",
+  cyan: "\x1b[36m",
+  dim: "\x1b[2m",
+};
+
+let currentStepIndex = 0;
+let totalStepsInScenario = 0;
+let scenarioSteps = [];
 
 export const config = {
   runner: "local",
@@ -25,10 +45,12 @@ export const config = {
       browserName: "chrome",
       "goog:chromeOptions": {
         args: [
-          "--window-size=1440,900",
+          "--start-maximized",
           "--no-sandbox",
           "--disable-dev-shm-usage",
-          ...(isHeadless ? ["--headless=new", "--disable-gpu"] : []),
+          ...(isHeadless
+            ? ["--headless=new", "--disable-gpu", "--window-size=1920,1080"]
+            : []),
         ],
       },
     },
@@ -41,17 +63,17 @@ export const config = {
   connectionRetryCount: 3,
   framework: "cucumber",
   reporters: [
-    "spec",
     [
       "cucumberjs-json",
       {
         jsonFolder: JSON_REPORT_DIR,
-        language: "en",
+        language: "es",
       },
     ],
   ],
   cucumberOpts: {
     require: ["./tests/steps/**/*.js"],
+    retry: 1, // Reintenta 1 vez únicamente los escenarios que fallan
     backtrace: false,
     requireModule: [],
     dryRun: false,
@@ -60,7 +82,7 @@ export const config = {
     snippets: true,
     source: true,
     strict: false,
-    tagExpression: "",
+    tags: tagExpression,
     timeout: 60000,
     ignoreUndefinedDefinitions: false,
   },
@@ -72,18 +94,51 @@ export const config = {
     fs.mkdirSync(HTML_REPORT_DIR, { recursive: true });
   },
 
-  beforeScenario: async function () {
+  beforeScenario: async function (world) {
     await videoRecorder.start();
+    if (!isHeadless) {
+      await browser.maximizeWindow();
+    }
+    currentStepIndex = 0;
+    scenarioSteps = world.pickle.steps;
+    totalStepsInScenario = scenarioSteps.length;
+    console.log(
+      `\n${COLORS.cyan}▶ Scenario: ${world.pickle.name}${COLORS.reset}`,
+    );
   },
 
-  afterStep: async function (_step, _scenario, { passed }) {
-    if (!passed) {
+  afterStep: async function (step, _scenario, { passed, error }) {
+    currentStepIndex++;
+    const stepText = `${step.keyword}${step.text}`.trim();
+
+    if (passed) {
+      console.log(
+        `${COLORS.green}[STEP ${currentStepIndex}/${totalStepsInScenario}] ${stepText} ✓${COLORS.reset}`,
+      );
+    } else {
+      console.log(
+        `${COLORS.red}[STEP ${currentStepIndex}/${totalStepsInScenario}] ${stepText} ✖${COLORS.reset}`,
+      );
+      if (error) {
+        console.log(
+          `${COLORS.dim}   ↳ ${error.message || error}${COLORS.reset}`,
+        );
+      }
+
       const screenshot = await browser.takeScreenshot();
       cucumberJson.attach(screenshot, "image/png");
     }
   },
 
   afterScenario: async function () {
+    while (currentStepIndex < totalStepsInScenario) {
+      const skippedStep = scenarioSteps[currentStepIndex];
+      currentStepIndex++;
+      console.log(
+        `${COLORS.yellow}[STEP ${currentStepIndex}/${totalStepsInScenario}] ${skippedStep.text} - (skipped)${COLORS.reset}`,
+      );
+    }
+
     const videoBase64 = await videoRecorder.stopAndEncode();
     if (videoBase64) {
       cucumberJson.attach(videoBase64, "video/webm");
@@ -99,7 +154,7 @@ export const config = {
       reportName: "Emuná Estudio Pilates • Reporte E2E",
       brandLogo: BRAND_LOGO_PATH,
       customStyle: CUSTOM_STYLE_PATH,
-      externalizeMedia: true,
+      externalizeMedia: false,
       modalShowContext: true,
       displayDuration: true,
       displayReportTime: true,
