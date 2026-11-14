@@ -91,8 +91,10 @@
 
 ### Qué se cambió / Qué se agregó
 - Se creó el paquete de Cloud Functions (`functions/index.js` y `functions/package.json`) con **Firebase Admin SDK**:
-  - `createStudentAccount`: valida permisos `staff`/`administradora` en el `databaseId` solicitado (`emuna-testing` o `emuna-prod`), crea el usuario en Firebase Auth sin cerrar la sesión de la administradora, guarda su perfil en `usuarios/{uid}` con `rol: 'customer'` (con rollback automático en Auth si falla Firestore) y genera enlace de activación/restablecimiento de contraseña.
-  - `deleteStudentAccount`: valida permisos `staff`/`administradora`, elimina en cascada los documentos relacionados (`reservas`, `membresias_usuario`, `pagos` y `usuarios/{uid}`) y borra la cuenta de Firebase Auth.
+  - `createStudentAccount`: autoriza usando **custom claims** de Firebase Auth (token emitido por backend confiable) para permisos `staff`/`administradora` y no confía en `usuarios/{uid}.rol` para control de acceso; crea el usuario en Firebase Auth sin cerrar la sesión de la administradora, guarda su perfil en `usuarios/{uid}` con `rol: 'customer'` (con rollback automático en Auth si falla Firestore) y genera enlace de activación/restablecimiento de contraseña.
+  - `deleteStudentAccount`: autoriza usando **custom claims** (`staff`/`administradora`), valida que el objetivo a eliminar pertenezca a un perfil `customer` antes de borrar, elimina en cascada los documentos relacionados (`reservas`, `membresias_usuario`, `pagos` y `usuarios/{uid}`) y luego borra la cuenta de Firebase Auth.
+- Se reforzó el modelo de autorización: en `firestore.rules` los propietarios de `usuarios/{uid}` no pueden escalar privilegios modificando `rol` (ni crear/actualizar campos de rol administrativos por cuenta propia).
+- Se restringió el alcance de `databaseId` para impedir decisiones de autorización cruzadas entre entornos (`emuna-testing` / `emuna-prod`) basadas en parámetros controlados por cliente.
 - Se agregó `functions` en `src/config/firebase.js` y se creó `src/services/studentService.js` + el hook reutilizable `src/hooks/useStudentsManager.js`.
 - Al crear un alumno desde `createStudentViaAdmin`, se dispara `sendPasswordResetEmail` desde el cliente para enviar el email oficial de activación de contraseña sin afectar la sesión actual.
 - Se creó la molécula reutilizable `Snackbar` (`src/components/molecules/Snackbar.jsx`) con animación flotante abajo a la derecha (`SnackbarFloating` en `src/index.css`) y variantes `success` / `error`.
