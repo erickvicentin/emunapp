@@ -32,7 +32,7 @@ Feature: Students Management in Administrator Panel
     Then the delete confirmation dialog should be open with irreversible warning
     When the administrator confirms the student deletion
     Then a "success" snackbar should appear indicating deletion succeeded
-    And the students table should display "7" registered students
+    And the students table should display same registered students that StudentCount
     And the row for student "alu-8" should no longer exist in the table
 
   @EMUNA-008

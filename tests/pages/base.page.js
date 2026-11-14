@@ -29,8 +29,9 @@ export default class BasePage {
   async clickElement(selector) {
     const element = await $(selector);
     await element.waitForExist();
-    if (!(await element.isDisplayed({ withinViewport: true }))) {
-      await element.scrollIntoView({ block: 'nearest' });
+    const clickable = await element.isClickable().catch(() => false);
+    if (!clickable) {
+      await element.scrollIntoView({ block: 'center', inline: 'nearest' });
     }
     await element.waitForClickable();
     await element.click();

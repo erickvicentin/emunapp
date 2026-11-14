@@ -45,6 +45,23 @@ class AlumnosPage extends BasePage {
     return this.getElementText(STUDENTS_COUNT_BADGE);
   }
 
+  async waitForStudentsCount(expectedCount, timeout = 5000) {
+    await browser.waitUntil(
+      async () => {
+        const rows = await $$(TABLE_ROWS);
+        const badgeText = await this.getCountBadgeText();
+        return (
+          rows.length === expectedCount &&
+          badgeText.includes(`${expectedCount} registrados`)
+        );
+      },
+      {
+        timeout,
+        timeoutMsg: `Expected students table to display ${expectedCount} registered students`,
+      }
+    );
+  }
+
   async isExportButtonDisplayed() {
     return this.isElementDisplayed(EXPORT_BTN);
   }
