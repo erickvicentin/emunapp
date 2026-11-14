@@ -1,7 +1,7 @@
 {
   "name": "emuna-pilates",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "test:e2e": "wdio run wdio.conf.js",
     "test:e2e:headless": "HEADLESS=true wdio run wdio.conf.js",
-    "test:e2e:report": "open tests/reports/html/index.html"
+    "report": "open tests/reports/html/index.html"
   },
   "dependencies": {
     "firebase": "^12.19.0",

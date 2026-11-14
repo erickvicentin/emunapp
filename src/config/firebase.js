@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyA3RA20hfW1C9RXekT75Kb5muZ_yQjX1GI",
@@ -18,6 +19,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
-const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || 'emuna-testing';
+export const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || 'emuna-testing';
 export const db = getFirestore(app, databaseId);
+export const functions = getFunctions(app);
 export default app;

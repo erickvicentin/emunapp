@@ -7,6 +7,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-1',
     nombreApellido: 'Sofía Martínez',
+    email: 'sofia.martinez@emuna.com',
     dni: '38.412.905',
     edad: 29,
     sexo: 'Femenino',
@@ -17,6 +18,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-2',
     nombreApellido: 'Lucía González',
+    email: 'lucia.gonzalez@emuna.com',
     dni: '41.209.334',
     edad: 25,
     sexo: 'Femenino',
@@ -27,6 +29,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-3',
     nombreApellido: 'Valentina Romero',
+    email: 'valentina.romero@emuna.com',
     dni: '35.876.112',
     edad: 34,
     sexo: 'Femenino',
@@ -37,6 +40,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-4',
     nombreApellido: 'Martín Echeverría',
+    email: 'martin.echeverria@emuna.com',
     dni: '33.654.821',
     edad: 37,
     sexo: 'Masculino',
@@ -47,6 +51,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-5',
     nombreApellido: 'Camila Benítez',
+    email: 'camila.benitez@emuna.com',
     dni: '42.910.448',
     edad: 23,
     sexo: 'Femenino',
@@ -57,6 +62,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-6',
     nombreApellido: 'Mariana Duarte',
+    email: 'mariana.duarte@emuna.com',
     dni: '36.118.770',
     edad: 32,
     sexo: 'Femenino',
@@ -67,6 +73,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-7',
     nombreApellido: 'Julián Sosa',
+    email: 'julian.sosa@emuna.com',
     dni: '39.503.219',
     edad: 28,
     sexo: 'Masculino',
@@ -77,6 +84,7 @@ export const MOCK_STUDENTS = [
   {
     id: 'alu-8',
     nombreApellido: 'Agustina Pereyra',
+    email: 'agustina.pereyra@emuna.com',
     dni: '40.321.654',
     edad: 26,
     sexo: 'Otro',

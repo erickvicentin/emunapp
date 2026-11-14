@@ -285,3 +285,18 @@ dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
 }
+
+@keyframes snackbarFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.SnackbarFloating {
+  animation: snackbarFloatIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

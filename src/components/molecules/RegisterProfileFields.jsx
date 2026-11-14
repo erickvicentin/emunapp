@@ -18,6 +18,7 @@ export default function RegisterProfileFields({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
         <Input
           id="register-nombre"
+          data-testid="register-nombre-input"
           name="nombre"
           label="Nombre"
           value={formData.nombre}
@@ -30,6 +31,7 @@ export default function RegisterProfileFields({
         />
         <Input
           id="register-apellido"
+          data-testid="register-apellido-input"
           name="apellido"
           label="Apellido"
           value={formData.apellido}
@@ -45,6 +47,7 @@ export default function RegisterProfileFields({
       {/* Teléfono */}
       <Input
         id="register-telefono"
+        data-testid="register-telefono-input"
         name="telefono"
         type="tel"
         label="Teléfono / WhatsApp"
@@ -62,6 +65,7 @@ export default function RegisterProfileFields({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
         <Input
           id="register-fecha-nacimiento"
+          data-testid="register-fecha-nacimiento-input"
           name="fechaNacimiento"
           type="date"
           label="Fecha de Nacimiento"

@@ -42,6 +42,14 @@ export default function App() {
             }
           />
           <Route
+            path="/administrador/:section/:action"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <AdministratorPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/administrator/*"
             element={<Navigate to="/administrador/dashboard" replace />}
           />

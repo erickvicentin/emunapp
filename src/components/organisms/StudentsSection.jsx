@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
+import SearchBar from '../molecules/SearchBar';
 import StudentsHeader from '../molecules/StudentsHeader';
 import StudentsTable from '../molecules/StudentsTable';
 import StudentDeleteDialog from '../molecules/StudentDeleteDialog';
-import { MOCK_STUDENTS } from '../../data/mockStudents';
 import { exportStudentsExcelTemplate } from '../../utils/studentExport';
+import { filterStudents } from '../../utils/studentFilter';
 
 /**
  * StudentsSection Organism
@@ -12,15 +14,24 @@ import { exportStudentsExcelTemplate } from '../../utils/studentExport';
  * header actions (Crear alumno, Exportar plantilla como Excel),
  * and row actions (Ver detalle, Editar, Borrar).
  */
-export default function StudentsSection() {
-  const [students, setStudents] = useState(MOCK_STUDENTS);
+export default function StudentsSection({
+  students = [],
+  isDeletingStudent = false,
+  onDeleteStudent,
+}) {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
   const [notice, setNotice] = useState(null);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const deleteDialogRef = useRef(null);
 
+  const filteredStudents = filterStudents(students, searchQuery);
+
   useEffect(() => {
     if (!notice) return undefined;
-    const timer = setTimeout(() => setNotice(null), 4000);
+    const timer = setTimeout(() => {
+      setNotice(null);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -50,11 +61,10 @@ export default function StudentsSection() {
     deleteDialogRef.current?.close('cancel');
   };
 
-  const handleConfirmDelete = (event) => {
+  const handleConfirmDelete = async (event) => {
     event.preventDefault();
     if (studentToDelete) {
-      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
-      showNotice(`Alumno "${studentToDelete.nombreApellido}" eliminado del listado.`);
+      await onDeleteStudent?.(studentToDelete);
     }
     deleteDialogRef.current?.close('confirm');
   };
@@ -64,9 +74,7 @@ export default function StudentsSection() {
       <StudentsHeader
         studentsCount={students.length}
         onExportExcel={handleExportExcel}
-        onCreateStudent={() =>
-          showNotice('Próximamente: pantalla para crear un nuevo alumno.')
-        }
+        onCreateStudent={() => navigate('/administrador/alumnos/nuevo')}
       />
 
       {/* Non-intrusive inline feedback notice */}
@@ -92,8 +100,20 @@ export default function StudentsSection() {
         </div>
       )}
 
+      <SearchBar
+        id="students-search-input"
+        value={searchQuery}
+        onChange={setSearchQuery}
+        onClear={() => setSearchQuery('')}
+        placeholder="Buscar por nombre, apellido, DNI o email..."
+        ariaLabel="Buscar alumnos por nombre, apellido, DNI o email"
+        clearLabel="Limpiar"
+        testIdPrefix="students-search"
+      />
+
       <StudentsTable
-        students={students}
+        students={filteredStudents}
+        hasSearchFilter={Boolean(searchQuery.trim())}
         onViewStudent={(student) =>
           showNotice(`Próximamente: detalle del alumno ${student.nombreApellido}.`)
         }
@@ -106,6 +126,7 @@ export default function StudentsSection() {
       <StudentDeleteDialog
         dialogRef={deleteDialogRef}
         studentToDelete={studentToDelete}
+        isDeleting={isDeletingStudent}
         onClose={handleDeleteDialogClose}
         onCancel={handleCancelDelete}
         onConfirm={handleConfirmDelete}
