@@ -4,6 +4,7 @@ import path from "node:path";
 import cucumberJson from "wdio-cucumberjs-json-reporter";
 import report from "multiple-cucumber-html-reporter";
 import videoRecorder from "./tests/config/videoRecorder.js";
+import { deduplicateRetriedScenarios } from "./tests/config/reportUtils.js";
 
 const JSON_REPORT_DIR = path.resolve(process.cwd(), "tests/reports/json");
 const HTML_REPORT_DIR = path.resolve(process.cwd(), "tests/reports/html");
@@ -146,6 +147,7 @@ export const config = {
   },
 
   onComplete: async function () {
+    deduplicateRetriedScenarios(JSON_REPORT_DIR);
     await report.generate({
       jsonDir: JSON_REPORT_DIR,
       reportPath: HTML_REPORT_DIR,

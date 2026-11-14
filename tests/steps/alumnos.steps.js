@@ -186,8 +186,10 @@ When(
 Then(
   "the students table should display {string} matching rows",
   async (expectedCount) => {
+    const expected = Number(expectedCount);
+    await AlumnosPage.waitForRowsCount(expected);
     const rowsCount = await AlumnosPage.getRowsCount();
-    expect(rowsCount).toBe(Number(expectedCount));
+    expect(rowsCount).toBe(expected);
   },
 );
 

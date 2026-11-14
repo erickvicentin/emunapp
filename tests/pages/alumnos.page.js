@@ -45,6 +45,19 @@ class AlumnosPage extends BasePage {
     return this.getElementText(STUDENTS_COUNT_BADGE);
   }
 
+  async waitForRowsCount(expectedCount, timeout = 5000) {
+    await browser.waitUntil(
+      async () => {
+        const rows = await $$(TABLE_ROWS);
+        return rows.length === expectedCount;
+      },
+      {
+        timeout,
+        timeoutMsg: `Expected students table to display ${expectedCount} matching rows`,
+      }
+    );
+  }
+
   async waitForStudentsCount(expectedCount, timeout = 5000) {
     await browser.waitUntil(
       async () => {
