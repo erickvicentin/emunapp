@@ -76,7 +76,7 @@
 
 ### Por qué
 - Permitir que el administrador dé de alta alumnos con exactamente los mismos datos personales que el registro de clientes sin duplicar formularios ni lógica de validación.
-- **Estrategia de activación con Firebase Authentication:** En Firebase Auth cliente estándar, `createUserWithEmailAndPassword` inicia sesión automáticamente con el usuario recién creado y cierra la sesión del administrador. Por ello, al integrar Firebase se utilizará Firebase Admin SDK (vía Cloud Function) o una instancia secundaria de Firebase App + `sendPasswordResetEmail` para que el alumno reciba un correo y cree su propia contraseña, manteniendo como alternativa/respaldo la contraseña inicial igual al DNI con cambio obligatorio en el primer ingreso.
+- **Estrategia de activación con Firebase Authentication:** En Firebase Auth cliente estándar, `createUserWithEmailAndPassword` inicia sesión automáticamente con el usuario recién creado y cierra la sesión del administrador. Por ello, al integrar Firebase se utilizará Firebase Admin SDK (vía Cloud Function) o una instancia secundaria de Firebase App + `sendPasswordResetEmail` para que el alumno reciba un correo y cree su propia contraseña. **No se usará el DNI (ni ningún dato personal) como contraseña inicial**; si se requiere crear la cuenta previamente, se asignará una contraseña aleatoria de alta entropía no comunicada al usuario y la activación se realizará únicamente mediante enlace de restablecimiento/activación.
 
 ### Pros y Contras
 - **Pros:** Reutilización directa de `RegisterProfileFields` y validadores existentes; consistencia total de datos y atributos `data-testid`; estado compartido limpio sin dependencias externas.
