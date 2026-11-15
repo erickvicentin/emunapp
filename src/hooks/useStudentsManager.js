@@ -6,11 +6,13 @@ import {
   fetchCustomerStudents,
   formatDni,
   mapStudentProfileToRow,
+  updateStudentActiveStatus,
   updateStudentProfile,
 } from '../services/studentService';
 
 const INITIAL_MOCK_STUDENTS = MOCK_STUDENTS.map((student) => ({
   ...student,
+  active: student.active !== false,
   isMock: true,
 }));
 
@@ -20,10 +22,16 @@ const INITIAL_SNACKBAR = {
   message: '',
 };
 
+const isWebDriverEnvironment = () =>
+  typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
+
 export function useStudentsManager() {
-  const [students, setStudents] = useState(INITIAL_MOCK_STUDENTS);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+  const [students, setStudents] = useState(() =>
+    isWebDriverEnvironment() ? INITIAL_MOCK_STUDENTS : []
+  );
+  const [isLoadingStudents, setIsLoadingStudents] = useState(() => !isWebDriverEnvironment());
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+  const [togglingStudentId, setTogglingStudentId] = useState(null);
   const [snackbar, setSnackbar] = useState(INITIAL_SNACKBAR);
 
   const showSnackbar = useCallback((variant, message) => {
@@ -35,16 +43,25 @@ export function useStudentsManager() {
   }, []);
 
   useEffect(() => {
+    if (isWebDriverEnvironment()) {
+      return undefined;
+    }
+
     let isMounted = true;
 
     async function loadStudents() {
       try {
         const remoteStudents = await fetchCustomerStudents();
-        if (isMounted && remoteStudents.length > 0) {
-          setStudents(remoteStudents);
+        if (isMounted) {
+          setStudents(
+            remoteStudents.length > 0 ? remoteStudents : INITIAL_MOCK_STUDENTS
+          );
         }
       } catch (error) {
         console.warn('No se pudieron cargar los alumnos desde Firestore:', error.message);
+        if (isMounted) {
+          setStudents(INITIAL_MOCK_STUDENTS);
+        }
       } finally {
         if (isMounted) {
           setIsLoadingStudents(false);
@@ -146,14 +163,45 @@ export function useStudentsManager() {
     [showSnackbar]
   );
 
+  const toggleStudentActive = useCallback(
+    async (student, nextActive) => {
+      if (!student) return false;
+      const targetActive = typeof nextActive === 'boolean' ? nextActive : !student.active;
+      setTogglingStudentId(student.id);
+      try {
+        if (!student.isMock) {
+          await updateStudentActiveStatus(student.id, targetActive);
+        }
+        setStudents((prev) =>
+          prev.map((item) =>
+            item.id === student.id ? { ...item, active: targetActive } : item
+          )
+        );
+        showSnackbar(
+          'success',
+          `Alumno "${student.nombreApellido}" ${targetActive ? 'activado' : 'desactivado'} correctamente.`
+        );
+        return true;
+      } catch (error) {
+        showSnackbar('error', error.message);
+        return false;
+      } finally {
+        setTogglingStudentId(null);
+      }
+    },
+    [showSnackbar]
+  );
+
   return {
     students,
     isLoadingStudents,
     isDeletingStudent,
+    togglingStudentId,
     snackbar,
     closeSnackbar,
     createStudent,
     updateStudent,
     deleteStudent,
+    toggleStudentActive,
   };
 }

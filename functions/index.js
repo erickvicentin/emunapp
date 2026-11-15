@@ -157,6 +157,7 @@ export const createStudentAccount = onCall(async (request) => {
     dni: payload.dniFormatted,
     photoURL: '',
     rol: 'customer',
+    active: true,
     estado: 'activo',
     registroCompleto: true,
     requiereCambioPassword: true,

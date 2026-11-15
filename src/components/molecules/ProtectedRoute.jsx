@@ -24,8 +24,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
     );
   }
 
-  // Not logged in -> redirect to /login
-  if (!user) {
+  // Not logged in or account deactivated -> redirect to /login
+  if (!user || userProfile?.active === false) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

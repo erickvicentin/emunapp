@@ -16,8 +16,11 @@ import { filterStudents } from '../../utils/studentFilter';
  */
 export default function StudentsSection({
   students = [],
+  isLoadingStudents = false,
   isDeletingStudent = false,
+  togglingStudentId = null,
   onDeleteStudent,
+  onToggleStudentActive,
 }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,7 +116,10 @@ export default function StudentsSection({
 
       <StudentsTable
         students={filteredStudents}
+        isLoading={isLoadingStudents}
         hasSearchFilter={Boolean(searchQuery.trim())}
+        togglingStudentId={togglingStudentId}
+        onToggleStudentActive={onToggleStudentActive}
         onViewStudent={(student) =>
           navigate(
             `/administrador/alumnos/detail?studentId=${encodeURIComponent(student.id)}`

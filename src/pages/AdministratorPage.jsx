@@ -79,10 +79,13 @@ function renderAlumnosContent({
   action,
   selectedStudent,
   students,
+  isLoadingStudents,
   isDeletingStudent,
+  togglingStudentId,
   onCreateStudent,
   onUpdateStudent,
   onDeleteStudent,
+  onToggleStudentActive,
 }) {
   if (action === 'nuevo') {
     return <StudentCreateSection onCreateStudent={onCreateStudent} />;
@@ -102,8 +105,11 @@ function renderAlumnosContent({
   return (
     <StudentsSection
       students={students}
+      isLoadingStudents={isLoadingStudents}
       isDeletingStudent={isDeletingStudent}
+      togglingStudentId={togglingStudentId}
       onDeleteStudent={onDeleteStudent}
+      onToggleStudentActive={onToggleStudentActive}
     />
   );
 }
@@ -113,10 +119,13 @@ function AdminSectionContent({
   action,
   selectedStudent,
   students,
+  isLoadingStudents,
   isDeletingStudent,
+  togglingStudentId,
   onCreateStudent,
   onUpdateStudent,
   onDeleteStudent,
+  onToggleStudentActive,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -124,10 +133,13 @@ function AdminSectionContent({
       action,
       selectedStudent,
       students,
+      isLoadingStudents,
       isDeletingStudent,
+      togglingStudentId,
       onCreateStudent,
       onUpdateStudent,
       onDeleteStudent,
+      onToggleStudentActive,
     });
   }
   if (activeNavItem.id !== 'dashboard') {
@@ -144,12 +156,15 @@ export default function AdministratorPage() {
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
   const {
     students,
+    isLoadingStudents,
     isDeletingStudent,
+    togglingStudentId,
     snackbar,
     closeSnackbar,
     createStudent,
     updateStudent,
     deleteStudent,
+    toggleStudentActive,
   } = useStudentsManager();
 
   const { redirectTo, activeNavItem } = resolveAdminRoute(section, action);
@@ -194,10 +209,13 @@ export default function AdministratorPage() {
         action={action}
         selectedStudent={selectedStudent}
         students={students}
+        isLoadingStudents={isLoadingStudents}
         isDeletingStudent={isDeletingStudent}
+        togglingStudentId={togglingStudentId}
         onCreateStudent={createStudent}
         onUpdateStudent={updateStudent}
         onDeleteStudent={deleteStudent}
+        onToggleStudentActive={toggleStudentActive}
         renderDashboard={() => (
         <div className="space-y-6">
         {/* Welcome & Shift Selector */}

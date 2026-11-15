@@ -1,5 +1,48 @@
 import React from 'react';
 import Icon from '../atoms/Icon';
+import Skeleton from '../atoms/Skeleton';
+import Switch from '../atoms/Switch';
+
+const SKELETON_ROWS = [0, 1, 2, 3, 4, 5];
+
+function StudentsTableSkeletonRows() {
+  return SKELETON_ROWS.map((rowIndex) => (
+    <tr
+      key={`skeleton-${rowIndex}`}
+      data-testid={`students-skeleton-row-${rowIndex}`}
+      className="hover:bg-transparent"
+    >
+      <td className="py-3.5 px-5 bg-surface-container-lowest">
+        <Skeleton className="h-4 w-36" />
+      </td>
+      <td className="py-3.5 px-4">
+        <Skeleton className="h-4 w-24" />
+      </td>
+      <td className="py-3.5 px-4">
+        <Skeleton className="h-4 w-14" />
+      </td>
+      <td className="py-3.5 px-4">
+        <Skeleton className="h-4 w-20" />
+      </td>
+      <td className="py-3.5 px-4">
+        <Skeleton className="h-5 w-12 rounded-full" />
+      </td>
+      <td className="py-3.5 px-4">
+        <div className="inline-flex items-center gap-2">
+          <Skeleton className="h-6 w-11 rounded-full" />
+          <Skeleton className="h-3.5 w-12" />
+        </div>
+      </td>
+      <td className="py-3.5 px-5">
+        <div className="flex items-center justify-end gap-1.5">
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
+      </td>
+    </tr>
+  ));
+}
 
 /**
  * AttendancePercentage helper
@@ -28,14 +71,17 @@ function AttendancePercentage({ percentage }) {
  */
 export default function StudentsTable({
   students,
+  isLoading = false,
   hasSearchFilter = false,
+  togglingStudentId = null,
+  onToggleStudentActive,
   onViewStudent,
   onEditStudent,
   onDeleteStudent,
 }) {
   return (
     <section className="rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs overflow-hidden">
-      {students.length === 0 ? (
+      {!isLoading && students.length === 0 ? (
         <div
           data-testid={
             hasSearchFilter ? 'students-empty-search' : 'students-empty-state'
@@ -66,7 +112,11 @@ export default function StudentsTable({
           aria-labelledby="alumnos-table-caption"
           className="StudentsTable-wrapper p-2 sm:p-0 focus:outline-none focus:ring-2 focus:ring-secondary/40 rounded-2xl"
         >
-          <table data-testid="students-table" className="StudentsTable text-left">
+          <table
+            data-testid={isLoading ? 'students-table-skeleton' : 'students-table'}
+            aria-busy={isLoading}
+            className="StudentsTable text-left"
+          >
             <caption id="alumnos-table-caption" className="sr-only">
               Tabla de alumnos registrados con DNI, edad, sexo, porcentaje de asistencia y acciones
             </caption>
@@ -104,6 +154,12 @@ export default function StudentsTable({
                 </th>
                 <th
                   scope="col"
+                  className="py-3.5 px-4 font-label-md text-[12px] uppercase tracking-wider font-semibold bg-surface-container-low whitespace-nowrap"
+                >
+                  Estado
+                </th>
+                <th
+                  scope="col"
                   className="py-3.5 px-5 font-label-md text-[12px] uppercase tracking-wider font-semibold bg-surface-container-low text-right whitespace-nowrap"
                 >
                   Acciones
@@ -111,11 +167,18 @@ export default function StudentsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-high/70">
-              {students.map((student) => (
+              {isLoading ? (
+                <StudentsTableSkeletonRows />
+              ) : (
+                students.map((student) => {
+                const isActive = student.active !== false;
+                return (
                 <tr
                   key={student.id}
                   data-testid={`student-row-${student.id}`}
-                  className="hover:bg-surface-container-low/50 transition-colors"
+                  className={`hover:bg-surface-container-low/50 transition-colors ${
+                    isActive ? '' : 'opacity-70'
+                  }`}
                 >
                   <th
                     scope="row"
@@ -147,6 +210,30 @@ export default function StudentsTable({
                     className="py-3.5 px-4 whitespace-nowrap"
                   >
                     <AttendancePercentage percentage={student.porcentajeAsistencia} />
+                  </td>
+                  <td
+                    data-testid={`student-status-${student.id}`}
+                    className="py-3.5 px-4 whitespace-nowrap"
+                  >
+                    <div className="inline-flex items-center gap-2">
+                      <Switch
+                        checked={isActive}
+                        disabled={togglingStudentId === student.id}
+                        ariaLabel={`${isActive ? 'Desactivar' : 'Activar'} a ${student.nombreApellido}`}
+                        testId={`student-active-switch-${student.id}`}
+                        onChange={(nextValue) =>
+                          onToggleStudentActive?.(student, nextValue)
+                        }
+                      />
+                      <span
+                        data-testid={`student-status-label-${student.id}`}
+                        className={`font-label-sm text-[12px] font-semibold ${
+                          isActive ? 'text-secondary' : 'text-on-surface-variant'
+                        }`}
+                      >
+                        {isActive ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
                   </td>
                   <td className="py-3.5 px-5 whitespace-nowrap">
                     <div className="flex items-center justify-end gap-1">
@@ -183,7 +270,9 @@ export default function StudentsTable({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })
+              )}
             </tbody>
           </table>
         </div>

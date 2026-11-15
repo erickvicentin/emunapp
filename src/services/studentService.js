@@ -65,6 +65,7 @@ export function mapStudentProfileToRow(data, id) {
     porcentajeAsistencia: data.porcentajeAsistencia ?? 0,
     tienePaquete: Boolean(data.tienePaquete),
     inscriptoClases: Boolean(data.inscriptoClases),
+    active: data.active !== false,
     isMock: Boolean(data.isMock),
   };
 }
@@ -147,6 +148,25 @@ export async function updateStudentProfile(uid, formData) {
       mapCallableError(
         error,
         'No se pudieron actualizar los datos del alumno en Firestore.'
+      )
+    );
+  }
+}
+
+export async function updateStudentActiveStatus(uid, active) {
+  const nextActive = Boolean(active);
+  try {
+    const userDocRef = doc(db, 'usuarios', uid);
+    await updateDoc(userDocRef, {
+      active: nextActive,
+      actualizadoEn: serverTimestamp(),
+    });
+    return nextActive;
+  } catch (error) {
+    throw new Error(
+      mapCallableError(
+        error,
+        'No se pudo actualizar el estado del alumno en Firestore.'
       )
     );
   }
