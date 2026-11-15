@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
-import Input from '../atoms/Input';
 import Button from '../atoms/Button';
-import RegisterProfileFields from '../molecules/RegisterProfileFields';
-import { calculateAge } from '../../utils/dateUtils';
+import StudentFormFields from '../molecules/StudentFormFields';
 import { validateStudentCreate } from '../../utils/registrationValidator';
 
 const INITIAL_STUDENT_FORM = {
@@ -27,10 +25,6 @@ export default function StudentCreateSection({ onCreateStudent }) {
   const [formData, setFormData] = useState(INITIAL_STUDENT_FORM);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const currentAge = calculateAge(formData.fechaNacimiento);
-  const birthdateHelper =
-    currentAge !== null ? `Edad calculada: ${currentAge} años` : undefined;
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -65,7 +59,6 @@ export default function StudentCreateSection({ onCreateStudent }) {
 
   return (
     <div data-testid="student-create-section" className="space-y-5">
-      {/* Header */}
       <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
         <div>
           <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
@@ -94,63 +87,29 @@ export default function StudentCreateSection({ onCreateStudent }) {
         </Button>
       </section>
 
-      {/* Form Card */}
       <section className="p-6 sm:p-8 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs">
         <form onSubmit={handleSubmit} noValidate className="space-y-5 max-w-3xl">
-          <RegisterProfileFields
+          <StudentFormFields
             formData={formData}
             onChange={handleChange}
             errors={errors}
-            birthdateHelper={birthdateHelper}
           />
 
-          {/* DNI & Email */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
-            <Input
-              id="student-create-dni"
-              data-testid="student-create-dni-input"
-              name="dni"
-              label="DNI"
-              value={formData.dni}
-              onChange={handleChange}
-              placeholder="Ej. 38412905"
-              icon="badge"
-              required
-              error={errors.dni}
-            />
-            <Input
-              id="student-create-email"
-              data-testid="student-create-email-input"
-              name="email"
-              type="email"
-              label="Correo Electrónico"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Ej. alumna@email.com"
-              icon="mail"
-              required
-              error={errors.email}
-              autoComplete="email"
-            />
-          </div>
-
-          {/* Account Activation / Default Password Notice */}
           <div
             data-testid="student-create-activation-notice"
             className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-start gap-3"
           >
-            <Icon name="mark_email_read" className="text-[20px] text-secondary shrink-0 mt-0.5" />
+            <Icon name="mail" className="text-secondary text-[20px] mt-0.5 shrink-0" />
             <div className="font-body-sm text-[13px] text-on-surface-variant leading-relaxed">
               <p className="font-semibold text-primary">
                 Activación de cuenta y contraseña inicial
               </p>
               <p className="mt-0.5">
-                El alumno se registrará con rol <strong>customer</strong> utilizando una contraseña aleatoria segura, y recibirá un correo electrónico de activación para crear su propia contraseña.
+                El alumno se registrará en Firebase Auth y Firestore con rol <strong>customer</strong> utilizando una contraseña aleatoria segura, y recibirá un correo electrónico de activación para crear su propia contraseña.
               </p>
             </div>
           </div>
 
-          {/* Actions */}
           <div className="pt-2 flex flex-wrap items-center justify-end gap-3 border-t border-surface-container">
             <Button
               variant="outline"

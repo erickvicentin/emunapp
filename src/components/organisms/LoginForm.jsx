@@ -2,22 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import StudioBanner from '../molecules/StudioBanner';
-import RoleSwitcherTabs from '../molecules/RoleSwitcherTabs';
 import LoginFormHeader from '../molecules/LoginFormHeader';
 import LoginCredentialsFields from '../molecules/LoginCredentialsFields';
 import LoginFormActions from '../molecules/LoginFormActions';
 import { useAuth } from '../../hooks/useAuth';
 
+const isStaffRole = (rol) => rol === 'staff' || rol === 'administradora';
+
 /**
  * LoginForm Organism
  * Implements the user login interface for Emuná Pilates.
- * Supports role switching (alumna / equipo), password visibility toggle,
- * Google OAuth entry, and direct navigation to registration.
+ * Automatically routes users based on their profile role, supports password
+ * visibility toggle, Google OAuth entry, and direct navigation to registration.
  */
 export default function LoginForm({ onSubmit, onGoogleLogin }) {
   const navigate = useNavigate();
   const { loginWithEmail, loginWithGoogle } = useAuth();
-  const [role, setRole] = useState('alumna'); // 'alumna' | 'equipo'
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,7 +30,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
     setError('');
 
     if (!identifier.trim()) {
-      setError('Por favor ingresá tu correo electrónico o DNI.');
+      setError('Por favor ingresá tu correo electrónico.');
       return;
     }
     if (!password) {
@@ -40,7 +40,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
 
     setLoading(true);
     if (onSubmit) {
-      onSubmit({ role, identifier, password, rememberMe });
+      onSubmit({ identifier, password, rememberMe });
       setLoading(false);
       return;
     }
@@ -49,8 +49,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
       const res = await loginWithEmail(identifier.trim(), password);
       const profile = res?.profile;
 
-      // Staff users or Equipo logins always proceed directly to administrator dashboard
-      if (role === 'equipo' || profile?.rol === 'staff' || profile?.rol === 'administradora') {
+      if (isStaffRole(profile?.rol)) {
         navigate('/administrador/dashboard');
         return;
       }
@@ -94,10 +93,12 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
         return;
       }
 
-      const target = profile.rol === 'staff' || role === 'equipo' ? '/administrador/dashboard' : '/customer';
+      const target = isStaffRole(profile.rol) ? '/administrador/dashboard' : '/customer';
       navigate(target);
     } catch (err) {
-      if (err.code !== 'auth/popup-closed-by-user') {
+      if (err.code === 'auth/user-disabled') {
+        setError(err.message);
+      } else if (err.code !== 'auth/popup-closed-by-user') {
         setError('Error al autenticar con Google: ' + (err.message || 'Intentá nuevamente.'));
       }
     } finally {
@@ -120,15 +121,6 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
         <div>
           <LoginFormHeader />
 
-          {/* Role Switcher Tabs Molecule */}
-          <RoleSwitcherTabs
-            role={role}
-            onSelectRole={(newRole) => {
-              setRole(newRole);
-              setError('');
-            }}
-          />
-
           {/* Error notification */}
           {error && (
             <div
@@ -144,7 +136,6 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
           {/* Form */}
           <form className="mt-space-lg space-y-space-md" onSubmit={handleSubmit} noValidate>
             <LoginCredentialsFields
-              role={role}
               identifier={identifier}
               onIdentifierChange={setIdentifier}
               password={password}

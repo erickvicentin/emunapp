@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../config/firebase';
 import { AuthContext } from './authContextInstance';
+import { formatDni } from '../services/studentService';
 
 const withTimeout = (promise, ms = 5000) => {
   return Promise.race([
@@ -36,6 +37,22 @@ const setLocalProfile = (uid, profile) => {
     // Ignore storage quota errors
   }
 };
+
+function removeLocalProfile(uid) {
+  try {
+    localStorage.removeItem(`emuna_profile_${uid}`);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function createDisabledAccountError() {
+  const error = new Error(
+    'Tu cuenta está desactivada. Comunicate con la administración de Emuná para reactivarla.'
+  );
+  error.code = 'auth/user-disabled';
+  return error;
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -121,7 +138,15 @@ export function AuthProvider({ children }) {
       if (!isMounted) return;
       setUser(currentUser);
       if (currentUser) {
-        await fetchUserProfile(currentUser);
+        const profile = await fetchUserProfile(currentUser);
+        if (profile?.active === false) {
+          removeLocalProfile(currentUser.uid);
+          await signOut(auth);
+          if (isMounted) {
+            setUser(null);
+            setUserProfile(null);
+          }
+        }
       } else {
         setUserProfile(null);
       }
@@ -136,11 +161,22 @@ export function AuthProvider({ children }) {
     };
   }, [fetchUserProfile]);
 
+  const enforceActiveAccount = useCallback(async (uid, profile) => {
+    if (profile?.active === false) {
+      removeLocalProfile(uid);
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      throw createDisabledAccountError();
+    }
+  }, []);
+
   const loginWithEmail = useCallback(async (email, password) => {
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const profile = await fetchUserProfile(cred.user);
+    await enforceActiveAccount(cred.user.uid, profile);
     return { user: cred.user, profile };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, enforceActiveAccount]);
 
   const registerWithEmail = useCallback(async (email, password, profileData) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -159,11 +195,13 @@ export function AuthProvider({ children }) {
       email: cred.user.email,
       nombre: profileData.nombre,
       apellido: profileData.apellido,
+      dni: formatDni(profileData.dni),
       telefono: profileData.telefono || '',
       fechaNacimiento: profileData.fechaNacimiento || '',
       genero: profileData.genero || 'no_especificar',
       photoURL: cred.user.photoURL || '',
       rol: 'customer',
+      active: true,
       estado: 'activo',
       registroCompleto: true,
       creadoEn: new Date().toISOString(),
@@ -186,8 +224,9 @@ export function AuthProvider({ children }) {
   const loginWithGoogle = useCallback(async () => {
     const cred = await signInWithPopup(auth, googleProvider);
     const profile = await fetchUserProfile(cred.user);
+    await enforceActiveAccount(cred.user.uid, profile);
     return { user: cred.user, profile };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, enforceActiveAccount]);
 
   const completeGoogleRegistration = useCallback(async (profileData) => {
     if (!auth.currentUser) throw new Error('No hay usuario autenticado');
@@ -198,11 +237,13 @@ export function AuthProvider({ children }) {
       email: auth.currentUser.email,
       nombre: profileData.nombre || auth.currentUser.displayName?.split(' ')[0] || '',
       apellido: profileData.apellido || '',
+      dni: formatDni(profileData.dni),
       telefono: profileData.telefono || '',
       fechaNacimiento: profileData.fechaNacimiento || '',
       genero: profileData.genero || 'no_especificar',
       photoURL: auth.currentUser.photoURL || '',
       rol: 'customer',
+      active: true,
       estado: 'activo',
       registroCompleto: true,
       actualizadoEn: new Date().toISOString(),

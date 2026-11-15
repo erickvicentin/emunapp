@@ -6,7 +6,6 @@ import Icon from '../atoms/Icon';
  * Renders identifier, password (with visibility toggle), and remember-me fields.
  */
 export default function LoginCredentialsFields({
-  role,
   identifier,
   onIdentifierChange,
   password,
@@ -25,9 +24,7 @@ export default function LoginCredentialsFields({
           htmlFor="user-identifier"
           className="block font-label-md text-label-md text-on-surface"
         >
-          {role === 'alumna'
-            ? 'DNI o Correo Electrónico'
-            : 'Correo Electrónico Institucional'}
+          Correo Electrónico
         </label>
         <div className="relative flex items-center">
           <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px] pointer-events-none select-none">
@@ -37,23 +34,17 @@ export default function LoginCredentialsFields({
             id="user-identifier"
             data-testid="login-identifier-input"
             name="identifier"
-            type={role === 'equipo' ? 'email' : 'text'}
-            autoComplete={role === 'equipo' ? 'email' : 'username'}
+            type="email"
+            autoComplete="email"
             value={identifier}
             onChange={(e) => onIdentifierChange(e.target.value)}
-            placeholder={
-              role === 'alumna'
-                ? 'Ej. tu@email.com o 38450123'
-                : 'instructora@emunaestudio.com'
-            }
+            placeholder="Ej. tu@email.com"
             required
             className="w-full bg-surface-container-low focus:bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 rounded-xl pl-11 pr-space-md py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm border border-transparent"
           />
         </div>
         <p className="font-body-sm text-body-sm text-on-surface-variant/80">
-          {role === 'alumna'
-            ? 'Si sos alumna podés ingresar con tu email registrado.'
-            : 'Acceso exclusivo para instructoras certificadas y equipo de gestión.'}
+          Ingresá con tu correo electrónico registrado.
         </p>
       </div>
 

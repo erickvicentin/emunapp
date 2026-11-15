@@ -27,6 +27,8 @@ const getAttendanceSelector = (id) => `[data-testid="student-attendance-${id}"]`
 const getViewBtnSelector = (id) => `[data-testid="student-view-btn-${id}"]`;
 const getEditBtnSelector = (id) => `[data-testid="student-edit-btn-${id}"]`;
 const getDeleteBtnSelector = (id) => `[data-testid="student-delete-btn-${id}"]`;
+const getActiveSwitchSelector = (id) => `[data-testid="student-active-switch-${id}"]`;
+const getStatusLabelSelector = (id) => `[data-testid="student-status-label-${id}"]`;
 
 class AlumnosPage extends BasePage {
   async waitForPageLoad() {
@@ -174,6 +176,20 @@ class AlumnosPage extends BasePage {
 
   async clickDeleteStudent(studentId) {
     await this.clickElement(getDeleteBtnSelector(studentId));
+  }
+
+  async toggleStudentActive(studentId) {
+    await this.clickElement(getActiveSwitchSelector(studentId));
+  }
+
+  async getStudentStatusLabel(studentId) {
+    return this.getElementText(getStatusLabelSelector(studentId));
+  }
+
+  async isStudentSwitchChecked(studentId) {
+    const el = await this.waitForElement(getActiveSwitchSelector(studentId));
+    const checked = await el.getAttribute('aria-checked');
+    return checked === 'true';
   }
 
   async isDeleteDialogOpen() {

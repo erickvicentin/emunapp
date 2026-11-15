@@ -9,7 +9,7 @@ export default function GoogleOnboardingBanner({ googleUser, onReset }) {
   return (
     <div className="mt-space-md p-4 rounded-xl bg-surface-container border border-surface-container-highest flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div className="flex items-center gap-3">
-        <div className="relative">
+        <div className="relative shrink-0">
           <img
             src={googleUser.avatarUrl}
             alt={`Foto de perfil de ${googleUser.nombre}`}
@@ -25,7 +25,10 @@ export default function GoogleOnboardingBanner({ googleUser, onReset }) {
             <span className="text-secondary">{googleUser.email}</span>
           </p>
           <p className="font-body-sm text-[12px] text-on-surface-variant">
-            Foto de perfil, nombre y fecha tomados automáticamente. Completá los campos obligatorios debajo.
+            Foto de perfil, nombre y fecha tomados automáticamente.
+          </p>
+          <p className="font-body-sm text-[12px] text-on-surface-variant">
+            Completá los campos obligatorios debajo.
           </p>
         </div>
       </div>

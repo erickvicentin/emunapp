@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
+import Input from '../atoms/Input';
 import StudioBanner from '../molecules/StudioBanner';
 import RegisterProfileFields from '../molecules/RegisterProfileFields';
 import GoogleOnboardingBanner from '../molecules/GoogleOnboardingBanner';
@@ -15,6 +16,7 @@ import { useAuth } from '../../hooks/useAuth';
 const INITIAL_FORM_STATE = {
   nombre: '',
   apellido: '',
+  dni: '',
   telefono: '',
   fechaNacimiento: '',
   genero: '',
@@ -201,7 +203,7 @@ export default function RegisterForm({ onSubmit }) {
                 Emuná Estudio Pilates
               </span>
               <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-0.5">
-                {isGoogleMode ? 'Completá tu ficha de registro' : 'Creá tu cuenta de alumna'}
+                {isGoogleMode ? 'Completá tu ficha de registro' : 'Creá tu cuenta de alumno/a'}
               </h1>
             </div>
             <div
@@ -234,6 +236,21 @@ export default function RegisterForm({ onSubmit }) {
                   birthdateHelper={getBirthdateHelper()}
                 />
 
+                <Input
+                  id="register-dni"
+                  data-testid="register-dni-input"
+                  name="dni"
+                  label="DNI"
+                  inputMode="numeric"
+                  value={formData.dni}
+                  onChange={handleChange}
+                  placeholder="Ej. 38.412.905"
+                  icon="badge"
+                  required
+                  error={errors.dni}
+                  helperText="Sin espacios; podés ingresarlo con o sin puntos."
+                />
+
                 {/* Email and Password for direct registration */}
                 {!isGoogleMode && (
                   <AccountCredentialsFields
@@ -259,7 +276,7 @@ export default function RegisterForm({ onSubmit }) {
                     disabled={loading}
                     className="w-full py-3.5 px-space-lg rounded-full bg-primary-container hover:bg-primary text-on-primary font-label-lg text-label-lg transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-space-xs disabled:opacity-60 cursor-pointer"
                   >
-                    <span>{loading ? 'Creando cuenta...' : 'Crear mi Cuenta de Alumna'}</span>
+                    <span>{loading ? 'Creando cuenta...' : 'Crear mi Cuenta de Alumno/a'}</span>
                     <Icon name="arrow_forward" className="text-[18px]" />
                   </button>
                 </div>

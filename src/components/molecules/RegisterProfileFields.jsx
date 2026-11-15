@@ -1,6 +1,7 @@
 import React from 'react';
 import Input from '../atoms/Input';
 import GenderSelector from './GenderSelector';
+import PhoneInput from './PhoneInput';
 
 /**
  * RegisterProfileFields Molecule
@@ -45,20 +46,15 @@ export default function RegisterProfileFields({
       </div>
 
       {/* Teléfono */}
-      <Input
+      <PhoneInput
         id="register-telefono"
-        data-testid="register-telefono-input"
         name="telefono"
-        type="tel"
         label="Teléfono / WhatsApp"
         value={formData.telefono}
         onChange={onChange}
-        placeholder="Ej. +54 9 362 4123456"
-        icon="call"
         required
         error={errors.telefono}
         helperText="Para avisos de tus turnos y lista de espera."
-        autoComplete="tel"
       />
 
       {/* Fecha de Nacimiento & Género (Dropdown) */}

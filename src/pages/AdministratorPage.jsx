@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import AdminSidebar from '../components/organisms/AdminSidebar';
 import StudentsSection from '../components/organisms/StudentsSection';
 import StudentCreateSection from '../components/organisms/StudentCreateSection';
+import StudentDetailSection from '../components/organisms/StudentDetailSection';
+import StudentEditSection from '../components/organisms/StudentEditSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
@@ -27,12 +29,14 @@ const INITIAL_PENDING_PAYMENTS = [
  * Path: /administrator
  * Workspace for users with role="staff" (instructor / admin)
  */
+const ALUMNOS_ACTIONS = new Set(['nuevo', 'edit', 'detail']);
+
 function resolveAdminRoute(section, action) {
   const activeNavItem = ADMIN_NAV_ITEMS.find((item) => item.id === section);
   if (!activeNavItem) {
     return { redirectTo: '/administrador/dashboard', activeNavItem: null };
   }
-  if (action && !(activeNavItem.id === 'alumnos' && action === 'nuevo')) {
+  if (action && !(activeNavItem.id === 'alumnos' && ALUMNOS_ACTIONS.has(action))) {
     return { redirectTo: `/administrador/${activeNavItem.id}`, activeNavItem: null };
   }
   return { redirectTo: null, activeNavItem };
@@ -71,26 +75,72 @@ function getStaffIdentity(user, userProfile) {
   return { staffName, staffEmail };
 }
 
+function renderAlumnosContent({
+  action,
+  selectedStudent,
+  students,
+  isLoadingStudents,
+  isDeletingStudent,
+  togglingStudentId,
+  onCreateStudent,
+  onUpdateStudent,
+  onDeleteStudent,
+  onToggleStudentActive,
+}) {
+  if (action === 'nuevo') {
+    return <StudentCreateSection onCreateStudent={onCreateStudent} />;
+  }
+  if (action === 'detail') {
+    return <StudentDetailSection student={selectedStudent} />;
+  }
+  if (action === 'edit') {
+    return (
+      <StudentEditSection
+        key={selectedStudent?.id || 'missing'}
+        student={selectedStudent}
+        onUpdateStudent={onUpdateStudent}
+      />
+    );
+  }
+  return (
+    <StudentsSection
+      students={students}
+      isLoadingStudents={isLoadingStudents}
+      isDeletingStudent={isDeletingStudent}
+      togglingStudentId={togglingStudentId}
+      onDeleteStudent={onDeleteStudent}
+      onToggleStudentActive={onToggleStudentActive}
+    />
+  );
+}
+
 function AdminSectionContent({
   activeNavItem,
   action,
+  selectedStudent,
   students,
+  isLoadingStudents,
   isDeletingStudent,
+  togglingStudentId,
   onCreateStudent,
+  onUpdateStudent,
   onDeleteStudent,
+  onToggleStudentActive,
   renderDashboard,
 }) {
-  if (activeNavItem.id === 'alumnos' && action === 'nuevo') {
-    return <StudentCreateSection onCreateStudent={onCreateStudent} />;
-  }
   if (activeNavItem.id === 'alumnos') {
-    return (
-      <StudentsSection
-        students={students}
-        isDeletingStudent={isDeletingStudent}
-        onDeleteStudent={onDeleteStudent}
-      />
-    );
+    return renderAlumnosContent({
+      action,
+      selectedStudent,
+      students,
+      isLoadingStudents,
+      isDeletingStudent,
+      togglingStudentId,
+      onCreateStudent,
+      onUpdateStudent,
+      onDeleteStudent,
+      onToggleStudentActive,
+    });
   }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
@@ -101,15 +151,20 @@ function AdminSectionContent({
 export default function AdministratorPage() {
   const { user, userProfile } = useAuth();
   const { section, action } = useParams();
+  const [searchParams] = useSearchParams();
   const [beds, setBeds] = useState(INITIAL_BEDS);
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
   const {
     students,
+    isLoadingStudents,
     isDeletingStudent,
+    togglingStudentId,
     snackbar,
     closeSnackbar,
     createStudent,
+    updateStudent,
     deleteStudent,
+    toggleStudentActive,
   } = useStudentsManager();
 
   const { redirectTo, activeNavItem } = resolveAdminRoute(section, action);
@@ -117,6 +172,8 @@ export default function AdministratorPage() {
     return <Navigate to={redirectTo} replace />;
   }
 
+  const studentId = searchParams.get('studentId');
+  const selectedStudent = students.find((student) => student.id === studentId) || null;
   const { staffName, staffEmail } = getStaffIdentity(user, userProfile);
 
   const toggleCheckIn = (bedId) => {
@@ -150,10 +207,15 @@ export default function AdministratorPage() {
       <AdminSectionContent
         activeNavItem={activeNavItem}
         action={action}
+        selectedStudent={selectedStudent}
         students={students}
+        isLoadingStudents={isLoadingStudents}
         isDeletingStudent={isDeletingStudent}
+        togglingStudentId={togglingStudentId}
         onCreateStudent={createStudent}
+        onUpdateStudent={updateStudent}
         onDeleteStudent={deleteStudent}
+        onToggleStudentActive={toggleStudentActive}
         renderDashboard={() => (
         <div className="space-y-6">
         {/* Welcome & Shift Selector */}
