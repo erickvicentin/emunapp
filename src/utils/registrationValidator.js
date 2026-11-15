@@ -58,6 +58,49 @@ export function validateDniField(rawDni) {
   return null;
 }
 
+export const PASSWORD_RULES = [
+  {
+    id: 'length',
+    label: 'Mínimo 6 caracteres',
+    test: (pwd) => pwd.length >= 6,
+  },
+  {
+    id: 'uppercase',
+    label: 'Al menos 1 letra mayúscula',
+    test: (pwd) => /[A-Z]/.test(pwd),
+  },
+  {
+    id: 'lowercase',
+    label: 'Al menos 1 letra minúscula',
+    test: (pwd) => /[a-z]/.test(pwd),
+  },
+  {
+    id: 'number',
+    label: 'Al menos 1 número',
+    test: (pwd) => /\d/.test(pwd),
+  },
+];
+
+/**
+ * Validates password presence and strength rules.
+ * @param {string} password
+ * @returns {string|null} error message or null
+ */
+export function validatePasswordField(password = '') {
+  if (!password) return 'La contraseña es obligatoria.';
+  if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+  if (!/[A-Z]/.test(password)) {
+    return 'La contraseña debe incluir al menos una letra mayúscula.';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'La contraseña debe incluir al menos una letra minúscula.';
+  }
+  if (!/\d/.test(password)) {
+    return 'La contraseña debe incluir al menos un número.';
+  }
+  return null;
+}
+
 /**
  * Validates the customer self-registration form data.
  * @param {Object} formData
@@ -74,11 +117,8 @@ export function validateRegistration(formData, isGoogleMode) {
     const emailError = validateEmailField(formData.email);
     if (emailError) errors.email = emailError;
 
-    if (!formData.password) {
-      errors.password = 'La contraseña es obligatoria.';
-    } else if (formData.password.length < 6) {
-      errors.password = 'La contraseña debe tener al menos 6 caracteres.';
-    }
+    const passwordError = validatePasswordField(formData.password);
+    if (passwordError) errors.password = passwordError;
 
     if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Las contraseñas no coinciden.';

@@ -4,6 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import AuthActionPage from './pages/AuthActionPage';
 import CustomerPage from './pages/CustomerPage';
 import AdministratorPage from './pages/AdministratorPage';
 import ProtectedRoute from './components/molecules/ProtectedRoute';
@@ -21,6 +23,9 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
+          <Route path="/auth/action" element={<AuthActionPage />} />
+          <Route path="/reset-password" element={<AuthActionPage />} />
           <Route
             path="/customer"
             element={

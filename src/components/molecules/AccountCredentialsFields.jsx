@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Input from '../atoms/Input';
 import Icon from '../atoms/Icon';
+import PasswordRequirementsChecklist from './PasswordRequirementsChecklist';
 
 /**
  * AccountCredentialsFields Molecule
@@ -73,6 +74,11 @@ export default function AccountCredentialsFields({
           autoComplete="new-password"
         />
       </div>
+
+      <PasswordRequirementsChecklist
+        password={password}
+        testIdPrefix="register-password-rule"
+      />
     </>
   );
 }

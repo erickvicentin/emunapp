@@ -59,6 +59,7 @@ export default function LoginCredentialsFields({
           </label>
           <button
             type="button"
+            data-testid="login-forgot-password-btn"
             onClick={onForgotPassword}
             className="font-label-md text-label-md text-secondary hover:text-on-secondary-container transition-colors cursor-pointer"
           >
