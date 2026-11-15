@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from '../atoms/Icon';
+import SelectChevron from '../atoms/SelectChevron';
 import {
   buildInternationalPhone,
   COUNTRY_DIAL_OPTIONS,
@@ -106,7 +107,7 @@ export default function PhoneInput({
       )}
 
       <div className="flex flex-col sm:flex-row gap-2">
-        <div className="sm:w-[210px] shrink-0">
+        <div className="relative sm:w-[210px] shrink-0">
           <select
             id={`${id}-country`}
             data-testid="register-phone-country-select"
@@ -115,8 +116,8 @@ export default function PhoneInput({
             onChange={handleCountryChange}
             disabled={disabled}
             className={`
-              w-full bg-surface-container-low focus:bg-surface-container-lowest
-              text-on-surface rounded-xl px-3 py-3 text-body-md transition-all
+              w-full appearance-none bg-surface-container-low focus:bg-surface-container-lowest
+              text-on-surface rounded-xl pl-3 pr-10 py-3 text-body-md transition-all
               outline-none border shadow-2xs cursor-pointer
               ${
                 error
@@ -131,6 +132,7 @@ export default function PhoneInput({
               </option>
             ))}
           </select>
+          <SelectChevron />
         </div>
 
         <div className="relative flex-1 flex items-center">

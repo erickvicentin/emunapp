@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from '../atoms/Icon';
+import SelectChevron from '../atoms/SelectChevron';
 
 const GENDER_OPTIONS = [
   { value: 'mujer', label: 'Mujer' },
@@ -62,9 +63,7 @@ export default function GenderSelector({
           ))}
         </select>
 
-        <span className="material-symbols-outlined absolute right-3.5 text-on-surface-variant text-[20px] pointer-events-none select-none">
-          expand_more
-        </span>
+        <SelectChevron />
       </div>
 
       {error && (

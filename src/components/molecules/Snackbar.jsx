@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Icon from '../atoms/Icon';
+
+const EXIT_ANIMATION_MS = 240;
 
 const VARIANT_STYLES = {
   success: {
@@ -25,13 +27,32 @@ export default function Snackbar({
   onClose,
   duration = 4500,
 }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const exitTimerRef = useRef(null);
+
+  const triggerClose = useCallback(() => {
+    if (exitTimerRef.current) return;
+    setIsExiting(true);
+    exitTimerRef.current = setTimeout(() => {
+      exitTimerRef.current = null;
+      setIsExiting(false);
+      onClose?.();
+    }, EXIT_ANIMATION_MS);
+  }, [onClose]);
+
   useEffect(() => {
     if (!open || !message) return undefined;
     const timer = setTimeout(() => {
-      onClose?.();
+      triggerClose();
     }, duration);
-    return () => clearTimeout(timer);
-  }, [open, message, duration, onClose]);
+    return () => {
+      clearTimeout(timer);
+      if (exitTimerRef.current) {
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = null;
+      }
+    };
+  }, [open, message, duration, triggerClose]);
 
   if (!open || !message) {
     return null;
@@ -45,7 +66,9 @@ export default function Snackbar({
       data-variant={variant}
       role={variant === 'error' ? 'alert' : 'status'}
       aria-live="polite"
-      className={`SnackbarFloating fixed bottom-6 right-6 z-50 max-w-md w-[calc(100vw-2rem)] sm:w-auto rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${styles.container}`}
+      className={`fixed bottom-6 right-6 z-50 max-w-md w-[calc(100vw-2rem)] sm:w-auto rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+        isExiting ? 'SnackbarFloating--exit' : 'SnackbarFloating'
+      } ${styles.container}`}
     >
       <Icon name={styles.icon} className="text-[22px] shrink-0" />
       <p
@@ -58,7 +81,7 @@ export default function Snackbar({
         type="button"
         data-testid="snackbar-close-btn"
         aria-label="Cerrar notificación"
-        onClick={onClose}
+        onClick={triggerClose}
         className="p-1 rounded-full hover:bg-black/15 transition-colors cursor-pointer shrink-0"
       >
         <Icon name="close" className="text-[18px]" />

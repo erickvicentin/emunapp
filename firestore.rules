@@ -83,6 +83,24 @@ service cloud.firestore {
         isValidOptionalString(data, 'price', 40);
     }
 
+    // Validador de dominio para documentos de /horarios_base/{slotId}
+    function isValidBaseScheduleSlot(data) {
+      return data.dayOfWeek is int &&
+        data.dayOfWeek >= 0 &&
+        data.dayOfWeek <= 6 &&
+        data.startTime is string &&
+        data.durationMinutes is int &&
+        data.durationMinutes >= 15 &&
+        data.durationMinutes <= 180;
+    }
+
+    // Validador de dominio para documentos de /dias_cerrados/{dateKey}
+    function isValidClosedDay(data) {
+      return data.dateKey is string &&
+        data.dateKey.size() == 10 &&
+        isValidOptionalString(data, 'reason', 120);
+    }
+
     // ===============================================================
     // Collections
     // ===============================================================
@@ -146,6 +164,20 @@ service cloud.firestore {
         request.resource.data.usuarioId is string &&
         request.resource.data.usuarioId == request.auth.uid;
       allow update, delete: if isStaff();
+    }
+
+    // Colección: horarios_base (plantilla semanal recurrente de horarios de clase)
+    match /horarios_base/{slotId} {
+      allow read: if isStaff() || isActiveUser();
+      allow create, update: if isAdmin() && isValidBaseScheduleSlot(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Colección: dias_cerrados (feriados y días sin actividad del estudio)
+    match /dias_cerrados/{dateKey} {
+      allow read: if isStaff() || isActiveUser();
+      allow create, update: if isAdmin() && isValidClosedDay(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }
