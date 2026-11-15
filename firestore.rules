@@ -69,6 +69,20 @@ service cloud.firestore {
         (!('active' in data) || data.active is bool);
     }
 
+    // Validador de dominio para documentos de /paquetes_catalogo/{paqueteId}
+    function isValidPackage(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 80 &&
+        data.classesCount is int && data.classesCount >= 1 && data.classesCount <= 100 &&
+        data.numericPrice is number && data.numericPrice >= 0 &&
+        (!('validityDays' in data) || (data.validityDays is int && data.validityDays >= 1 && data.validityDays <= 365)) &&
+        (!('active' in data) || data.active is bool) &&
+        (!('isPopular' in data) || data.isPopular is bool) &&
+        (!('isProtected' in data) || data.isProtected is bool) &&
+        isValidOptionalString(data, 'category', 80) &&
+        isValidOptionalString(data, 'frequency', 80) &&
+        isValidOptionalString(data, 'price', 40);
+    }
+
     // ===============================================================
     // Collections
     // ===============================================================
@@ -113,7 +127,10 @@ service cloud.firestore {
     // Colección: paquetes_catalogo (paquetes de 4, 8, 12 y 20 clases)
     match /paquetes_catalogo/{paqueteId} {
       allow read: if isStaff() || isActiveUser();
-      allow write: if isStaff();
+      allow create: if isStaff() && isValidPackage(request.resource.data);
+      allow update: if isStaff() && isValidPackage(request.resource.data) &&
+        (resource.data.get('isProtected', false) != true || request.resource.data.get('isProtected', false) == true);
+      allow delete: if isStaff() && resource.data.get('isProtected', false) != true;
     }
 
     // Colección: membresias_usuario (créditos y vencimientos)

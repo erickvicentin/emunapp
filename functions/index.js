@@ -341,3 +341,19 @@ export const deleteStaffAccount = onCall(async (request) =>
     blockAdminTargets: true,
   })
 );
+
+/**
+ * Devuelve los paquetes activos del catálogo público para la Landing Page
+ * sin exponer lectura pública directa en Firestore Rules.
+ */
+export const getPublicPackages = onCall(async (request) => {
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const snapshot = await db.collection('paquetes_catalogo').get();
+  const packages = snapshot.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((pkg) => pkg.active !== false)
+    .sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+
+  return { packages };
+});

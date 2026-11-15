@@ -10,11 +10,13 @@ import StaffSection from '../components/organisms/StaffSection';
 import StaffCreateSection from '../components/organisms/StaffCreateSection';
 import StaffDetailSection from '../components/organisms/StaffDetailSection';
 import StaffEditSection from '../components/organisms/StaffEditSection';
+import PackagesSection from '../components/organisms/PackagesSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentsManager } from '../hooks/useStudentsManager';
 import { useStaffManager } from '../hooks/useStaffManager';
+import { usePackagesManager } from '../hooks/usePackagesManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
@@ -180,6 +182,7 @@ function AdminSectionContent({
   onUpdateStaff,
   onDeleteStaff,
   onToggleStaffActive,
+  renderPackages,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -209,6 +212,9 @@ function AdminSectionContent({
       onDeleteStaff,
       onToggleStaffActive,
     });
+  }
+  if (activeNavItem.id === 'precios') {
+    return renderPackages();
   }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
@@ -247,6 +253,18 @@ export default function AdministratorPage() {
     deleteStaff,
     toggleStaffActive,
   } = useStaffManager({ isAdmin, showSnackbar });
+
+  const {
+    packages,
+    isLoadingPackages,
+    isSavingPackage,
+    isDeletingPackage,
+    togglingPackageId,
+    handleCreatePackage,
+    handleUpdatePackage,
+    handleToggleActive: handleTogglePackageActive,
+    handleDeletePackage,
+  } = usePackagesManager({ isEnabled: true, showSnackbar });
 
   const { redirectTo, activeNavItem } = resolveAdminRoute(section, action, isAdmin);
   if (redirectTo) {
@@ -309,6 +327,19 @@ export default function AdministratorPage() {
         onUpdateStaff={updateStaff}
         onDeleteStaff={deleteStaff}
         onToggleStaffActive={toggleStaffActive}
+        renderPackages={() => (
+          <PackagesSection
+            packages={packages}
+            isLoading={isLoadingPackages}
+            isSaving={isSavingPackage}
+            isDeleting={isDeletingPackage}
+            togglingPackageId={togglingPackageId}
+            onCreatePackage={handleCreatePackage}
+            onUpdatePackage={handleUpdatePackage}
+            onToggleActive={handleTogglePackageActive}
+            onDeletePackage={handleDeletePackage}
+          />
+        )}
         renderDashboard={() => (
         <div className="space-y-6">
         {/* Welcome & Shift Selector */}
