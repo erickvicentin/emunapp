@@ -85,3 +85,21 @@ Feature: Students Management in Administrator Panel
     And the administrator saves the student changes
     Then a "success" snackbar should appear indicating update succeeded
     And the row for student "alu-1" should display name "Sofía Elena Martínez"
+
+  @EMUNA-014
+  Scenario: Phone input defaults to Argentina and limits maximum digit length
+    When the administrator clicks the "Crear alumno" button
+    Then the student creation page should be visible with title "Registrar nuevo alumno"
+    And the phone country code dropdown should default to "AR"
+    When the administrator enters an oversized phone number "91145218890123456"
+    Then the phone input should prevent exceeding the maximum digits for "AR"
+
+  @EMUNA-015
+  Scenario: Toggle student active status switch without deleting the student
+    Then the student "alu-1" should have status "Activo" with switch checked "true"
+    When the administrator toggles the active switch for student "alu-1"
+    Then a "success" snackbar should appear indicating status change "desactivado"
+    And the student "alu-1" should have status "Inactivo" with switch checked "false"
+    When the administrator toggles the active switch for student "alu-1"
+    Then a "success" snackbar should appear indicating status change "activado"
+    And the student "alu-1" should have status "Activo" with switch checked "true"

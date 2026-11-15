@@ -5,6 +5,7 @@ const CREATE_TITLE = '[data-testid="student-create-title"]';
 const BACK_BTN = '[data-testid="student-create-back-btn"]';
 const NOMBRE_INPUT = '[data-testid="register-nombre-input"]';
 const APELLIDO_INPUT = '[data-testid="register-apellido-input"]';
+const PHONE_COUNTRY_SELECT = '[data-testid="register-phone-country-select"]';
 const TELEFONO_INPUT = '[data-testid="register-telefono-input"]';
 const FECHA_NACIMIENTO_INPUT = '[data-testid="register-fecha-nacimiento-input"]';
 const GENERO_SELECT = '[data-testid="register-genero-select"]';
@@ -33,6 +34,16 @@ class StudentCreatePage extends BasePage {
 
   async getActivationNoticeText() {
     return this.getElementText(ACTIVATION_NOTICE);
+  }
+
+  async getSelectedPhoneCountry() {
+    const el = await this.waitForElement(PHONE_COUNTRY_SELECT);
+    return el.getValue();
+  }
+
+  async getPhoneInputValue() {
+    const el = await this.waitForElement(TELEFONO_INPUT);
+    return el.getValue();
   }
 
   async fillStudentForm({

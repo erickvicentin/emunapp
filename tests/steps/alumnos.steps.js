@@ -41,6 +41,7 @@ Then(
     expect(normalizedHeaders).toContain("EDAD");
     expect(normalizedHeaders).toContain("SEXO");
     expect(normalizedHeaders).toContain("% DE ASISTENCIA");
+    expect(normalizedHeaders).toContain("ESTADO");
     expect(normalizedHeaders).toContain("ACCIONES");
   },
 );
@@ -245,7 +246,7 @@ When(
     await StudentCreatePage.fillStudentForm({
       nombre: "Camila",
       apellido: "Navarro",
-      telefono: "+54 9 11 5555-9988",
+      telefono: "91155559988",
       fechaNacimiento: "1997-08-20",
       genero: "mujer",
       dni: "40123456",
@@ -330,5 +331,56 @@ Then(
     await AlumnosPage.waitForPageLoad();
     const data = await AlumnosPage.getStudentRowData(studentId);
     expect(data.name).toBe(expectedName);
+  },
+);
+
+Then(
+  "the phone country code dropdown should default to {string}",
+  async (expectedCountry) => {
+    const selected = await StudentCreatePage.getSelectedPhoneCountry();
+    expect(selected).toBe(expectedCountry);
+  },
+);
+
+When(
+  "the administrator enters an oversized phone number {string}",
+  async (rawPhone) => {
+    await StudentCreatePage.fillStudentForm({ telefono: rawPhone });
+  },
+);
+
+Then(
+  "the phone input should prevent exceeding the maximum digits for {string}",
+  async (countryCode) => {
+    const value = await StudentCreatePage.getPhoneInputValue();
+    expect(countryCode).toBe("AR");
+    expect(value.length).toBeLessThanOrEqual(11);
+  },
+);
+
+When(
+  "the administrator toggles the active switch for student {string}",
+  async (studentId) => {
+    await AlumnosPage.toggleStudentActive(studentId);
+  },
+);
+
+Then(
+  "the student {string} should have status {string} with switch checked {string}",
+  async (studentId, expectedLabel, expectedChecked) => {
+    const label = await AlumnosPage.getStudentStatusLabel(studentId);
+    const isChecked = await AlumnosPage.isStudentSwitchChecked(studentId);
+    expect(label).toBe(expectedLabel);
+    expect(String(isChecked)).toBe(expectedChecked);
+  },
+);
+
+Then(
+  "a {string} snackbar should appear indicating status change {string}",
+  async (expectedVariant, expectedWord) => {
+    const snackbar = await AlumnosPage.getSnackbarState();
+    expect(snackbar.displayed).toBe(true);
+    expect(snackbar.variant).toBe(expectedVariant);
+    expect(snackbar.message).toContain(expectedWord);
   },
 );
