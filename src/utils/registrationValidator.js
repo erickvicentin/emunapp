@@ -1,4 +1,5 @@
 import { calculateAge } from './dateUtils';
+import { validatePhoneNumber } from './phoneUtils';
 
 /**
  * Validates shared personal profile fields (Nombre, Apellido, Teléfono, Fecha de Nacimiento, Género).
@@ -11,8 +12,10 @@ export function validateProfileFields(formData) {
 
   if (!formData.nombre.trim()) errors.nombre = 'El nombre es obligatorio.';
   if (!formData.apellido.trim()) errors.apellido = 'El apellido es obligatorio.';
-  if (!formData.telefono.trim()) {
-    errors.telefono = 'El teléfono es obligatorio para contactarte por tus turnos.';
+
+  const phoneError = validatePhoneNumber(formData.telefono);
+  if (phoneError) {
+    errors.telefono = phoneError;
   }
 
   if (!formData.fechaNacimiento) {
@@ -44,6 +47,17 @@ export function validateEmailField(email) {
   return null;
 }
 
+export function validateDniField(rawDni) {
+  const compactDni = String(rawDni || '').replace(/\./g, '').trim();
+  if (!compactDni) {
+    return 'El DNI es obligatorio.';
+  }
+  if (!/^\d{7,8}$/.test(compactDni)) {
+    return 'Ingresá un DNI válido de 7 u 8 dígitos.';
+  }
+  return null;
+}
+
 /**
  * Validates the customer self-registration form data.
  * @param {Object} formData
@@ -52,6 +66,9 @@ export function validateEmailField(email) {
  */
 export function validateRegistration(formData, isGoogleMode) {
   const errors = validateProfileFields(formData);
+
+  const dniError = validateDniField(formData.dni);
+  if (dniError) errors.dni = dniError;
 
   if (!isGoogleMode) {
     const emailError = validateEmailField(formData.email);
@@ -84,12 +101,8 @@ export function validateRegistration(formData, isGoogleMode) {
 export function validateStudentCreate(formData) {
   const errors = validateProfileFields(formData);
 
-  const compactDni = formData.dni.replace(/\./g, '').trim();
-  if (!compactDni) {
-    errors.dni = 'El DNI es obligatorio.';
-  } else if (!/^\d{7,8}$/.test(compactDni)) {
-    errors.dni = 'Ingresá un DNI válido de 7 u 8 dígitos.';
-  }
+  const dniError = validateDniField(formData.dni);
+  if (dniError) errors.dni = dniError;
 
   const emailError = validateEmailField(formData.email);
   if (emailError) errors.email = emailError;
