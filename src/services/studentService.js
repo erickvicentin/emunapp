@@ -23,7 +23,7 @@ export function formatDni(rawDni) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function mapCallableError(error, fallbackMessage) {
+export function mapCallableError(error, fallbackMessage) {
   const code = error?.code || '';
   if (code.includes('not-found') || code.includes('unavailable')) {
     return 'El servicio de administración de Firebase (Cloud Functions) no está desplegado o no responde en este entorno.';

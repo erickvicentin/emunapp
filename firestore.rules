@@ -32,6 +32,14 @@ service cloud.firestore {
       );
     }
 
+    // Verifica si el usuario tiene rol de administradora vía custom claims
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.rol == 'administradora' ||
+        request.auth.token.admin == true
+      );
+    }
+
     // Verifica que los campos inmutables no hayan sido modificados en un update
     function areImmutableFieldsUnchanged(fields) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
@@ -72,13 +80,15 @@ service cloud.firestore {
         (isOwner(userId) &&
           request.resource.data.rol == 'customer' &&
           (!('active' in request.resource.data) || request.resource.data.active == true)) ||
-        isStaff()
+        (isStaff() && request.resource.data.rol == 'customer') ||
+        isAdmin()
       );
       allow update: if isValidUser(request.resource.data, userId) && (
         (isOwner(userId) && areImmutableFieldsUnchanged(['rol', 'uid', 'active'])) ||
-        isStaff()
+        (isStaff() && resource.data.rol == 'customer' && request.resource.data.rol == 'customer') ||
+        isAdmin()
       );
-      allow delete: if isStaff();
+      allow delete: if (isStaff() && resource.data.rol == 'customer') || isAdmin();
     }
 
     // Colección: turnos_clase (cupos fijos de 4 camas)
