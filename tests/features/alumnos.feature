@@ -20,11 +20,10 @@ Feature: Students Management in Administrator Panel
     And the row for student "alu-1" should display the view, edit, and delete action icons
 
   @EMUNA-006
-  Scenario: View details and edit student show upcoming feature notice
+  Scenario: View student detail page with gender fallback icon
     When the administrator clicks the view icon for student "alu-1"
-    Then an inline notice should display "Próximamente: detalle del alumno Sofía Martínez."
-    When the administrator clicks the edit icon for student "alu-1"
-    Then an inline notice should display "Próximamente: editar datos de Sofía Martínez."
+    Then the student detail page should be visible for "alu-1" with name "Sofía Martínez"
+    And the student detail avatar should show the gender fallback icon "woman"
 
   @EMUNA-007
   Scenario: Delete a student after confirming in the modal dialog
@@ -77,3 +76,12 @@ Feature: Students Management in Administrator Panel
     When the administrator completes the new student form with valid data
     And the administrator submits the new student form
     Then an "error" snackbar should appear with the error message
+
+  @EMUNA-013
+  Scenario: Edit student personal data and reflect changes in the table
+    When the administrator clicks the edit icon for student "alu-1"
+    Then the student edit page should be visible for "alu-1" with title "Editar datos del alumno"
+    When the administrator updates the student first name to "Sofía Elena"
+    And the administrator saves the student changes
+    Then a "success" snackbar should appear indicating update succeeded
+    And the row for student "alu-1" should display name "Sofía Elena Martínez"

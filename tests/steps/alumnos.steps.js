@@ -2,6 +2,8 @@ import { When, Then } from "@wdio/cucumber-framework";
 import { expect } from "@wdio/globals";
 import AlumnosPage from "../pages/alumnos.page.js";
 import StudentCreatePage from "../pages/studentCreate.page.js";
+import StudentDetailPage from "../pages/studentDetail.page.js";
+import StudentEditPage from "../pages/studentEdit.page.js";
 
 Then(
   "the students section should be visible with title {string}",
@@ -262,5 +264,71 @@ Then(
     const hasError =
       await StudentCreatePage.isSectionTextVisible(expectedError);
     expect(hasError).toBe(true);
+  },
+);
+
+Then(
+  "the student detail page should be visible for {string} with name {string}",
+  async (studentId, expectedName) => {
+    await StudentDetailPage.waitForPageLoad();
+    const isDisplayed = await StudentDetailPage.isSectionDisplayed();
+    const url = await StudentDetailPage.getCurrentUrl();
+    const name = await StudentDetailPage.getStudentNameText();
+
+    expect(isDisplayed).toBe(true);
+    expect(url).toContain(`/administrador/alumnos/detail?studentId=${studentId}`);
+    expect(name).toBe(expectedName);
+  },
+);
+
+Then(
+  "the student detail avatar should show the gender fallback icon {string}",
+  async (expectedIcon) => {
+    const iconName = await StudentDetailPage.getAvatarFallbackIconName();
+    expect(iconName).toBe(expectedIcon);
+  },
+);
+
+Then(
+  "the student edit page should be visible for {string} with title {string}",
+  async (studentId, expectedTitle) => {
+    await StudentEditPage.waitForPageLoad();
+    const isDisplayed = await StudentEditPage.isSectionDisplayed();
+    const url = await StudentEditPage.getCurrentUrl();
+    const title = await StudentEditPage.getTitleText();
+
+    expect(isDisplayed).toBe(true);
+    expect(url).toContain(`/administrador/alumnos/edit?studentId=${studentId}`);
+    expect(title).toBe(expectedTitle);
+  },
+);
+
+When(
+  "the administrator updates the student first name to {string}",
+  async (newFirstName) => {
+    await StudentEditPage.updateFields({ nombre: newFirstName });
+  },
+);
+
+When("the administrator saves the student changes", async () => {
+  await StudentEditPage.clickSubmit();
+});
+
+Then(
+  "a {string} snackbar should appear indicating update succeeded",
+  async (expectedVariant) => {
+    const snackbar = await AlumnosPage.getSnackbarState();
+    expect(snackbar.displayed).toBe(true);
+    expect(snackbar.variant).toBe(expectedVariant);
+    expect(snackbar.message).toContain("actualizados correctamente");
+  },
+);
+
+Then(
+  "the row for student {string} should display name {string}",
+  async (studentId, expectedName) => {
+    await AlumnosPage.waitForPageLoad();
+    const data = await AlumnosPage.getStudentRowData(studentId);
+    expect(data.name).toBe(expectedName);
   },
 );

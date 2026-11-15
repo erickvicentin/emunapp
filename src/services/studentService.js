@@ -1,5 +1,13 @@
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { auth, databaseId, db, functions } from '../config/firebase';
 import { calculateAge } from '../utils/dateUtils';
@@ -9,6 +17,11 @@ const GENDER_LABEL_MAP = {
   hombre: 'Masculino',
   no_especificar: 'Otro',
 };
+
+export function formatDni(rawDni) {
+  const digits = String(rawDni || '').replace(/\D/g, '');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 
 function mapCallableError(error, fallbackMessage) {
   const code = error?.code || '';
@@ -28,18 +41,24 @@ function mapCallableError(error, fallbackMessage) {
 }
 
 export function mapStudentProfileToRow(data, id) {
+  const nombre = data.nombre || '';
+  const apellido = data.apellido || '';
   const nombreApellido =
     data.nombreApellido ||
-    `${data.nombre || ''} ${data.apellido || ''}`.trim() ||
+    `${nombre} ${apellido}`.trim() ||
     data.email ||
     'Sin nombre';
 
   return {
     id: id || data.uid,
+    nombre,
+    apellido,
     nombreApellido,
     email: data.email || '',
     telefono: data.telefono || '',
     fechaNacimiento: data.fechaNacimiento || '',
+    genero: data.genero || 'no_especificar',
+    photoURL: data.photoURL || '',
     dni: data.dni || 'Sin DNI',
     edad: data.edad ?? calculateAge(data.fechaNacimiento) ?? '-',
     sexo: data.sexo || GENDER_LABEL_MAP[data.genero] || 'Otro',
@@ -101,6 +120,33 @@ export async function deleteStudentViaAdmin(uid) {
       mapCallableError(
         error,
         'No se pudo eliminar el alumno de Firebase Auth y Firestore.'
+      )
+    );
+  }
+}
+
+export async function updateStudentProfile(uid, formData) {
+  const updatedFields = {
+    nombre: formData.nombre.trim(),
+    apellido: formData.apellido.trim(),
+    telefono: formData.telefono.trim(),
+    fechaNacimiento: formData.fechaNacimiento,
+    genero: formData.genero || 'no_especificar',
+    dni: formatDni(formData.dni),
+  };
+
+  try {
+    const userDocRef = doc(db, 'usuarios', uid);
+    await updateDoc(userDocRef, {
+      ...updatedFields,
+      actualizadoEn: serverTimestamp(),
+    });
+    return updatedFields;
+  } catch (error) {
+    throw new Error(
+      mapCallableError(
+        error,
+        'No se pudieron actualizar los datos del alumno en Firestore.'
       )
     );
   }

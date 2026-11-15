@@ -110,3 +110,24 @@
 ### Pros y Contras
 - **Pros:** Seguridad real validada en backend; consistencia entre Firebase Auth y Firestore (`emuna-testing` / `emuna-prod`); feedback visual inmediato de éxito y error.
 - **Contras:** El despliegue de Cloud Functions en Firebase requiere tener el proyecto en el plan Blaze y ejecutar `firebase deploy --only functions`.
+
+---
+
+## ADR-006: Páginas de Detalle y Edición de Alumno (`/administrador/alumnos/detail` y `/edit`), Reutilización de `StudentFormFields` y Avatar por Género
+
+- **Fecha:** 2026-11-13
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- Se amplió `resolveAdminRoute` en `src/pages/AdministratorPage.jsx` para soportar las acciones `detail` y `edit` bajo `/administrador/alumnos/:action` leyendo `studentId` desde `useSearchParams()`.
+- Se creó la molécula reutilizable `StudentFormFields` (`src/components/molecules/StudentFormFields.jsx`) compartida entre `StudentCreateSection` y `StudentEditSection`, evitando duplicar la composición de `RegisterProfileFields` + DNI + Email.
+- Se creó `StudentDetailSection` (`src/components/organisms/StudentDetailSection.jsx`) reutilizando el átomo `Avatar` (ampliado con `size="xl"` y `fallbackIcon` para mostrar `woman`, `man` o `person` según el género del alumno cuando no posee `photoURL`).
+- Se creó `StudentEditSection` (`src/components/organisms/StudentEditSection.jsx`), `updateStudentProfile` en `src/services/studentService.js` y `updateStudent` en `src/hooks/useStudentsManager.js` con feedback por `Snackbar`.
+
+### Qué se quitó
+- Se eliminaron los avisos temporales `"Próximamente: detalle..."` y `"Próximamente: editar..."` en `StudentsSection`.
+
+### Por qué (Path Params vs. Query Params)
+- Se adoptaron rutas `/administrador/alumnos/detail?studentId=...` y `/administrador/alumnos/edit?studentId=...` para mantener consistencia directa con el patrón existente `/administrador/:section/:action` (`/administrador/alumnos/nuevo`).
+- **Pros:** Reutiliza la estructura de rutas `/administrador/:section/:action` sin agregar más niveles de rutas anidadas y permite manejar fácilmente IDs ausentes o inválidos.
+- **Contras:** En REST/SPA convencionales, los path params (`/alumnos/:studentId` y `/alumnos/:studentId/editar`) suelen ser más semánticos para identificar un recurso específico, reservando los query params para filtros o paginación. Si en el futuro se migra a path params, solo requiere ajustar `App.jsx` y `resolveAdminRoute`.

@@ -115,10 +115,14 @@ export default function StudentsSection({
         students={filteredStudents}
         hasSearchFilter={Boolean(searchQuery.trim())}
         onViewStudent={(student) =>
-          showNotice(`Próximamente: detalle del alumno ${student.nombreApellido}.`)
+          navigate(
+            `/administrador/alumnos/detail?studentId=${encodeURIComponent(student.id)}`
+          )
         }
         onEditStudent={(student) =>
-          showNotice(`Próximamente: editar datos de ${student.nombreApellido}.`)
+          navigate(
+            `/administrador/alumnos/edit?studentId=${encodeURIComponent(student.id)}`
+          )
         }
         onDeleteStudent={handleOpenDeleteDialog}
       />

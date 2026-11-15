@@ -4,6 +4,9 @@ import {
   createStudentViaAdmin,
   deleteStudentViaAdmin,
   fetchCustomerStudents,
+  formatDni,
+  mapStudentProfileToRow,
+  updateStudentProfile,
 } from '../services/studentService';
 
 const INITIAL_MOCK_STUDENTS = MOCK_STUDENTS.map((student) => ({
@@ -103,6 +106,46 @@ export function useStudentsManager() {
     [showSnackbar]
   );
 
+  const updateStudent = useCallback(
+    async (student, formData) => {
+      if (!student) return null;
+      try {
+        if (!student.isMock) {
+          await updateStudentProfile(student.id, formData);
+        }
+
+        const updatedRow = mapStudentProfileToRow(
+          {
+            ...student,
+            nombre: formData.nombre.trim(),
+            apellido: formData.apellido.trim(),
+            nombreApellido: `${formData.nombre.trim()} ${formData.apellido.trim()}`,
+            telefono: formData.telefono.trim(),
+            fechaNacimiento: formData.fechaNacimiento,
+            genero: formData.genero || 'no_especificar',
+            dni: formatDni(formData.dni),
+            edad: undefined,
+            sexo: undefined,
+          },
+          student.id
+        );
+
+        setStudents((prev) =>
+          prev.map((item) => (item.id === student.id ? updatedRow : item))
+        );
+        showSnackbar(
+          'success',
+          `Datos de "${updatedRow.nombreApellido}" actualizados correctamente.`
+        );
+        return updatedRow;
+      } catch (error) {
+        showSnackbar('error', error.message);
+        throw error;
+      }
+    },
+    [showSnackbar]
+  );
+
   return {
     students,
     isLoadingStudents,
@@ -110,6 +153,7 @@ export function useStudentsManager() {
     snackbar,
     closeSnackbar,
     createStudent,
+    updateStudent,
     deleteStudent,
   };
 }
