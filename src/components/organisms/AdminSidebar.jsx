@@ -14,7 +14,11 @@ export default function AdminSidebar({
   isDrawerOpen,
   onDrawerOpenChange,
   openBtnRef,
+  userRole = 'staff',
 }) {
+  const visibleNavItems = ADMIN_NAV_ITEMS.filter(
+    (item) => !item.adminOnly || userRole === 'administradora'
+  );
   const drawerRef = useRef(null);
   const scrollerRef = useRef(null);
   const sheetRef = useRef(null);
@@ -223,7 +227,7 @@ export default function AdminSidebar({
           </div>
 
           <ul className="space-y-1 flex-1">
-            {ADMIN_NAV_ITEMS.map((item) => (
+            {visibleNavItems.map((item) => (
               <li key={item.id}>
                 <NavLink
                   to={item.path}

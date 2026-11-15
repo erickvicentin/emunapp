@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
+import { useAuth } from '../../hooks/useAuth';
+import { resolveAuthenticatedCta } from '../../utils/authRouting';
 import logo from '../../assets/logo.jpeg'
 
 /**
@@ -10,6 +12,17 @@ import logo from '../../assets/logo.jpeg'
  */
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, userProfile } = useAuth();
+  const { isAuthenticated, targetPath, firstName } = resolveAuthenticatedCta(
+    user,
+    userProfile
+  );
+  const desktopCtaLabel = isAuthenticated
+    ? `Hola, ${firstName || 'Usuario'}`
+    : 'Iniciar Sesión / Reservar';
+  const mobileCtaLabel = isAuthenticated
+    ? `Hola, ${firstName || 'Usuario'}`
+    : 'Iniciar Sesión / Reservar Turno';
 
   const navLinks = [
     { label: 'Inicio', href: '#inicio' },
@@ -57,17 +70,19 @@ export default function Header() {
         {/* CTA Actions */}
         <div className="flex items-center gap-3 sm:gap-space-md">
           <Button
-            to="/login"
+            to={targetPath}
             variant="primary"
             size="md"
+            data-testid="header-auth-cta"
             className="hidden sm:inline-flex text-xs md:text-sm py-2 px-4 md:px-5"
           >
-            Iniciar Sesión / Reservar
+            {desktopCtaLabel}
           </Button>
 
           <Link
-            to="/login"
-            aria-label="Perfil y cuenta de alumno"
+            to={targetPath}
+            data-testid="header-account-icon"
+            aria-label={isAuthenticated ? `Ir a la cuenta de ${firstName || 'usuario'}` : 'Perfil y cuenta de alumno'}
             className="w-9 h-9 rounded-full bg-primary flex items-center justify-center hover:bg-primary-container transition-colors shadow-xs"
           >
             <Icon name="person" className="text-on-primary text-[19px]" />
@@ -102,13 +117,14 @@ export default function Header() {
             ))}
             <div className="pt-4 border-t border-surface-container-high flex flex-col gap-3">
               <Button
-                to="/login"
+                to={targetPath}
                 variant="primary"
                 size="lg"
+                data-testid="header-mobile-auth-cta"
                 className="w-full text-center"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Iniciar Sesión / Reservar Turno
+                {mobileCtaLabel}
               </Button>
             </div>
           </nav>

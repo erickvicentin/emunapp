@@ -37,6 +37,10 @@ function hasStaffClaim(claims = {}) {
   );
 }
 
+function hasAdminClaim(claims = {}) {
+  return claims.rol === 'administradora' || claims.admin === true;
+}
+
 function assertStaffCaller(request) {
   if (!request.auth?.uid) {
     throw new HttpsError(
@@ -49,6 +53,22 @@ function assertStaffCaller(request) {
     throw new HttpsError(
       'permission-denied',
       'Solo el personal autorizado con custom claims de staff puede gestionar alumnos.'
+    );
+  }
+}
+
+function assertAdminCaller(request) {
+  if (!request.auth?.uid) {
+    throw new HttpsError(
+      'unauthenticated',
+      'Debes iniciar sesión para realizar esta operación.'
+    );
+  }
+
+  if (!hasAdminClaim(request.auth.token)) {
+    throw new HttpsError(
+      'permission-denied',
+      'Solo una cuenta con rol administradora puede gestionar usuarios de staff.'
     );
   }
 }
@@ -109,12 +129,13 @@ async function deleteCollectionByUserId(db, collectionName, uid) {
   return snapshot.size;
 }
 
-/**
- * Crea un alumno en Firebase Auth y en la colección `usuarios` de Firestore
- * con rol `customer` utilizando Firebase Admin SDK.
- */
-export const createStudentAccount = onCall(async (request) => {
-  assertStaffCaller(request);
+async function createManagedAccount(request, { targetRole, requireAdminCaller = false }) {
+  if (requireAdminCaller) {
+    assertAdminCaller(request);
+  } else {
+    assertStaffCaller(request);
+  }
+
   const databaseId = resolveDatabaseId(request.data?.databaseId);
   const db = getFirestore(databaseId);
   const payload = validateStudentPayload(request.data);
@@ -129,7 +150,7 @@ export const createStudentAccount = onCall(async (request) => {
       displayName: `${payload.nombre} ${payload.apellido}`.trim(),
       emailVerified: false,
     });
-    await auth.setCustomUserClaims(userRecord.uid, { rol: 'customer' });
+    await auth.setCustomUserClaims(userRecord.uid, { rol: targetRole });
   } catch (error) {
     if (userRecord?.uid) {
       await auth.deleteUser(userRecord.uid).catch(() => {});
@@ -146,7 +167,7 @@ export const createStudentAccount = onCall(async (request) => {
     );
   }
 
-  const studentProfile = {
+  const userProfile = {
     uid: userRecord.uid,
     email: payload.email,
     nombre: payload.nombre,
@@ -156,7 +177,7 @@ export const createStudentAccount = onCall(async (request) => {
     genero: payload.genero,
     dni: payload.dniFormatted,
     photoURL: '',
-    rol: 'customer',
+    rol: targetRole,
     active: true,
     estado: 'activo',
     registroCompleto: true,
@@ -171,14 +192,14 @@ export const createStudentAccount = onCall(async (request) => {
       .collection('usuarios')
       .doc(userRecord.uid)
       .set({
-        ...studentProfile,
+        ...userProfile,
         creadoEn: FieldValue.serverTimestamp(),
       });
   } catch (error) {
     await auth.deleteUser(userRecord.uid).catch(() => {});
     throw new HttpsError(
       'internal',
-      error?.message || 'No se pudo guardar el perfil del alumno en Firestore.'
+      error?.message || 'No se pudo guardar el perfil del usuario en Firestore.'
     );
   }
 
@@ -191,39 +212,47 @@ export const createStudentAccount = onCall(async (request) => {
   }
 
   return {
-    student: studentProfile,
+    userProfile,
     activationLinkGenerated,
   };
-});
+}
 
-/**
- * Elimina un usuario con rol `customer` de Firestore (perfil y colecciones relacionadas)
- * y de Firebase Authentication utilizando Firebase Admin SDK.
- */
-export const deleteStudentAccount = onCall(async (request) => {
-  assertStaffCaller(request);
+async function deleteManagedAccount(
+  request,
+  { expectedRole, requireAdminCaller = false, blockAdminTargets = true }
+) {
+  if (requireAdminCaller) {
+    assertAdminCaller(request);
+  } else {
+    assertStaffCaller(request);
+  }
+
   const databaseId = resolveDatabaseId(request.data?.databaseId);
   const db = getFirestore(databaseId);
   const auth = getAuth();
   const uid = String(request.data?.uid || '').trim();
 
   if (!uid) {
-    throw new HttpsError('invalid-argument', 'El identificador del alumno es obligatorio.');
+    throw new HttpsError('invalid-argument', 'El identificador del usuario es obligatorio.');
   }
 
   if (uid === request.auth.uid) {
     throw new HttpsError(
       'failed-precondition',
-      'No podés eliminar tu propia cuenta de administrador.'
+      'No podés eliminar tu propia cuenta.'
     );
   }
 
   try {
     const targetAuthUser = await auth.getUser(uid);
-    if (hasStaffClaim(targetAuthUser.customClaims)) {
+    const targetClaims = targetAuthUser.customClaims || {};
+    if (
+      (blockAdminTargets && hasAdminClaim(targetClaims)) ||
+      (expectedRole === 'customer' && hasStaffClaim(targetClaims))
+    ) {
       throw new HttpsError(
         'permission-denied',
-        'No podés eliminar cuentas de personal o administración.'
+        'No podés eliminar cuentas con mayor o igual privilegio administrativo.'
       );
     }
   } catch (error) {
@@ -239,13 +268,13 @@ export const deleteStudentAccount = onCall(async (request) => {
   const targetUserRef = db.collection('usuarios').doc(uid);
   const targetUserSnap = await targetUserRef.get();
   if (!targetUserSnap.exists) {
-    throw new HttpsError('not-found', 'El perfil del alumno no existe en Firestore.');
+    throw new HttpsError('not-found', 'El perfil del usuario no existe en Firestore.');
   }
 
-  if (targetUserSnap.data()?.rol !== 'customer') {
+  if (targetUserSnap.data()?.rol !== expectedRole) {
     throw new HttpsError(
       'permission-denied',
-      'Solo se permite eliminar cuentas con rol customer.'
+      `Solo se permite eliminar cuentas con rol ${expectedRole}.`
     );
   }
 
@@ -267,4 +296,64 @@ export const deleteStudentAccount = onCall(async (request) => {
   }
 
   return { success: true, uid };
+}
+
+/**
+ * Crea un alumno en Firebase Auth y en la colección `usuarios` de Firestore
+ * con rol `customer` utilizando Firebase Admin SDK.
+ */
+export const createStudentAccount = onCall(async (request) => {
+  const { userProfile, activationLinkGenerated } = await createManagedAccount(
+    request,
+    { targetRole: 'customer' }
+  );
+  return { student: userProfile, activationLinkGenerated };
+});
+
+/**
+ * Elimina un usuario con rol `customer` de Firestore (perfil y colecciones relacionadas)
+ * y de Firebase Authentication utilizando Firebase Admin SDK.
+ */
+export const deleteStudentAccount = onCall(async (request) =>
+  deleteManagedAccount(request, { expectedRole: 'customer' })
+);
+
+/**
+ * Crea un usuario con rol `staff` en Firebase Auth (con custom claim `rol: 'staff'`)
+ * y en Firestore. Exclusivo para cuentas con rol `administradora`.
+ */
+export const createStaffAccount = onCall(async (request) => {
+  const { userProfile, activationLinkGenerated } = await createManagedAccount(
+    request,
+    { targetRole: 'staff', requireAdminCaller: true }
+  );
+  return { staff: userProfile, activationLinkGenerated };
+});
+
+/**
+ * Elimina un usuario con rol `staff` de Firestore y Firebase Authentication.
+ * Exclusivo para cuentas con rol `administradora`.
+ */
+export const deleteStaffAccount = onCall(async (request) =>
+  deleteManagedAccount(request, {
+    expectedRole: 'staff',
+    requireAdminCaller: true,
+    blockAdminTargets: true,
+  })
+);
+
+/**
+ * Devuelve los paquetes activos del catálogo público para la Landing Page
+ * sin exponer lectura pública directa en Firestore Rules.
+ */
+export const getPublicPackages = onCall(async (request) => {
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const snapshot = await db.collection('paquetes_catalogo').get();
+  const packages = snapshot.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((pkg) => pkg.active !== false)
+    .sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+
+  return { packages };
 });

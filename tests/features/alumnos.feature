@@ -1,3 +1,4 @@
+@sanity-student-admin
 Feature: Students Management in Administrator Panel
   As an Emuná Pilates administrator
   I want to view and manage the list of registered students

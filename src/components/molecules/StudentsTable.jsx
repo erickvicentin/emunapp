@@ -5,11 +5,11 @@ import Switch from '../atoms/Switch';
 
 const SKELETON_ROWS = [0, 1, 2, 3, 4, 5];
 
-function StudentsTableSkeletonRows() {
+function StudentsTableSkeletonRows({ showAttendance = true, testIdPrefix = 'students' }) {
   return SKELETON_ROWS.map((rowIndex) => (
     <tr
       key={`skeleton-${rowIndex}`}
-      data-testid={`students-skeleton-row-${rowIndex}`}
+      data-testid={`${testIdPrefix}-skeleton-row-${rowIndex}`}
       className="hover:bg-transparent"
     >
       <td className="py-3.5 px-5 bg-surface-container-lowest">
@@ -24,9 +24,11 @@ function StudentsTableSkeletonRows() {
       <td className="py-3.5 px-4">
         <Skeleton className="h-4 w-20" />
       </td>
-      <td className="py-3.5 px-4">
-        <Skeleton className="h-5 w-12 rounded-full" />
-      </td>
+      {showAttendance && (
+        <td className="py-3.5 px-4">
+          <Skeleton className="h-5 w-12 rounded-full" />
+        </td>
+      )}
       <td className="py-3.5 px-4">
         <div className="inline-flex items-center gap-2">
           <Skeleton className="h-6 w-11 rounded-full" />
@@ -78,13 +80,21 @@ export default function StudentsTable({
   onViewStudent,
   onEditStudent,
   onDeleteStudent,
+  showAttendance = true,
+  tableTestIdPrefix = 'students',
+  rowTestIdPrefix = 'student',
+  emptyTitle = 'No hay alumnos registrados',
+  emptyDescription = 'Crea un nuevo alumno o importa una plantilla para comenzar.',
+  emptySearchTitle = 'No se encontraron alumnos',
 }) {
   return (
     <section className="rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs overflow-hidden">
       {!isLoading && students.length === 0 ? (
         <div
           data-testid={
-            hasSearchFilter ? 'students-empty-search' : 'students-empty-state'
+            hasSearchFilter
+              ? `${tableTestIdPrefix}-empty-search`
+              : `${tableTestIdPrefix}-empty-state`
           }
           className="p-12 text-center flex flex-col items-center justify-center"
         >
@@ -95,30 +105,32 @@ export default function StudentsTable({
             />
           </div>
           <p className="font-headline-sm text-primary font-semibold">
-            {hasSearchFilter
-              ? 'No se encontraron alumnos'
-              : 'No hay alumnos registrados'}
+            {hasSearchFilter ? emptySearchTitle : emptyTitle}
           </p>
           <p className="font-body-sm text-on-surface-variant mt-1">
             {hasSearchFilter
               ? 'Probá con otro nombre, apellido, DNI o email, o limpiá la búsqueda.'
-              : 'Crea un nuevo alumno o importa una plantilla para comenzar.'}
+              : emptyDescription}
           </p>
         </div>
       ) : (
         <div
           tabIndex={0}
           role="region"
-          aria-labelledby="alumnos-table-caption"
+          aria-labelledby={`${tableTestIdPrefix}-table-caption`}
           className="StudentsTable-wrapper p-2 sm:p-0 focus:outline-none focus:ring-2 focus:ring-secondary/40 rounded-2xl"
         >
           <table
-            data-testid={isLoading ? 'students-table-skeleton' : 'students-table'}
+            data-testid={
+              isLoading
+                ? `${tableTestIdPrefix}-table-skeleton`
+                : `${tableTestIdPrefix}-table`
+            }
             aria-busy={isLoading}
             className="StudentsTable text-left"
           >
-            <caption id="alumnos-table-caption" className="sr-only">
-              Tabla de alumnos registrados con DNI, edad, sexo, porcentaje de asistencia y acciones
+            <caption id={`${tableTestIdPrefix}-table-caption`} className="sr-only">
+              Tabla de usuarios registrados con DNI, edad, sexo, estado y acciones
             </caption>
             <thead>
               <tr className="bg-surface-container-low text-on-surface-variant border-b border-surface-container-high">
@@ -146,12 +158,14 @@ export default function StudentsTable({
                 >
                   Sexo
                 </th>
-                <th
-                  scope="col"
-                  className="py-3.5 px-4 font-label-md text-[12px] uppercase tracking-wider font-semibold bg-surface-container-low whitespace-nowrap"
-                >
-                  % de asistencia
-                </th>
+                {showAttendance && (
+                  <th
+                    scope="col"
+                    className="py-3.5 px-4 font-label-md text-[12px] uppercase tracking-wider font-semibold bg-surface-container-low whitespace-nowrap"
+                  >
+                    % de asistencia
+                  </th>
+                )}
                 <th
                   scope="col"
                   className="py-3.5 px-4 font-label-md text-[12px] uppercase tracking-wider font-semibold bg-surface-container-low whitespace-nowrap"
@@ -168,51 +182,56 @@ export default function StudentsTable({
             </thead>
             <tbody className="divide-y divide-surface-container-high/70">
               {isLoading ? (
-                <StudentsTableSkeletonRows />
+                <StudentsTableSkeletonRows
+                  showAttendance={showAttendance}
+                  testIdPrefix={tableTestIdPrefix}
+                />
               ) : (
                 students.map((student) => {
                 const isActive = student.active !== false;
                 return (
                 <tr
                   key={student.id}
-                  data-testid={`student-row-${student.id}`}
+                  data-testid={`${rowTestIdPrefix}-row-${student.id}`}
                   className={`hover:bg-surface-container-low/50 transition-colors ${
                     isActive ? '' : 'opacity-70'
                   }`}
                 >
                   <th
                     scope="row"
-                    data-testid={`student-name-${student.id}`}
+                    data-testid={`${rowTestIdPrefix}-name-${student.id}`}
                     className="py-3.5 px-5 font-label-lg text-[14px] font-semibold text-primary bg-surface-container-lowest whitespace-nowrap"
                   >
                     {student.nombreApellido}
                   </th>
                   <td
-                    data-testid={`student-dni-${student.id}`}
+                    data-testid={`${rowTestIdPrefix}-dni-${student.id}`}
                     className="py-3.5 px-4 font-body-md text-[14px] text-on-surface tabular-nums whitespace-nowrap"
                   >
                     {student.dni}
                   </td>
                   <td
-                    data-testid={`student-age-${student.id}`}
+                    data-testid={`${rowTestIdPrefix}-age-${student.id}`}
                     className="py-3.5 px-4 font-body-md text-[14px] text-on-surface tabular-nums whitespace-nowrap"
                   >
                     {student.edad} años
                   </td>
                   <td
-                    data-testid={`student-gender-${student.id}`}
+                    data-testid={`${rowTestIdPrefix}-gender-${student.id}`}
                     className="py-3.5 px-4 font-body-md text-[14px] text-on-surface-variant whitespace-nowrap"
                   >
                     {student.sexo}
                   </td>
+                  {showAttendance && (
+                    <td
+                      data-testid={`${rowTestIdPrefix}-attendance-${student.id}`}
+                      className="py-3.5 px-4 whitespace-nowrap"
+                    >
+                      <AttendancePercentage percentage={student.porcentajeAsistencia} />
+                    </td>
+                  )}
                   <td
-                    data-testid={`student-attendance-${student.id}`}
-                    className="py-3.5 px-4 whitespace-nowrap"
-                  >
-                    <AttendancePercentage percentage={student.porcentajeAsistencia} />
-                  </td>
-                  <td
-                    data-testid={`student-status-${student.id}`}
+                    data-testid={`${rowTestIdPrefix}-status-${student.id}`}
                     className="py-3.5 px-4 whitespace-nowrap"
                   >
                     <div className="inline-flex items-center gap-2">
@@ -220,13 +239,13 @@ export default function StudentsTable({
                         checked={isActive}
                         disabled={togglingStudentId === student.id}
                         ariaLabel={`${isActive ? 'Desactivar' : 'Activar'} a ${student.nombreApellido}`}
-                        testId={`student-active-switch-${student.id}`}
+                        testId={`${rowTestIdPrefix}-active-switch-${student.id}`}
                         onChange={(nextValue) =>
                           onToggleStudentActive?.(student, nextValue)
                         }
                       />
                       <span
-                        data-testid={`student-status-label-${student.id}`}
+                        data-testid={`${rowTestIdPrefix}-status-label-${student.id}`}
                         className={`font-label-sm text-[12px] font-semibold ${
                           isActive ? 'text-secondary' : 'text-on-surface-variant'
                         }`}
@@ -239,7 +258,7 @@ export default function StudentsTable({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        data-testid={`student-view-btn-${student.id}`}
+                        data-testid={`${rowTestIdPrefix}-view-btn-${student.id}`}
                         onClick={() => onViewStudent(student)}
                         aria-label={`Ver detalle de ${student.nombreApellido}`}
                         title="Ver detalle"
@@ -249,20 +268,20 @@ export default function StudentsTable({
                       </button>
                       <button
                         type="button"
-                        data-testid={`student-edit-btn-${student.id}`}
+                        data-testid={`${rowTestIdPrefix}-edit-btn-${student.id}`}
                         onClick={() => onEditStudent(student)}
                         aria-label={`Editar datos de ${student.nombreApellido}`}
-                        title="Editar alumno"
+                        title="Editar"
                         className="w-9 h-9 rounded-full inline-flex items-center justify-center text-on-surface-variant hover:text-secondary hover:bg-secondary-container/40 transition-colors cursor-pointer"
                       >
                         <Icon name="edit" className="text-[19px]" />
                       </button>
                       <button
                         type="button"
-                        data-testid={`student-delete-btn-${student.id}`}
+                        data-testid={`${rowTestIdPrefix}-delete-btn-${student.id}`}
                         onClick={() => onDeleteStudent(student)}
                         aria-label={`Borrar a ${student.nombreApellido}`}
-                        title="Borrar alumno"
+                        title="Borrar"
                         className="w-9 h-9 rounded-full inline-flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error-container/60 transition-colors cursor-pointer"
                       >
                         <Icon name="delete" className="text-[19px]" />

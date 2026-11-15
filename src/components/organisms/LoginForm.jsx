@@ -73,7 +73,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
   };
 
   const handleForgotPassword = () => {
-    alert('Para recuperar tu contraseña, comunicate con la administración de Emuná por WhatsApp o acercate a la recepción.');
+    navigate('/recuperar-contrasena');
   };
 
   const handleGoogleClick = async () => {

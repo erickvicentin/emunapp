@@ -32,6 +32,14 @@ service cloud.firestore {
       );
     }
 
+    // Verifica si el usuario tiene rol de administradora vía custom claims
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.rol == 'administradora' ||
+        request.auth.token.admin == true
+      );
+    }
+
     // Verifica que los campos inmutables no hayan sido modificados en un update
     function areImmutableFieldsUnchanged(fields) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
@@ -61,6 +69,20 @@ service cloud.firestore {
         (!('active' in data) || data.active is bool);
     }
 
+    // Validador de dominio para documentos de /paquetes_catalogo/{paqueteId}
+    function isValidPackage(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 80 &&
+        data.classesCount is int && data.classesCount >= 1 && data.classesCount <= 100 &&
+        data.numericPrice is number && data.numericPrice >= 0 &&
+        (!('validityDays' in data) || (data.validityDays is int && data.validityDays >= 1 && data.validityDays <= 365)) &&
+        (!('active' in data) || data.active is bool) &&
+        (!('isPopular' in data) || data.isPopular is bool) &&
+        (!('isProtected' in data) || data.isProtected is bool) &&
+        isValidOptionalString(data, 'category', 80) &&
+        isValidOptionalString(data, 'frequency', 80) &&
+        isValidOptionalString(data, 'price', 40);
+    }
+
     // ===============================================================
     // Collections
     // ===============================================================
@@ -72,13 +94,15 @@ service cloud.firestore {
         (isOwner(userId) &&
           request.resource.data.rol == 'customer' &&
           (!('active' in request.resource.data) || request.resource.data.active == true)) ||
-        isStaff()
+        (isStaff() && request.resource.data.rol == 'customer') ||
+        isAdmin()
       );
       allow update: if isValidUser(request.resource.data, userId) && (
         (isOwner(userId) && areImmutableFieldsUnchanged(['rol', 'uid', 'active'])) ||
-        isStaff()
+        (isStaff() && resource.data.rol == 'customer' && request.resource.data.rol == 'customer') ||
+        isAdmin()
       );
-      allow delete: if isStaff();
+      allow delete: if (isStaff() && resource.data.rol == 'customer') || isAdmin();
     }
 
     // Colección: turnos_clase (cupos fijos de 4 camas)
@@ -103,7 +127,10 @@ service cloud.firestore {
     // Colección: paquetes_catalogo (paquetes de 4, 8, 12 y 20 clases)
     match /paquetes_catalogo/{paqueteId} {
       allow read: if isStaff() || isActiveUser();
-      allow write: if isStaff();
+      allow create: if isAdmin() && isValidPackage(request.resource.data);
+      allow update: if isAdmin() && isValidPackage(request.resource.data) &&
+        (resource.data.get('isProtected', false) != true || request.resource.data.get('isProtected', false) == true);
+      allow delete: if isAdmin() && resource.data.get('isProtected', false) != true;
     }
 
     // Colección: membresias_usuario (créditos y vencimientos)
