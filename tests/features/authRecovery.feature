@@ -1,3 +1,4 @@
+@sanity-auth-recovery
 Feature: Password Recovery, Reset Action, and Password Strength Rules
   As an Emuná Pilates user
   I want to recover my password, handle password action links, and see clear password rules

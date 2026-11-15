@@ -1,3 +1,4 @@
+@sanity-users
 Feature: Staff Users Management in Administrator Panel
   As an Emuná Pilates administrator
   I want to view and manage staff users

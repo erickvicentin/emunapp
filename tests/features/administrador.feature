@@ -1,3 +1,4 @@
+@sanity-administrator
 Feature: Administrator Panel
   As an Emuná Pilates administrator
   I want to access the administration panel and navigate through its sections

@@ -1,3 +1,4 @@
+@sanity-prices
 Feature: Packages and Pricing Management in Administrator Panel
   As an Emuná Pilates administrator
   I want to manage class packages and prices
