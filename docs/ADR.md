@@ -131,3 +131,30 @@
 - Se adoptaron rutas `/administrador/alumnos/detail?studentId=...` y `/administrador/alumnos/edit?studentId=...` para mantener consistencia directa con el patrón existente `/administrador/:section/:action` (`/administrador/alumnos/nuevo`).
 - **Pros:** Reutiliza la estructura de rutas `/administrador/:section/:action` sin agregar más niveles de rutas anidadas y permite manejar fácilmente IDs ausentes o inválidos.
 - **Contras:** En REST/SPA convencionales, los path params (`/alumnos/:studentId` y `/alumnos/:studentId/editar`) suelen ser más semánticos para identificar un recurso específico, reservando los query params para filtros o paginación. Si en el futuro se migra a path params, solo requiere ajustar `App.jsx` y `resolveAdminRoute`.
+
+
+---
+
+## ADR-007: Sección Usuarios (Staff) Exclusiva para Administradora (`/administrador/usuarios`) e Integración Firebase
+
+- **Fecha:** 2026-11-15
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se agregó el helper `isAdmin()` (`rol == 'administradora'`) y se restringió el alta, edición y eliminación de documentos con `rol == 'staff'` exclusivamente a `isAdmin()`, mientras `isStaff()` continúa limitado a gestionar cuentas `customer`.
+- **Cloud Functions (`functions/index.js`):** Se refactorizó la lógica compartida (`hasAdminClaim`, `assertAdminCaller`, `createManagedAccount`, `deleteManagedAccount`) y se exportaron `createStaffAccount` (asigna custom claim `{ rol: 'staff' }`) y `deleteStaffAccount`, restringidas a callers con rol `administradora`.
+- **Servicios y Hook:** Se exportó `mapCallableError` en `src/services/studentService.js`, se creó `src/services/staffService.js` (`fetchStaffUsers`, `createStaffViaAdmin`, `deleteStaffViaAdmin`, `updateStaffProfile`, `updateStaffActiveStatus`) y `src/hooks/useStaffManager.js` (con estado inicial `[]` y skeleton activo mientras `isAdmin` carga).
+- **UI y Reutilización Atómica:** Se generalizaron `StudentsHeader` y `StudentsTable` (incluyendo skeleton de carga y switch `active`), se extrajo la molécula `DetailField` (compartida entre `StudentDetailSection` y `StaffDetailSection`), y se crearon `StaffSection`, `StaffCreateSection`, `StaffEditSection` y `StaffDetailSection`.
+- **Aislamiento de Navegación y Rutas:** Se marcó `usuarios` con `adminOnly: true` en `src/data/adminNavItems.js`, se filtró en `AdminSidebar` según `userRole`, y se protegió `/administrador/usuarios` (+ `nuevo`, `edit`, `detail`) en `resolveAdminRoute` de `AdministratorPage.jsx`.
+
+### Qué se quitó
+- Se reemplazó el placeholder `"Próximamente"` de la sección `usuarios` en `AdministratorPage.jsx`.
+- Se eliminó la duplicación del bloque de campo de detalle entre `StudentDetailSection` y `StaffDetailSection` mediante `DetailField`.
+
+### Por qué
+- El personal con rol `staff` no debe poder visualizar, crear, modificar, activar/desactivar ni eliminar otros usuarios `staff`; esa responsabilidad corresponde únicamente a `administradora` tanto en UI como en backend (`firestore.rules` + Cloud Functions).
+- Generalizar `StudentsHeader`, `StudentsTable` y extraer `DetailField` mantiene consistencia visual, reutiliza el skeleton de carga y evita duplicación en `src/`.
+
+### Pros y Contras
+- **Pros:** Defensa en profundidad (UI + Firestore Rules + Cloud Functions Admin SDK); alta reutilización de moléculas existentes; sin flash de datos mockeados durante la carga.
+- **Contras:** Requiere desplegar las reglas actualizadas de Firestore y las nuevas Cloud Functions (`createStaffAccount`, `deleteStaffAccount`) en Firebase para operar en producción/testing.
