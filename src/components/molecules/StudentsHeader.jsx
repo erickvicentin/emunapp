@@ -10,6 +10,11 @@ export default function StudentsHeader({
   studentsCount,
   onExportExcel,
   onCreateStudent,
+  title = 'Alumnos',
+  subtitle = 'Listado general de alumnos registrados, tengan o no paquetes contratados o clases inscriptas.',
+  createLabel = 'Crear alumno',
+  showExport = true,
+  testIdPrefix = 'students',
 }) {
   return (
     <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-xs">
@@ -19,47 +24,49 @@ export default function StudentsHeader({
         </span>
         <div className="flex flex-wrap items-center gap-3 mt-1">
           <h1
-            data-testid="students-title"
+            data-testid={`${testIdPrefix}-title`}
             className="font-headline-lg text-headline-lg text-primary tracking-tight"
           >
-            Alumnos
+            {title}
           </h1>
           <span
-            data-testid="students-count-badge"
+            data-testid={`${testIdPrefix}-count-badge`}
             className="px-3 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-md text-[12px] font-semibold"
           >
             {studentsCount} registrados
           </span>
         </div>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Listado general de alumnos registrados, tengan o no paquetes contratados o clases inscriptas.
+          {subtitle}
         </p>
       </div>
 
       <div className="flex flex-col items-end lg:w-100">
-  <div className="flex flex-col gap-3 w-fit">
-    <Button
-      variant="outline"
-      size="sm"
-      data-testid="students-export-btn"
-      onClick={onExportExcel}
-      className="w-full justify-center gap-1 bg-surface-container-lowest cursor-pointer"
-    >
-      <Icon name="table_view" className="text-[18px] text-secondary" />
-      <span>Exportar plantilla como Excel</span>
-    </Button>
-    <Button
-      variant="primary"
-      size="sm"
-      data-testid="students-create-btn"
-      onClick={onCreateStudent}
-      className="w-full justify-center gap-1 cursor-pointer"
-    >
-      <Icon name="person_add" className="text-[18px]" />
-      <span>Crear alumno</span>
-    </Button>
-  </div>
-</div>
+        <div className="flex flex-col gap-3 w-fit">
+          {showExport && (
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid={`${testIdPrefix}-export-btn`}
+              onClick={onExportExcel}
+              className="w-full justify-center gap-1 bg-surface-container-lowest cursor-pointer"
+            >
+              <Icon name="table_view" className="text-[18px] text-secondary" />
+              <span>Exportar plantilla como Excel</span>
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            data-testid={`${testIdPrefix}-create-btn`}
+            onClick={onCreateStudent}
+            className="w-full justify-center gap-1 cursor-pointer"
+          >
+            <Icon name="person_add" className="text-[18px]" />
+            <span>{createLabel}</span>
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }

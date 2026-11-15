@@ -6,10 +6,15 @@ import StudentsSection from '../components/organisms/StudentsSection';
 import StudentCreateSection from '../components/organisms/StudentCreateSection';
 import StudentDetailSection from '../components/organisms/StudentDetailSection';
 import StudentEditSection from '../components/organisms/StudentEditSection';
+import StaffSection from '../components/organisms/StaffSection';
+import StaffCreateSection from '../components/organisms/StaffCreateSection';
+import StaffDetailSection from '../components/organisms/StaffDetailSection';
+import StaffEditSection from '../components/organisms/StaffEditSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentsManager } from '../hooks/useStudentsManager';
+import { useStaffManager } from '../hooks/useStaffManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
@@ -29,14 +34,15 @@ const INITIAL_PENDING_PAYMENTS = [
  * Path: /administrator
  * Workspace for users with role="staff" (instructor / admin)
  */
-const ALUMNOS_ACTIONS = new Set(['nuevo', 'edit', 'detail']);
+const USER_CRUD_ACTIONS = new Set(['nuevo', 'edit', 'detail']);
 
-function resolveAdminRoute(section, action) {
+function resolveAdminRoute(section, action, isAdmin) {
   const activeNavItem = ADMIN_NAV_ITEMS.find((item) => item.id === section);
-  if (!activeNavItem) {
+  if (!activeNavItem || (activeNavItem.adminOnly && !isAdmin)) {
     return { redirectTo: '/administrador/dashboard', activeNavItem: null };
   }
-  if (action && !(activeNavItem.id === 'alumnos' && ALUMNOS_ACTIONS.has(action))) {
+  const supportsCrud = activeNavItem.id === 'alumnos' || activeNavItem.id === 'usuarios';
+  if (action && !(supportsCrud && USER_CRUD_ACTIONS.has(action))) {
     return { redirectTo: `/administrador/${activeNavItem.id}`, activeNavItem: null };
   }
   return { redirectTo: null, activeNavItem };
@@ -114,6 +120,45 @@ function renderAlumnosContent({
   );
 }
 
+function renderUsuariosContent({
+  action,
+  selectedStaff,
+  staffUsers,
+  isLoadingStaff,
+  isDeletingStaff,
+  togglingStaffId,
+  onCreateStaff,
+  onUpdateStaff,
+  onDeleteStaff,
+  onToggleStaffActive,
+}) {
+  if (action === 'nuevo') {
+    return <StaffCreateSection onCreateStaff={onCreateStaff} />;
+  }
+  if (action === 'detail') {
+    return <StaffDetailSection staffMember={selectedStaff} />;
+  }
+  if (action === 'edit') {
+    return (
+      <StaffEditSection
+        key={selectedStaff?.id || 'missing'}
+        staffMember={selectedStaff}
+        onUpdateStaff={onUpdateStaff}
+      />
+    );
+  }
+  return (
+    <StaffSection
+      staffUsers={staffUsers}
+      isLoadingStaff={isLoadingStaff}
+      isDeletingStaff={isDeletingStaff}
+      togglingStaffId={togglingStaffId}
+      onDeleteStaff={onDeleteStaff}
+      onToggleStaffActive={onToggleStaffActive}
+    />
+  );
+}
+
 function AdminSectionContent({
   activeNavItem,
   action,
@@ -126,6 +171,15 @@ function AdminSectionContent({
   onUpdateStudent,
   onDeleteStudent,
   onToggleStudentActive,
+  selectedStaff,
+  staffUsers,
+  isLoadingStaff,
+  isDeletingStaff,
+  togglingStaffId,
+  onCreateStaff,
+  onUpdateStaff,
+  onDeleteStaff,
+  onToggleStaffActive,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -142,6 +196,20 @@ function AdminSectionContent({
       onToggleStudentActive,
     });
   }
+  if (activeNavItem.id === 'usuarios') {
+    return renderUsuariosContent({
+      action,
+      selectedStaff,
+      staffUsers,
+      isLoadingStaff,
+      isDeletingStaff,
+      togglingStaffId,
+      onCreateStaff,
+      onUpdateStaff,
+      onDeleteStaff,
+      onToggleStaffActive,
+    });
+  }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
   }
@@ -154,12 +222,14 @@ export default function AdministratorPage() {
   const [searchParams] = useSearchParams();
   const [beds, setBeds] = useState(INITIAL_BEDS);
   const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+  const isAdmin = userProfile?.rol === 'administradora';
   const {
     students,
     isLoadingStudents,
     isDeletingStudent,
     togglingStudentId,
     snackbar,
+    showSnackbar,
     closeSnackbar,
     createStudent,
     updateStudent,
@@ -167,13 +237,26 @@ export default function AdministratorPage() {
     toggleStudentActive,
   } = useStudentsManager();
 
-  const { redirectTo, activeNavItem } = resolveAdminRoute(section, action);
+  const {
+    staffUsers,
+    isLoadingStaff,
+    isDeletingStaff,
+    togglingStaffId,
+    createStaff,
+    updateStaff,
+    deleteStaff,
+    toggleStaffActive,
+  } = useStaffManager({ isAdmin, showSnackbar });
+
+  const { redirectTo, activeNavItem } = resolveAdminRoute(section, action, isAdmin);
   if (redirectTo) {
     return <Navigate to={redirectTo} replace />;
   }
 
   const studentId = searchParams.get('studentId');
   const selectedStudent = students.find((student) => student.id === studentId) || null;
+  const userId = searchParams.get('userId');
+  const selectedStaff = staffUsers.find((member) => member.id === userId) || null;
   const { staffName, staffEmail } = getStaffIdentity(user, userProfile);
 
   const toggleCheckIn = (bedId) => {
@@ -195,12 +278,13 @@ export default function AdministratorPage() {
   return (
     <DashboardLayout
       roleName="Instructora / Admin"
-      roleBadge="staff"
+      roleBadge={isAdmin ? 'administradora' : 'staff'}
       userName={staffName}
       userEmail={staffEmail}
       renderSidebar={(sidebarProps) => (
         <AdminSidebar
           {...sidebarProps}
+          userRole={userProfile?.rol}
         />
       )}
     >
@@ -216,6 +300,15 @@ export default function AdministratorPage() {
         onUpdateStudent={updateStudent}
         onDeleteStudent={deleteStudent}
         onToggleStudentActive={toggleStudentActive}
+        selectedStaff={selectedStaff}
+        staffUsers={staffUsers}
+        isLoadingStaff={isLoadingStaff}
+        isDeletingStaff={isDeletingStaff}
+        togglingStaffId={togglingStaffId}
+        onCreateStaff={createStaff}
+        onUpdateStaff={updateStaff}
+        onDeleteStaff={deleteStaff}
+        onToggleStaffActive={toggleStaffActive}
         renderDashboard={() => (
         <div className="space-y-6">
         {/* Welcome & Shift Selector */}

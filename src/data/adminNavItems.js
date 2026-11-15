@@ -43,5 +43,6 @@ export const ADMIN_NAV_ITEMS = [
     label: 'Usuarios (staff)',
     icon: 'manage_accounts',
     description: 'Administración de instructoras, roles y permisos del equipo.',
+    adminOnly: true,
   },
 ];

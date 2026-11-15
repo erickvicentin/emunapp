@@ -198,6 +198,7 @@ export function useStudentsManager() {
     isDeletingStudent,
     togglingStudentId,
     snackbar,
+    showSnackbar,
     closeSnackbar,
     createStudent,
     updateStudent,
