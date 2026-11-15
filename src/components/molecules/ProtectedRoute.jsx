@@ -24,8 +24,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
     );
   }
 
-  // Not logged in -> redirect to /login
-  if (!user) {
+  // Not logged in or account deactivated -> redirect to /login
+  if (!user || userProfile?.active === false) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -38,9 +38,9 @@ export default function ProtectedRoute({ children, requiredRole }) {
   if (requiredRole) {
     const isStaffUser = userProfile?.rol === 'staff' || userProfile?.rol === 'administradora';
 
-    // Staff cannot access customer-only routes (/customer) -> send to /administrator
+    // Staff cannot access customer-only routes (/customer) -> send to /administrador
     if (requiredRole === 'customer' && isStaffUser) {
-      return <Navigate to="/administrator" replace />;
+      return <Navigate to="/administrador/dashboard" replace />;
     }
 
     // Non-staff users cannot access staff routes (/administrator) -> send to /customer

@@ -1,0 +1,13 @@
+{
+  "name": "emuna-functions",
+  "description": "Cloud Functions for Emuná Pilates using Firebase Admin SDK",
+  "main": "index.js",
+  "type": "module",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.2.0",
+    "firebase-functions": "^6.3.2"
+  }
+}

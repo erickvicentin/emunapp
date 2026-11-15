@@ -23,7 +23,7 @@ export default function RegisterSuccessCard({ nombre }) {
           to="/customer"
           className="inline-flex items-center gap-2 py-3 px-6 rounded-full bg-primary-container hover:bg-primary text-on-primary font-label-md transition-colors shadow-md hover:shadow-lg"
         >
-          <span>Ir a mi Espacio de Alumna</span>
+          <span>Ir a mi Espacio</span>
           <Icon name="arrow_forward" className="text-[18px]" />
         </Link>
         <Link

@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --background: #fff8f0;
+  --foreground: #1e1b13;
+  --card: #ffffff;
+  --card-foreground: #1e1b13;
+  --popover: #fbf3e4;
+  --popover-foreground: #1e1b13;
+  --primary: #82533e;
+  --primary-foreground: #ffffff;
+  --secondary: #fbf3e4;
+  --secondary-foreground: #2c2422;
+  --muted: #f5eddf;
+  --muted-foreground: #4e4542;
+  --accent: #ffdbcd;
+  --accent-foreground: #321204;
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+  --border: #d1c4c0;
+  --input: #d1c4c0;
+  --ring: #82533e;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #160f0e;
+  --foreground: #f8f0e2;
+  --card: #211a18;
+  --card-foreground: #f8f0e2;
+  --popover: #2c2422;
+  --popover-foreground: #f8f0e2;
+  --primary: #f6b99f;
+  --primary-foreground: #321204;
+  --secondary: #2c2422;
+  --secondary-foreground: #eedfdc;
+  --muted: #2c2422;
+  --muted-foreground: #d1c4c0;
+  --accent: #3f1c0c;
+  --accent-foreground: #ffdbcd;
+  --border: #4e4542;
+  --input: #4e4542;
+  --ring: #f6b99f;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Epilogue', system-ui, -apple-system, sans-serif;
+}
+
+header {
+  background-color: rgba(251, 243, 228, 0.92) !important;
+  border-bottom-color: #d1c4c0 !important;
+}
+
+.dark header {
+  background-color: rgba(33, 26, 24, 0.92) !important;
+  border-bottom-color: #4e4542 !important;
+}
+
+header img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}

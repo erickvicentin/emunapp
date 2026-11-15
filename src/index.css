@@ -53,3 +53,250 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Responsive Admin Sidebar / Mobile Navigation Drawer */
+.AdminDrawer {
+  --drawer-width: min(18.5rem, 82dvw, 100dvw - 24px);
+  --drawer-backdrop: 0;
+
+  inset: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.AdminDrawer::backdrop {
+  background: #160f0e;
+  opacity: calc(var(--drawer-backdrop) * 0.45);
+}
+
+.AdminDrawer-scroller {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--drawer-width) 100%;
+  overflow-x: scroll;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+
+.AdminDrawer-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .AdminDrawer-scroller {
+    scroll-behavior: smooth;
+  }
+}
+
+.AdminDrawer-scroller::after {
+  content: '';
+  scroll-snap-align: end;
+  scroll-initial-target: nearest;
+}
+
+.AdminDrawer-sheet {
+  height: 100svh;
+  overflow-y: auto;
+  scroll-snap-align: start;
+  scrollbar-width: none;
+}
+
+.AdminDrawer-sheet::-webkit-scrollbar {
+  display: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  .AdminDrawer {
+    timeline-scope: --admin-drawer-fade;
+    animation: fade-admin-drawer-backdrop linear both;
+    animation-timeline: --admin-drawer-fade;
+  }
+
+  .AdminDrawer-scroller {
+    scroll-timeline: --admin-drawer-fade x;
+  }
+
+  @property --drawer-backdrop {
+    syntax: '<number>';
+    inherits: true;
+    initial-value: 0;
+  }
+
+  @keyframes fade-admin-drawer-backdrop {
+    0% {
+      --drawer-backdrop: 1;
+    }
+    100% {
+      --drawer-backdrop: 0;
+    }
+  }
+}
+
+@media (min-width: 1024px) {
+  .AdminDrawer {
+    display: block;
+    position: static;
+    inset: auto;
+    width: 16.5rem;
+    flex-shrink: 0;
+  }
+
+  .AdminDrawer-scroller {
+    display: block;
+    overflow: visible;
+  }
+
+  .AdminDrawer-scroller::after {
+    display: none;
+  }
+
+  .AdminDrawer-sheet {
+    position: sticky;
+    top: 6rem;
+    height: auto;
+    max-height: calc(100dvh - 7.5rem);
+  }
+}
+
+/* Responsive Data Table (Students) */
+.StudentsTable-wrapper {
+  overflow: auto;
+  max-inline-size: 100%;
+  max-block-size: min(620px, 72vh);
+  container-type: inline-size;
+}
+
+.StudentsTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.StudentsTable thead {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+
+.StudentsTable tbody th {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+}
+
+@container (width < 640px) {
+  .StudentsTable,
+  .StudentsTable thead,
+  .StudentsTable tbody,
+  .StudentsTable tr,
+  .StudentsTable th,
+  .StudentsTable td {
+    display: block;
+  }
+
+  .StudentsTable thead {
+    display: none;
+  }
+
+  .StudentsTable tbody tr {
+    margin-block-end: 0.875rem;
+    border: 1px solid #d1c4c0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background: #ffffff;
+  }
+
+  .StudentsTable tbody tr:last-child {
+    margin-block-end: 0;
+  }
+
+  .StudentsTable tbody th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+    background: #fbf3e4;
+    border-bottom: 1px solid #efe7d9;
+  }
+
+  .StudentsTable tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-block: 0.625rem;
+    padding-inline: 1rem;
+    border-bottom: 1px solid #f5eddf;
+    text-align: right;
+  }
+
+  .StudentsTable tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .StudentsTable {
+    --label-2: "DNI";
+    --label-3: "Edad";
+    --label-4: "Sexo";
+    --label-5: "Asistencia";
+    --label-6: "Acciones";
+  }
+
+  .StudentsTable tbody td::before {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #82533e;
+    text-align: left;
+  }
+
+  .StudentsTable tbody td:nth-child(2)::before {
+    content: var(--label-2);
+  }
+  .StudentsTable tbody td:nth-child(3)::before {
+    content: var(--label-3);
+  }
+  .StudentsTable tbody td:nth-child(4)::before {
+    content: var(--label-4);
+  }
+  .StudentsTable tbody td:nth-child(5)::before {
+    content: var(--label-5);
+  }
+  .StudentsTable tbody td:nth-child(6)::before {
+    content: var(--label-6);
+  }
+}
+
+/* Native modal dialog scroll containment */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  background: rgba(22, 15, 14, 0.45);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@keyframes snackbarFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.SnackbarFloating {
+  animation: snackbarFloatIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}

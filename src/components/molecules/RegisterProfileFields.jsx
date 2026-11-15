@@ -1,6 +1,7 @@
 import React from 'react';
 import Input from '../atoms/Input';
 import GenderSelector from './GenderSelector';
+import PhoneInput from './PhoneInput';
 
 /**
  * RegisterProfileFields Molecule
@@ -18,6 +19,7 @@ export default function RegisterProfileFields({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
         <Input
           id="register-nombre"
+          data-testid="register-nombre-input"
           name="nombre"
           label="Nombre"
           value={formData.nombre}
@@ -30,6 +32,7 @@ export default function RegisterProfileFields({
         />
         <Input
           id="register-apellido"
+          data-testid="register-apellido-input"
           name="apellido"
           label="Apellido"
           value={formData.apellido}
@@ -43,25 +46,22 @@ export default function RegisterProfileFields({
       </div>
 
       {/* Teléfono */}
-      <Input
+      <PhoneInput
         id="register-telefono"
         name="telefono"
-        type="tel"
         label="Teléfono / WhatsApp"
         value={formData.telefono}
         onChange={onChange}
-        placeholder="Ej. +54 9 362 4123456"
-        icon="call"
         required
         error={errors.telefono}
         helperText="Para avisos de tus turnos y lista de espera."
-        autoComplete="tel"
       />
 
       {/* Fecha de Nacimiento & Género (Dropdown) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
         <Input
           id="register-fecha-nacimiento"
+          data-testid="register-fecha-nacimiento-input"
           name="fechaNacimiento"
           type="date"
           label="Fecha de Nacimiento"

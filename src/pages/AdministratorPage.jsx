@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
+import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
+import AdminSidebar from '../components/organisms/AdminSidebar';
+import StudentsSection from '../components/organisms/StudentsSection';
+import StudentCreateSection from '../components/organisms/StudentCreateSection';
+import StudentDetailSection from '../components/organisms/StudentDetailSection';
+import StudentEditSection from '../components/organisms/StudentEditSection';
+import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
+import { useStudentsManager } from '../hooks/useStudentsManager';
+import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
   { id: 1, name: 'Cama 1', alumno: 'Sofía Martínez', status: 'presente' },
@@ -20,16 +29,152 @@ const INITIAL_PENDING_PAYMENTS = [
  * Path: /administrator
  * Workspace for users with role="staff" (instructor / admin)
  */
-export default function AdministratorPage() {
-  const { user, userProfile } = useAuth();
-  const [beds, setBeds] = useState(INITIAL_BEDS);
-  const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+const ALUMNOS_ACTIONS = new Set(['nuevo', 'edit', 'detail']);
 
+function resolveAdminRoute(section, action) {
+  const activeNavItem = ADMIN_NAV_ITEMS.find((item) => item.id === section);
+  if (!activeNavItem) {
+    return { redirectTo: '/administrador/dashboard', activeNavItem: null };
+  }
+  if (action && !(activeNavItem.id === 'alumnos' && ALUMNOS_ACTIONS.has(action))) {
+    return { redirectTo: `/administrador/${activeNavItem.id}`, activeNavItem: null };
+  }
+  return { redirectTo: null, activeNavItem };
+}
+
+function AdminPlaceholderSection({ activeNavItem }) {
+  return (
+    <section
+      data-testid="admin-placeholder-section"
+      className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
+        <Icon name={activeNavItem.icon} className="text-[28px]" />
+      </div>
+      <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
+        Módulo de Administración
+      </span>
+      <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
+        {activeNavItem.label}
+      </h1>
+      <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md">
+        {activeNavItem.description}
+      </p>
+      <span className="mt-6 px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md">
+        Próximamente
+      </span>
+    </section>
+  );
+}
+
+function getStaffIdentity(user, userProfile) {
   const staffName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
     : user?.displayName || 'Administradora';
-
   const staffEmail = userProfile?.email || user?.email || 'admin@emuna.com';
+  return { staffName, staffEmail };
+}
+
+function renderAlumnosContent({
+  action,
+  selectedStudent,
+  students,
+  isLoadingStudents,
+  isDeletingStudent,
+  togglingStudentId,
+  onCreateStudent,
+  onUpdateStudent,
+  onDeleteStudent,
+  onToggleStudentActive,
+}) {
+  if (action === 'nuevo') {
+    return <StudentCreateSection onCreateStudent={onCreateStudent} />;
+  }
+  if (action === 'detail') {
+    return <StudentDetailSection student={selectedStudent} />;
+  }
+  if (action === 'edit') {
+    return (
+      <StudentEditSection
+        key={selectedStudent?.id || 'missing'}
+        student={selectedStudent}
+        onUpdateStudent={onUpdateStudent}
+      />
+    );
+  }
+  return (
+    <StudentsSection
+      students={students}
+      isLoadingStudents={isLoadingStudents}
+      isDeletingStudent={isDeletingStudent}
+      togglingStudentId={togglingStudentId}
+      onDeleteStudent={onDeleteStudent}
+      onToggleStudentActive={onToggleStudentActive}
+    />
+  );
+}
+
+function AdminSectionContent({
+  activeNavItem,
+  action,
+  selectedStudent,
+  students,
+  isLoadingStudents,
+  isDeletingStudent,
+  togglingStudentId,
+  onCreateStudent,
+  onUpdateStudent,
+  onDeleteStudent,
+  onToggleStudentActive,
+  renderDashboard,
+}) {
+  if (activeNavItem.id === 'alumnos') {
+    return renderAlumnosContent({
+      action,
+      selectedStudent,
+      students,
+      isLoadingStudents,
+      isDeletingStudent,
+      togglingStudentId,
+      onCreateStudent,
+      onUpdateStudent,
+      onDeleteStudent,
+      onToggleStudentActive,
+    });
+  }
+  if (activeNavItem.id !== 'dashboard') {
+    return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
+  }
+  return renderDashboard();
+}
+
+export default function AdministratorPage() {
+  const { user, userProfile } = useAuth();
+  const { section, action } = useParams();
+  const [searchParams] = useSearchParams();
+  const [beds, setBeds] = useState(INITIAL_BEDS);
+  const [payments, setPayments] = useState(INITIAL_PENDING_PAYMENTS);
+  const {
+    students,
+    isLoadingStudents,
+    isDeletingStudent,
+    togglingStudentId,
+    snackbar,
+    closeSnackbar,
+    createStudent,
+    updateStudent,
+    deleteStudent,
+    toggleStudentActive,
+  } = useStudentsManager();
+
+  const { redirectTo, activeNavItem } = resolveAdminRoute(section, action);
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  const studentId = searchParams.get('studentId');
+  const selectedStudent = students.find((student) => student.id === studentId) || null;
+  const { staffName, staffEmail } = getStaffIdentity(user, userProfile);
 
   const toggleCheckIn = (bedId) => {
     setBeds((prev) =>
@@ -53,15 +198,36 @@ export default function AdministratorPage() {
       roleBadge="staff"
       userName={staffName}
       userEmail={staffEmail}
+      renderSidebar={(sidebarProps) => (
+        <AdminSidebar
+          {...sidebarProps}
+        />
+      )}
     >
-      <div className="space-y-6">
+      <AdminSectionContent
+        activeNavItem={activeNavItem}
+        action={action}
+        selectedStudent={selectedStudent}
+        students={students}
+        isLoadingStudents={isLoadingStudents}
+        isDeletingStudent={isDeletingStudent}
+        togglingStudentId={togglingStudentId}
+        onCreateStudent={createStudent}
+        onUpdateStudent={updateStudent}
+        onDeleteStudent={deleteStudent}
+        onToggleStudentActive={toggleStudentActive}
+        renderDashboard={() => (
+        <div className="space-y-6">
         {/* Welcome & Shift Selector */}
         <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
           <div>
             <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
               Panel de Administración y Sala • Rol: Staff
             </span>
-            <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
+            <h1
+              data-testid="admin-dashboard-title"
+              className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1"
+            >
               Matriz de Sala • Turno 18:00 hs
             </h1>
             <p className="font-body-md text-body-md text-on-surface-variant mt-1">
@@ -88,13 +254,14 @@ export default function AdministratorPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div data-testid="admin-beds-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {beds.map((bed) => {
               const isAvailable = bed.status === 'disponible';
               const isPresent = bed.status === 'presente';
               return (
                 <div
                   key={bed.id}
+                  data-testid={`admin-bed-card-${bed.id}`}
                   className={`p-5 rounded-2xl border transition-colors shadow-xs flex flex-col justify-between min-h-[160px] ${isAvailable
                       ? 'bg-surface-container-lowest border-dashed border-outline-variant'
                       : isPresent
@@ -138,6 +305,7 @@ export default function AdministratorPage() {
                   {bed.alumno && (
                     <button
                       type="button"
+                      data-testid={`admin-bed-checkin-btn-${bed.id}`}
                       onClick={() => toggleCheckIn(bed.id)}
                       className={`w-full py-1.5 px-3 rounded-full text-xs font-semibold transition-colors flex items-center justify-center gap-1 cursor-pointer ${isPresent
                           ? 'bg-surface-container hover:bg-surface-container-high text-primary'
@@ -155,7 +323,10 @@ export default function AdministratorPage() {
         </section>
 
         {/* Pending Bank Transfers Validation */}
-        <section className="p-6 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs">
+        <section
+          data-testid="admin-payments-section"
+          className="p-6 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs"
+        >
           <div className="flex items-center justify-between pb-4 border-b border-surface-container">
             <div>
               <h2 className="font-headline-sm text-headline-sm text-primary font-semibold flex items-center gap-2">
@@ -201,7 +372,15 @@ export default function AdministratorPage() {
             )}
           </div>
         </section>
-      </div>
+        </div>
+        )}
+      />
+      <Snackbar
+        open={snackbar.open}
+        variant={snackbar.variant}
+        message={snackbar.message}
+        onClose={closeSnackbar}
+      />
     </DashboardLayout>
   );
 }
