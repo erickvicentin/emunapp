@@ -145,8 +145,14 @@
     display: block;
     position: static;
     inset: auto;
-    width: 16.5rem;
+    width: 16rem;
     flex-shrink: 0;
+    transition: width 200ms ease;
+  }
+
+  .AdminDrawer[data-collapsed='true'] {
+    width: 0;
+    overflow: hidden;
   }
 
   .AdminDrawer-scroller {
@@ -160,9 +166,10 @@
 
   .AdminDrawer-sheet {
     position: sticky;
-    top: 6rem;
-    height: auto;
-    max-height: calc(100dvh - 7.5rem);
+    top: 5.5rem;
+    height: calc(100dvh - 5.5rem);
+    max-height: none;
+    overflow-y: auto;
   }
 }
 
@@ -289,7 +296,7 @@ dialog::backdrop {
 @keyframes snackbarFloatIn {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.96);
+    transform: translateY(18px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -297,6 +304,22 @@ dialog::backdrop {
   }
 }
 
+@keyframes snackbarFloatOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+}
+
 .SnackbarFloating {
   animation: snackbarFloatIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.SnackbarFloating--exit {
+  animation: snackbarFloatOut 0.24s cubic-bezier(0.4, 0, 1, 1) forwards;
+  pointer-events: none;
 }

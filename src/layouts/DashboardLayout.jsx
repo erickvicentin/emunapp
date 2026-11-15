@@ -24,6 +24,7 @@ export default function DashboardLayout({
   const footerRef = useRef(null);
   const openBtnRef = useRef(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
 
   const handleDrawerOpenChange = useCallback((nextOpen) => {
     setIsDrawerOpen(nextOpen);
@@ -31,6 +32,14 @@ export default function DashboardLayout({
     if (mainRef.current) mainRef.current.inert = nextOpen;
     if (footerRef.current) footerRef.current.inert = nextOpen;
   }, []);
+
+  const handleMenuToggle = () => {
+    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+      setIsDesktopCollapsed((prev) => !prev);
+    } else {
+      handleDrawerOpenChange(true);
+    }
+  };
 
   const effectiveName = userName || userProfile?.nombre || user?.displayName || 'Usuario';
   const effectiveEmail = userEmail || userProfile?.email || user?.email || roleName;
@@ -52,18 +61,19 @@ export default function DashboardLayout({
         ref={headerRef}
         className="pt-3 pb-3 sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-container-high/60 shadow-xs"
       >
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-margin-desktop h-18 flex items-center justify-between">
-          {/* Mobile menu trigger + Brand */}
+        <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
+          {/* Mobile & desktop menu trigger + Brand */}
           <div className="flex items-center gap-2 sm:gap-3">
             {renderSidebar && (
               <button
                 ref={openBtnRef}
                 type="button"
-                onClick={() => handleDrawerOpenChange(true)}
-                aria-label="Abrir menú"
-                aria-expanded={isDrawerOpen}
+                data-testid="dashboard-menu-toggle-btn"
+                onClick={handleMenuToggle}
+                aria-label="Alternar menú principal"
+                aria-expanded={isDrawerOpen || !isDesktopCollapsed}
                 aria-controls="admin-drawer"
-                className="lg:hidden w-10 h-10 -ml-1 rounded-full inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
+                className="w-10 h-10 -ml-1 rounded-full inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
               >
                 <Icon name="menu" className="text-[22px]" />
               </button>
@@ -139,13 +149,15 @@ export default function DashboardLayout({
       </header>
 
       {/* Main Panel Content */}
-      <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-margin-desktop py-6 md:py-8 flex gap-6 lg:gap-8 items-start">
+      <div className="flex-1 w-full flex items-stretch">
         {renderSidebar?.({
           openBtnRef,
           isDrawerOpen,
           onDrawerOpenChange: handleDrawerOpenChange,
+          isDesktopCollapsed,
+          onToggleDesktopCollapse: () => setIsDesktopCollapsed((prev) => !prev),
         })}
-        <main ref={mainRef} className="flex-1 min-w-0 w-full">
+        <main ref={mainRef} className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8">
           {children}
         </main>
       </div>
@@ -155,7 +167,7 @@ export default function DashboardLayout({
         ref={footerRef}
         className="w-full py-4 text-center font-label-sm text-label-sm text-on-surface-variant border-t border-surface-container-high/40"
       >
-        © {new Date().getFullYear()} Emuná Estudio Pilates • Sistema de Gestión de 4 Camas Reformer
+        © {new Date().getFullYear()} Emuná Estudio Pilates • Desarrollado por Clutch Studio Software
       </footer>
     </div>
   );

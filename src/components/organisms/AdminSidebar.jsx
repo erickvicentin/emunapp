@@ -14,6 +14,8 @@ export default function AdminSidebar({
   isDrawerOpen,
   onDrawerOpenChange,
   openBtnRef,
+  isDesktopCollapsed = false,
+  onToggleDesktopCollapse,
   userRole = 'staff',
 }) {
   const visibleNavItems = ADMIN_NAV_ITEMS.filter(
@@ -186,6 +188,7 @@ export default function AdminSidebar({
     <aside
       id="admin-drawer"
       data-testid="admin-sidebar"
+      data-collapsed={isDesktop && isDesktopCollapsed ? 'true' : 'false'}
       ref={drawerRef}
       popover={isDesktop ? undefined : 'manual'}
       role={isDesktop ? undefined : 'dialog'}
@@ -196,7 +199,7 @@ export default function AdminSidebar({
         <nav
           ref={sheetRef}
           aria-label="Navegación de administración"
-          className="AdminDrawer-sheet flex flex-col bg-surface-container-low lg:rounded-2xl border-r lg:border border-surface-container-high/80 shadow-lg lg:shadow-xs p-4"
+          className="AdminDrawer-sheet flex flex-col bg-surface-container-low border-r border-surface-container-high/80 shadow-lg lg:shadow-xs p-4"
         >
           {/* Mobile drawer header */}
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-surface-container-high/70 lg:hidden">
@@ -219,11 +222,23 @@ export default function AdminSidebar({
             </button>
           </div>
 
-          {/* Desktop section label */}
-          <div className="hidden lg:block px-3 pb-2 mb-2 border-b border-surface-container-high/60">
+          {/* Desktop section label + collapse toggle */}
+          <div className="hidden lg:flex items-center justify-between px-3 pb-2 mb-2 border-b border-surface-container-high/60">
             <span className="font-label-sm text-[10px] uppercase tracking-widest text-secondary font-semibold">
               Menú Principal
             </span>
+            {onToggleDesktopCollapse && (
+              <button
+                type="button"
+                data-testid="admin-sidebar-collapse-btn"
+                onClick={onToggleDesktopCollapse}
+                aria-label="Contraer menú"
+                title="Contraer menú"
+                className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
+              >
+                <Icon name="chevron_left" className="text-[18px]" />
+              </button>
+            )}
           </div>
 
           <ul className="space-y-1 flex-1">

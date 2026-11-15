@@ -11,12 +11,14 @@ import StaffCreateSection from '../components/organisms/StaffCreateSection';
 import StaffDetailSection from '../components/organisms/StaffDetailSection';
 import StaffEditSection from '../components/organisms/StaffEditSection';
 import PackagesSection from '../components/organisms/PackagesSection';
+import CalendarSection from '../components/organisms/CalendarSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentsManager } from '../hooks/useStudentsManager';
 import { useStaffManager } from '../hooks/useStaffManager';
 import { usePackagesManager } from '../hooks/usePackagesManager';
+import { useCalendarManager } from '../hooks/useCalendarManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
 
 const INITIAL_BEDS = [
@@ -183,6 +185,7 @@ function AdminSectionContent({
   onDeleteStaff,
   onToggleStaffActive,
   renderPackages,
+  renderCalendar,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -215,6 +218,9 @@ function AdminSectionContent({
   }
   if (activeNavItem.id === 'precios') {
     return renderPackages();
+  }
+  if (activeNavItem.id === 'calendario') {
+    return renderCalendar();
   }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
@@ -265,6 +271,8 @@ export default function AdministratorPage() {
     handleToggleActive: handleTogglePackageActive,
     handleDeletePackage,
   } = usePackagesManager({ isEnabled: isAdmin, showSnackbar });
+
+  const calendar = useCalendarManager({ isEnabled: true, showSnackbar });
 
   const { redirectTo, activeNavItem } = resolveAdminRoute(section, action, isAdmin);
   if (redirectTo) {
@@ -338,6 +346,13 @@ export default function AdministratorPage() {
             onUpdatePackage={handleUpdatePackage}
             onToggleActive={handleTogglePackageActive}
             onDeletePackage={handleDeletePackage}
+          />
+        )}
+        renderCalendar={() => (
+          <CalendarSection
+            isAdmin={isAdmin}
+            students={students}
+            calendar={calendar}
           />
         )}
         renderDashboard={() => (
