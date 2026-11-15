@@ -14,7 +14,13 @@ service cloud.firestore {
 
     // Verifica si el usuario es el dueño del documento
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuthenticated() && isActiveUser() && request.auth.uid == userId;
+    }
+
+    // Verifica si el usuario autenticado está activo (active != false)
+    function isActiveUser() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.active != false;
     }
 
     // Verifica si el usuario tiene rol de staff / administradora vía custom claims
@@ -77,7 +83,7 @@ service cloud.firestore {
 
     // Colección: turnos_clase (cupos fijos de 4 camas)
     match /turnos_clase/{turnoId} {
-      allow read: if isAuthenticated();
+      allow read: if isStaff() || isActiveUser();
       allow write: if isStaff();
     }
 
@@ -96,20 +102,20 @@ service cloud.firestore {
 
     // Colección: paquetes_catalogo (paquetes de 4, 8, 12 y 20 clases)
     match /paquetes_catalogo/{paqueteId} {
-      allow read: if isAuthenticated();
+      allow read: if isStaff() || isActiveUser();
       allow write: if isStaff();
     }
 
     // Colección: membresias_usuario (créditos y vencimientos)
     match /membresias_usuario/{membresiaId} {
-      allow read: if isAuthenticated() && (resource.data.usuarioId == request.auth.uid || isStaff());
+      allow read: if isStaff() || (isActiveUser() && resource.data.usuarioId == request.auth.uid);
       allow write: if isStaff();
     }
 
     // Colección: pagos (transferencias manuales)
     match /pagos/{pagoId} {
-      allow read: if isAuthenticated() && (resource.data.usuarioId == request.auth.uid || isStaff());
-      allow create: if isAuthenticated() &&
+      allow read: if isStaff() || (isActiveUser() && resource.data.usuarioId == request.auth.uid);
+      allow create: if isActiveUser() &&
         request.resource.data.usuarioId is string &&
         request.resource.data.usuarioId == request.auth.uid;
       allow update, delete: if isStaff();
