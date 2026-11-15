@@ -36,6 +36,7 @@ export const ADMIN_NAV_ITEMS = [
     label: 'Precios y Paquetes',
     icon: 'sell',
     description: 'Configuración de membresías, valores y paquetes de clases.',
+    adminOnly: true,
   },
   {
     id: 'usuarios',

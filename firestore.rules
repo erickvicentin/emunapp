@@ -127,10 +127,10 @@ service cloud.firestore {
     // Colección: paquetes_catalogo (paquetes de 4, 8, 12 y 20 clases)
     match /paquetes_catalogo/{paqueteId} {
       allow read: if isStaff() || isActiveUser();
-      allow create: if isStaff() && isValidPackage(request.resource.data);
-      allow update: if isStaff() && isValidPackage(request.resource.data) &&
+      allow create: if isAdmin() && isValidPackage(request.resource.data);
+      allow update: if isAdmin() && isValidPackage(request.resource.data) &&
         (resource.data.get('isProtected', false) != true || request.resource.data.get('isProtected', false) == true);
-      allow delete: if isStaff() && resource.data.get('isProtected', false) != true;
+      allow delete: if isAdmin() && resource.data.get('isProtected', false) != true;
     }
 
     // Colección: membresias_usuario (créditos y vencimientos)

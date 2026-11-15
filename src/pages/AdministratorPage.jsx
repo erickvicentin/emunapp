@@ -264,7 +264,7 @@ export default function AdministratorPage() {
     handleUpdatePackage,
     handleToggleActive: handleTogglePackageActive,
     handleDeletePackage,
-  } = usePackagesManager({ isEnabled: true, showSnackbar });
+  } = usePackagesManager({ isEnabled: isAdmin, showSnackbar });
 
   const { redirectTo, activeNavItem } = resolveAdminRoute(section, action, isAdmin);
   if (redirectTo) {
