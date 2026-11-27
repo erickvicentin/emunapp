@@ -14,6 +14,7 @@ export const DEFAULT_MAX_CAPACITY = 4;
 export const STUDENT_CANCEL_MIN_HOURS = 4;
 export const STUDENT_CANCEL_GRACE_DAYS = 7;
 export const STUDENT_BOOK_MIN_HOURS = 1;
+export const STUDENT_BOOK_MIN_MINUTES = 10;
 export const STUDENT_BOOK_MAX_DAYS = 30;
 
 export const PRESET_HOUR_SLOTS = Array.from({ length: 15 }, (_, idx) => {
@@ -131,6 +132,69 @@ export function isWithinStudentBookingWindow(dateKey, startTime, now = new Date(
   const minMs = STUDENT_BOOK_MIN_HOURS * 60 * 60 * 1000;
   const maxMs = STUDENT_BOOK_MAX_DAYS * 24 * 60 * 60 * 1000;
   return diffMs >= minMs && diffMs <= maxMs;
+}
+
+/**
+ * Returns true when a turn starts at least STUDENT_BOOK_MIN_MINUTES (10 min) in the future.
+ */
+export function isTurnBookingOpen(dateKey, startTime, now = new Date()) {
+  const turnStart = parseTurnDateTime(dateKey, startTime);
+  return turnStart.getTime() - now.getTime() >= STUDENT_BOOK_MIN_MINUTES * 60 * 1000;
+}
+
+/**
+ * Builds the read-only weekly turn list for customers by combining persisted
+ * `turnos_clase` documents with virtual turns from `horarios_base` for today
+ * and future non-closed days.
+ */
+export function buildCustomerWeekTurns(
+  weekDays = [],
+  baseSlots = [],
+  closedDaysMap = {},
+  existingTurns = []
+) {
+  const todayKey = formatDateKey(new Date());
+  const existingById = new Set(existingTurns.map((t) => t.id));
+  const virtualTurns = [];
+
+  for (const day of weekDays) {
+    if (day.dateKey < todayKey || closedDaysMap[day.dateKey]) continue;
+
+    const slotsForDay = baseSlots.filter(
+      (slot) => slot.active !== false && Number(slot.dayOfWeek) === day.dayOfWeek
+    );
+
+    for (const slot of slotsForDay) {
+      const deterministicId = `${day.dateKey}_${slot.id}`;
+      if (existingById.has(deterministicId)) continue;
+
+      const hasMatchingTime = existingTurns.some(
+        (t) =>
+          t.dateKey === day.dateKey &&
+          t.startTime === slot.startTime &&
+          t.baseSlotId === slot.id
+      );
+      if (hasMatchingTime) continue;
+
+      virtualTurns.push({
+        id: deterministicId,
+        dateKey: day.dateKey,
+        startTime: slot.startTime,
+        durationMinutes: Number(slot.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES,
+        maxCapacity: Number(slot.maxCapacity) || DEFAULT_MAX_CAPACITY,
+        cuposOcupados: 0,
+        instructorName: slot.instructorName || 'Profesora Titular',
+        baseSlotId: slot.id,
+        estado: 'programado',
+        isVirtual: true,
+      });
+    }
+  }
+
+  return [...existingTurns, ...virtualTurns].sort((a, b) => {
+    if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
+    return String(a.startTime).localeCompare(String(b.startTime));
+  });
 }
 
 /**
