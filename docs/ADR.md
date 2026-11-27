@@ -158,3 +158,31 @@
 ### Pros y Contras
 - **Pros:** Defensa en profundidad (UI + Firestore Rules + Cloud Functions Admin SDK); alta reutilización de moléculas existentes; sin flash de datos mockeados durante la carga.
 - **Contras:** Requiere desplegar las reglas actualizadas de Firestore y las nuevas Cloud Functions (`createStaffAccount`, `deleteStaffAccount`) en Firebase para operar en producción/testing.
+
+
+---
+
+## ADR-008: Módulo de Cobros con Créditos Provisionales (24h), Parser Híbrido de Comprobantes y Conciliación Manual
+
+- **Fecha:** 2026-11-15 (actualizado 2026-11-26)
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se agregó `match /configuracion/{configId}` (lectura para usuarios activos/staff y escritura exclusiva para `administradora`), se habilitó la creación de avisos de pago en `/pagos` con estado `pendiente_conciliacion` (alumno titular o `staff`/`administradora`) y se habilitó la creación de membresías provisionales en `/membresias_usuario` con validación de campos obligatorios e inmutables, reservando aprobación/rechazo definitivo a `administradora`.
+- **Cloud Functions (`functions/index.js`):** Se agregó `expireProvisionalPayments` para vencer avisos provisionales expirados (por defecto tras 24h sin confirmación) y cancelar las reservas asociadas liberando cupos.
+- **Parser Híbrido de Comprobantes (`src/utils/receiptParser.js`):** Extracción local de número de operación, monto y fecha desde PDFs/texto/archivos + compresión de imagen en JPEG (`dataUrl`) editable antes de enviar.
+- **Servicio y Hook (`src/services/paymentService.js`, `src/hooks/usePaymentsManager.js`):** Gestión de configuración de cuenta destino (**Alias**, **CVU**, **Titular**, **CUIL/CUIT**) y plazo de vencimiento provisorio (24h por defecto), aviso de pago con límite de **1 aviso pendiente simultáneo** por alumno, acreditación provisional inmediata (`provisional: true`) y aprobación/rechazo manual por administradora (con anulación automática de reservas vinculadas si se rechaza o vence).
+- **UI Admin/Staff y Alumno (`CobrosSection`, `CobrosConfigCard`, `ReceiptPreviewModal`, `CashNoticeModal`, `ReportPaymentModal`, `CustomerPage`, `AdministratorPage`):** Flujo completo para que el alumno vea los datos de la cuenta destino, reporte transferencias/efectivo y reserve de inmediato, y para que `administradora` (o `staff` en modo lectura + registro de aviso en efectivo) gestione las conciliaciones manuales.
+- **Reservas (`src/services/scheduleService.js`):** Se actualizó `findEarliestActiveMembership` para excluir membresías canceladas o provisionales vencidas.
+
+### Qué se quitó
+- Se reemplazaron los datos mockeados de cobros pendientes (`INITIAL_PENDING_PAYMENTS`) en `AdministratorPage.jsx` y el placeholder estático de créditos/pagos en `CustomerPage.jsx` por datos en vivo de Firestore.
+- Por definición del cliente, se descartó la integración automática con la API de MercadoPago, priorizando la conciliación manual dentro de la ventana de 24 horas.
+
+### Por qué
+- Permitir que el alumno reserve clases inmediatamente al avisar un pago sin esperar conciliación manual reduce fricción operativa, mientras el límite de 1 aviso pendiente y la expiración automática a las 24h acotan el riesgo de abuso.
+- Mostrar explícitamente Alias, CVU, Titular y CUIL/CUIT configurables evita errores de transferencia del alumno y mantiene el control 100% en manos de la administración.
+
+### Pros y Contras
+- **Pros:** Reserva inmediata para el alumno; sin dependencia ni mantenimiento de credenciales/APIs externas de MercadoPago; menor carga manual con reconocimiento híbrido de comprobantes; trazabilidad completa en Firestore.
+- **Contras:** Requiere desplegar `firestore.rules` y `functions` (`expireProvisionalPayments`) en Firebase para ejecutar la limpieza automática en la nube.
