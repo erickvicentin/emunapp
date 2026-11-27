@@ -234,3 +234,23 @@
 ### Pros y Contras
 - **Pros:** Cumple estrictamente las reglas de seguridad de Firestore; reutiliza el mismo calendario semanal que administración; respeta la regla de corte de 10 minutos antes del inicio.
 - **Contras:** La acción de reserva al hacer clic en un turno disponible se implementará en la siguiente iteración.
+
+---
+
+## ADR-011: Flujo de Reserva de Turnos del Alumno (Con/Sin Créditos) y Sección "Próximos turnos..."
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se amplió `isValidReservation` con los estados `'esperando_comprobante'` y `'comprobante_rechazado'`, y se habilitó a usuarios activos (`isActiveUser()`) a crear turnos virtuales iniciales o actualizar exclusivamente `cuposOcupados` y `actualizadoEn` en `turnos_clase`.
+- **Servicio de Reservas (`src/services/scheduleService.js`):** Se actualizó `bookTurnAsStudent` para validar el corte de 10 minutos (`isTurnBookingOpen`), materializar turnos virtuales si no existen en `turnos_clase`, descontar 1 crédito (`confirmada`) cuando el alumno posee saldo o registrar la reserva como `esperando_comprobante` cuando no tiene créditos; además se agregó `fetchUserReservations`.
+- **Modal de Confirmación (`src/components/molecules/CustomerBookTurnModal.jsx`):** Al seleccionar un turno disponible se muestra el detalle completo del horario y se informa la deducción de 1 crédito + cancelación hasta 4h antes (si tiene saldo), o los datos bancarios (`cobrosConfig`) + importe de clase individual + aviso de aprobación pendiente (si tiene 0 créditos).
+- **Próximos Turnos y Snackbar (`src/components/molecules/CustomerUpcomingTurns.jsx`, `src/components/molecules/Snackbar.jsx`, `src/pages/CustomerPage.jsx`):** Se agregó la lista `"Próximos turnos..."` debajo del calendario con los estados `"Esperando comprobante"`, `"Turno confirmado"`, `"Comprobante rechazado"` y `"Turno cancelado"`, botón `"Informar pago"` para turnos en espera de comprobante, botón de acciones a la derecha de cada fila y `Snackbar` en posición `bottom-left`.
+
+### Por qué
+- Permitir que tanto alumnas con paquete activo como alumnas sin créditos puedan reservar un lugar en la cama reformer sin fricción, manteniendo trazabilidad del estado de pago y cupos en tiempo real.
+
+### Pros y Contras
+- **Pros:** Flujo completo con y sin créditos; reutilización de `ReportPaymentModal` y `cobrosConfig`; feedback inmediato en esquina inferior izquierda.
+- **Contras:** El menú de acciones a la derecha de cada fila en `"Próximos turnos..."` queda como disparador visual hasta implementar la cancelación/reprogramación del alumno.
