@@ -46,6 +46,11 @@ Then('the customer turns calendar should be visible', async () => {
   expect(isDisplayed).toBe(true);
 });
 
+Then('the customer upcoming turns section should be visible', async () => {
+  const isDisplayed = await CustomerPage.isUpcomingTurnsDisplayed();
+  expect(isDisplayed).toBe(true);
+});
+
 Then(
   'the customer placeholder section should show title {string} and status {string}',
   async (expectedTitle, expectedStatus) => {

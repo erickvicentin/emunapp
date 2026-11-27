@@ -13,6 +13,7 @@ Feature: Customer Panel Navigation
     And the customer header should display the credits badge
     And the customer URL should contain "/customer/turnos"
     And the customer turns calendar should be visible
+    And the customer upcoming turns section should be visible
 
   @EMUNA-102
   Scenario Outline: Customer sidebar navigation updates URL and displays placeholder

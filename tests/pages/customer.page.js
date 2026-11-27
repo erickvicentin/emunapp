@@ -2,6 +2,7 @@ const CUSTOMER_SIDEBAR = '[data-testid="customer-sidebar"]';
 const HEADER_BADGE = '[data-testid="dashboard-header-badge"]';
 const TURNS_SECTION = '[data-testid="customer-turns-section"]';
 const CALENDAR_WEEK_GRID = '[data-testid="calendar-week-grid"]';
+const UPCOMING_TURNS_SECTION = '[data-testid="customer-upcoming-turns"]';
 const PLACEHOLDER_SECTION = '[data-testid="customer-placeholder-section"]';
 const PLACEHOLDER_TITLE = '[data-testid="customer-placeholder-title"]';
 const PLACEHOLDER_STATUS = '[data-testid="customer-placeholder-status"]';
@@ -31,6 +32,12 @@ class CustomerPage {
     const grid = await $(CALENDAR_WEEK_GRID);
     await grid.waitForDisplayed();
     return grid.isDisplayed();
+  }
+
+  async isUpcomingTurnsDisplayed() {
+    const upcoming = await $(UPCOMING_TURNS_SECTION);
+    await upcoming.waitForDisplayed();
+    return upcoming.isDisplayed();
   }
 
   async isPlaceholderSectionDisplayed() {
