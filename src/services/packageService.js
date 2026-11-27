@@ -19,6 +19,17 @@ export function formatArsPrice(amount) {
   return `$${numeric.toLocaleString('es-AR')}`;
 }
 
+export function getPackageNumericPrice(pkg) {
+  if (!pkg) return 0;
+  if (typeof pkg.numericPrice === 'number' && !Number.isNaN(pkg.numericPrice) && pkg.numericPrice > 0) {
+    return pkg.numericPrice;
+  }
+  const direct = Number(pkg.price);
+  if (!Number.isNaN(direct) && direct > 0) return direct;
+  const digits = Number(String(pkg.price || '').replace(/\D/g, ''));
+  return Number.isNaN(digits) ? 0 : digits;
+}
+
 function normalizePackageDoc(docSnap) {
   const data = docSnap.data() || {};
   const numericPrice = Number(data.numericPrice) || 0;

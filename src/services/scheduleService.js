@@ -58,11 +58,14 @@ async function findEarliestActiveMembership(usuarioId, now = new Date()) {
     .filter((m) => {
       const remaining = Number(m.creditosRestantes) || 0;
       const exp = toDateOrNull(m.fechaVencimiento);
+      const provisionalExp = m.provisional ? toDateOrNull(m.expiresAt) : null;
       return (
         m.estado !== 'agotada' &&
         m.estado !== 'vencida' &&
+        m.estado !== 'cancelada' &&
         remaining > 0 &&
-        (!exp || exp.getTime() >= now.getTime())
+        (!exp || exp.getTime() >= now.getTime()) &&
+        (!provisionalExp || provisionalExp.getTime() >= now.getTime())
       );
     })
     .sort((a, b) => {
