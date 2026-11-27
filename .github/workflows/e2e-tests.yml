@@ -3,6 +3,8 @@
 # Required GitHub Repository Secrets (Settings -> Secrets and variables -> Actions):
 #   - ADM_USER
 #   - ADM_PASS
+#   - CUSTOMER_USER
+#   - CUSTOMER_PASS
 #   - VITE_FIREBASE_API_KEY
 #   - VITE_FIREBASE_AUTH_DOMAIN
 #   - VITE_FIREBASE_PROJECT_ID
@@ -53,6 +55,8 @@ jobs:
           BASE_URL: http://localhost:5173
           ADM_USER: ${{ secrets.ADM_USER }}
           ADM_PASS: ${{ secrets.ADM_PASS }}
+          CUSTOMER_USER: ${{ secrets.CUSTOMER_USER }}
+          CUSTOMER_PASS: ${{ secrets.CUSTOMER_PASS }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
