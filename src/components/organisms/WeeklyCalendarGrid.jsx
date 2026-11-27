@@ -17,6 +17,8 @@ export default function WeeklyCalendarGrid({
   closedDaysMap,
   turns,
   reservations = EMPTY_RESERVATIONS,
+  bookedDateKeys = null,
+  isBookingBlocked = false,
   isLoading = false,
   isAdmin = false,
   mode = 'admin',
@@ -74,7 +76,7 @@ export default function WeeklyCalendarGrid({
       ) : (
         <div
           data-testid="calendar-week-grid"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 items-start"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 items-stretch"
         >
           {weekDays.map((day) => (
             <CalendarDayColumn
@@ -85,6 +87,8 @@ export default function WeeklyCalendarGrid({
               closedInfo={closedDaysMap[day.dateKey]}
               dayTurns={turns.filter((t) => t.dateKey === day.dateKey)}
               reservations={reservations}
+              bookedDateKeys={bookedDateKeys}
+              isBookingBlocked={isBookingBlocked}
               isAdmin={isAdmin}
               mode={mode}
               onOpenClosedDayModal={onOpenClosedDayModal}

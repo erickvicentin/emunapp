@@ -1,28 +1,64 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
 import WeeklyCalendarGrid from './WeeklyCalendarGrid';
+import CustomerBookTurnModal from '../molecules/CustomerBookTurnModal';
+import CustomerUpcomingTurns from '../molecules/CustomerUpcomingTurns';
+import CustomerReservationPaymentModal from '../molecules/CustomerReservationPaymentModal';
 import { formatDateKey, getWeekStartMonday } from '../../utils/scheduleUtils';
+
+const ACTIVE_BOOKING_STATES = new Set([
+  'confirmada',
+  'esperando_comprobante',
+  'pendiente_confirmacion',
+]);
 
 /**
  * CustomerTurnsSection Organism
- * Displays the weekly read-only calendar for students, disabling past days,
- * turns within 10 min of start, and full turns.
+ * Displays the weekly read-only calendar for students, booking confirmation modal,
+ * and upcoming reservations list below the calendar.
  */
 export default function CustomerTurnsSection({ calendar }) {
+  const bookDialogRef = useRef(null);
+  const reportDialogRef = useRef(null);
+  const [selectedTurn, setSelectedTurn] = useState(null);
+  const [selectedReservation, setSelectedReservation] = useState(null);
+
   const {
     weekDays,
     closedDaysMap,
     turns,
+    totalCredits,
+    upcomingReservations,
+    cobrosConfig,
+    individualPackage,
     isLoading,
+    isMutating,
     loadError,
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,
+    bookTurn,
+    reportReservationPayment,
   } = calendar;
 
   const [todayKey] = useState(() => formatDateKey(new Date()));
   const [currentWeekStartKey] = useState(() => formatDateKey(getWeekStartMonday(new Date())));
+
+  const bookedDateKeys = useMemo(
+    () =>
+      new Set(
+        upcomingReservations
+          .filter((r) => ACTIVE_BOOKING_STATES.has(r.estado))
+          .map((r) => r.dateKey)
+      ),
+    [upcomingReservations]
+  );
+
+  const hasPendingSinglePayment = useMemo(
+    () => upcomingReservations.some((r) => r.estado === 'esperando_comprobante'),
+    [upcomingReservations]
+  );
 
   const weekRangeLabel =
     weekDays.length === 7
@@ -33,6 +69,23 @@ export default function CustomerTurnsSection({ calendar }) {
   const weekSelectorLabel = isCurrentWeek
     ? 'Semana en curso'
     : `Semana ${weekRangeLabel}`;
+
+  const handleOpenBookModal = (turn) => {
+    setSelectedTurn(turn);
+    bookDialogRef.current?.showModal();
+  };
+
+  const handleCloseBookModal = () => {
+    bookDialogRef.current?.close();
+    setSelectedTurn(null);
+  };
+
+  const handleConfirmBooking = async (turn) => {
+    const ok = await bookTurn(turn);
+    if (ok) {
+      handleCloseBookModal();
+    }
+  };
 
   return (
     <div data-testid="customer-turns-section" className="space-y-5">
@@ -68,6 +121,18 @@ export default function CustomerTurnsSection({ calendar }) {
         </div>
       </section>
 
+      {hasPendingSinglePayment && (
+        <div
+          data-testid="customer-pending-payment-block-banner"
+          className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-body-sm flex items-start gap-2.5"
+        >
+          <Icon name="info" className="text-[20px] shrink-0 mt-0.5" />
+          <span>
+            Tenés una reserva pendiente de confirmación de pago por clase individual. No podés realizar otra reserva hasta que se apruebe el pago.
+          </span>
+        </div>
+      )}
+
       {loadError && (
         <div
           data-testid="customer-turns-error"
@@ -83,11 +148,46 @@ export default function CustomerTurnsSection({ calendar }) {
         weekSelectorLabel={weekSelectorLabel}
         closedDaysMap={closedDaysMap}
         turns={turns}
+        bookedDateKeys={bookedDateKeys}
+        isBookingBlocked={hasPendingSinglePayment}
         isLoading={isLoading}
         isAdmin={false}
         mode="customer"
         onPrevWeek={goToPreviousWeek}
         onNextWeek={goToNextWeek}
+        onOpenTurnDetail={handleOpenBookModal}
+      />
+
+      <CustomerUpcomingTurns
+        reservations={upcomingReservations}
+        onReportPayment={(res) => {
+          setSelectedReservation(res);
+          reportDialogRef.current?.showModal();
+        }}
+      />
+
+      <CustomerBookTurnModal
+        dialogRef={bookDialogRef}
+        turn={selectedTurn}
+        totalCredits={totalCredits}
+        cobrosConfig={cobrosConfig}
+        individualPackage={individualPackage}
+        isMutating={isMutating}
+        onClose={handleCloseBookModal}
+        onConfirm={handleConfirmBooking}
+      />
+
+      <CustomerReservationPaymentModal
+        dialogRef={reportDialogRef}
+        reservation={selectedReservation}
+        individualPackage={individualPackage}
+        cobrosConfig={cobrosConfig}
+        isMutating={isMutating}
+        onClose={() => {
+          reportDialogRef.current?.close();
+          setSelectedReservation(null);
+        }}
+        onSubmit={reportReservationPayment}
       />
     </div>
   );

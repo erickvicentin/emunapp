@@ -26,6 +26,7 @@ export default function Snackbar({
   message,
   onClose,
   duration = 4500,
+  position = 'bottom-right',
 }) {
   const [isExiting, setIsExiting] = useState(false);
   const exitTimerRef = useRef(null);
@@ -59,14 +60,16 @@ export default function Snackbar({
   }
 
   const styles = VARIANT_STYLES[variant] || VARIANT_STYLES.success;
+  const positionClass = position === 'bottom-left' ? 'bottom-6 left-6' : 'bottom-6 right-6';
 
   return (
     <div
       data-testid="snackbar"
       data-variant={variant}
+      data-position={position}
       role={variant === 'error' ? 'alert' : 'status'}
       aria-live="polite"
-      className={`fixed bottom-6 right-6 z-50 max-w-md w-[calc(100vw-2rem)] sm:w-auto rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
+      className={`fixed ${positionClass} z-50 max-w-md w-[calc(100vw-2rem)] sm:w-auto rounded-2xl border px-4 py-3.5 flex items-center gap-3 ${
         isExiting ? 'SnackbarFloating--exit' : 'SnackbarFloating'
       } ${styles.container}`}
     >
