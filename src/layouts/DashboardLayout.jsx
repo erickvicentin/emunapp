@@ -4,6 +4,26 @@ import Icon from '../components/atoms/Icon';
 import logo from '../assets/logo.jpeg';
 import { useAuth } from '../hooks/useAuth';
 
+function DashboardHeaderBadge({ badgeLabel, badgeIcon, effectiveBadge }) {
+  const iconName =
+    badgeIcon || (effectiveBadge === 'staff' ? 'admin_panel_settings' : 'spa');
+  const label = badgeLabel || `Rol: ${effectiveBadge}`;
+  const badgeClasses =
+    effectiveBadge === 'staff'
+      ? 'bg-secondary-container text-on-secondary-container'
+      : 'bg-surface-container-highest text-primary';
+
+  return (
+    <span
+      data-testid="dashboard-header-badge"
+      className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full font-label-sm text-label-sm font-semibold uppercase tracking-wider ${badgeClasses}`}
+    >
+      <Icon name={iconName} className="text-[14px]" />
+      {label}
+    </span>
+  );
+}
+
 /**
  * DashboardLayout
  * Layout for authenticated role panels (/customer, /administrator)
@@ -14,6 +34,8 @@ export default function DashboardLayout({
   roleBadge = 'customer',
   userName,
   userEmail,
+  badgeLabel,
+  badgeIcon,
   sidebarId = 'admin-drawer',
   renderSidebar,
 }) {
@@ -97,21 +119,13 @@ export default function DashboardLayout({
             </Link>
           </div>
 
-          {/* User info & role badge */}
+          {/* User info & role/credits badge */}
           <div className="flex items-center gap-3 sm:gap-4">
-            <span
-              className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm font-semibold uppercase tracking-wider ${
-                effectiveBadge === 'staff'
-                  ? 'bg-secondary-container text-on-secondary-container'
-                  : 'bg-surface-container-highest text-primary'
-              }`}
-            >
-              <Icon
-                name={effectiveBadge === 'staff' ? 'admin_panel_settings' : 'spa'}
-                className="text-[14px]"
-              />
-              Rol: {effectiveBadge}
-            </span>
+            <DashboardHeaderBadge
+              badgeLabel={badgeLabel}
+              badgeIcon={badgeIcon}
+              effectiveBadge={effectiveBadge}
+            />
 
             <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-surface-container-high">
               {photoURL ? (
