@@ -23,7 +23,7 @@ import {
   DEFAULT_MAX_CAPACITY,
   formatDateKey,
   hasTimeOverlap,
-  isWithinStudentBookingWindow,
+  isTurnBookingOpen,
 } from '../utils/scheduleUtils';
 
 const BASE_SCHEDULE_COLLECTION = 'horarios_base';
@@ -748,9 +748,26 @@ export async function markReservationAttendance({ reserva, nextAttendance }) {
   return porcentajeAsistencia;
 }
 
+export async function fetchUserReservations(userId) {
+  if (!userId) return [];
+  const q = query(
+    collection(db, RESERVATIONS_COLLECTION),
+    where('usuarioId', '==', userId)
+  );
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => {
+      if (a.dateKey !== b.dateKey) return String(a.dateKey).localeCompare(String(b.dateKey));
+      return String(a.startTime).localeCompare(String(b.startTime));
+    });
+}
+
 /**
- * Student self-booking helper (ready for Customer Portal).
- * Enforces: closed day check, 1h..30d window, max 1 booking/day, max 4 slots, FEFO credit.
+ * Student self-booking helper for the Customer Portal.
+ * - Enforces closed day check, >= 10 min before start, max 1 active booking/day, max 4 slots.
+ * - If the student has an active membership credit, deducts 1 credit and sets `confirmada`.
+ * - If the student has 0 credits, reserves the spot with `esperando_comprobante`.
  */
 export async function bookTurnAsStudent({ turno, student }) {
   const closedSnap = await getDocs(
@@ -760,76 +777,114 @@ export async function bookTurnAsStudent({ turno, student }) {
     throw new Error('El estudio se encuentra cerrado en esa fecha.');
   }
 
-  if (!isWithinStudentBookingWindow(turno.dateKey, turno.startTime)) {
-    throw new Error('Solo podés reservar entre 1 hora antes de la clase y 30 días hacia adelante.');
+  if (!isTurnBookingOpen(turno.dateKey, turno.startTime)) {
+    throw new Error('Solo podés reservar hasta 10 minutos antes del inicio de la clase.');
   }
 
-  const sameDayQ = query(
+  const userReservationsQ = query(
     collection(db, RESERVATIONS_COLLECTION),
-    where('usuarioId', '==', student.id),
-    where('dateKey', '==', turno.dateKey)
+    where('usuarioId', '==', student.id)
   );
-  const sameDaySnap = await getDocs(sameDayQ);
-  const hasActiveSameDay = sameDaySnap.docs.some(
-    (d) => d.data()?.estado === 'confirmada'
+  const userReservationsSnap = await getDocs(userReservationsQ);
+  const hasPendingSinglePayment = userReservationsSnap.docs.some(
+    (d) => d.data()?.estado === 'esperando_comprobante'
+  );
+  if (hasPendingSinglePayment) {
+    throw new Error(
+      'Tenés una reserva pendiente de confirmación de pago. Esperá a que se apruebe antes de realizar otra reserva.'
+    );
+  }
+
+  const hasActiveSameDay = userReservationsSnap.docs.some(
+    (d) =>
+      d.data()?.dateKey === turno.dateKey &&
+      ['confirmada', 'esperando_comprobante', 'pendiente_confirmacion'].includes(d.data()?.estado)
   );
   if (hasActiveSameDay) {
-    throw new Error('Ya tenés una reserva confirmada para este día.');
+    throw new Error('Ya tenés una reserva activa para este día.');
   }
 
   const membership = await findEarliestActiveMembership(student.id);
-  if (!membership) {
-    throw new Error('No tenés cupos disponibles vigentes para reservar.');
-  }
-
   const reservationId = `${turno.id}_${student.id}_${Date.now()}`;
+  let bookedEstado = membership ? 'confirmada' : 'esperando_comprobante';
+
   await runTransaction(db, async (tx) => {
     const turnRef = doc(db, TURNS_COLLECTION, turno.id);
     const turnSnap = await tx.get(turnRef);
-    if (!turnSnap.exists() || turnSnap.data().estado === 'cancelado') {
+    const turnExists = turnSnap.exists();
+    const turnData = turnExists ? turnSnap.data() : turno;
+
+    if (turnData.estado === 'cancelado') {
       throw new Error('Este turno no se encuentra disponible.');
     }
 
-    const occupied = Number(turnSnap.data().cuposOcupados) || 0;
-    const capacity = Number(turnSnap.data().maxCapacity) || DEFAULT_MAX_CAPACITY;
+    const occupied = Number(turnData.cuposOcupados) || 0;
+    const capacity = Number(turnData.maxCapacity) || DEFAULT_MAX_CAPACITY;
     if (occupied >= capacity) {
       throw new Error('No quedan lugares disponibles en este horario.');
     }
 
-    const memRef = doc(db, MEMBERSHIPS_COLLECTION, membership.id);
-    const memSnap = await tx.get(memRef);
-    const remaining = Number(memSnap.data()?.creditosRestantes) || 0;
-    if (!memSnap.exists() || remaining <= 0) {
-      throw new Error('No tenés cupos disponibles vigentes para reservar.');
-    }
+    let creditoConsumido = false;
+    let membresiaId = null;
 
-    const nextCredits = remaining - 1;
-    tx.update(memRef, {
-      creditosRestantes: nextCredits,
-      estado: nextCredits === 0 ? 'agotada' : 'activa',
-      actualizadoEn: serverTimestamp(),
-    });
+    if (membership) {
+      const memRef = doc(db, MEMBERSHIPS_COLLECTION, membership.id);
+      const memSnap = await tx.get(memRef);
+      const remaining = Number(memSnap.data()?.creditosRestantes) || 0;
+      if (memSnap.exists() && remaining > 0) {
+        const nextCredits = remaining - 1;
+        tx.update(memRef, {
+          creditosRestantes: nextCredits,
+          estado: nextCredits === 0 ? 'agotada' : 'activa',
+          actualizadoEn: serverTimestamp(),
+        });
+        creditoConsumido = true;
+        membresiaId = membership.id;
+        bookedEstado = 'confirmada';
+      } else {
+        bookedEstado = 'esperando_comprobante';
+      }
+    }
 
     tx.set(doc(db, RESERVATIONS_COLLECTION, reservationId), {
       turnoId: turno.id,
       dateKey: turno.dateKey,
       startTime: turno.startTime,
+      durationMinutes: Number(turno.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES,
+      instructorName: turno.instructorName || 'Profesora Titular',
       usuarioId: student.id,
-      alumnoNombre: student.nombreApellido || `${student.nombre || ''} ${student.apellido || ''}`.trim(),
+      alumnoNombre:
+        student.nombreApellido || `${student.nombre || ''} ${student.apellido || ''}`.trim(),
       alumnoEmail: student.email || '',
-      estado: 'confirmada',
+      estado: bookedEstado,
       asistencia: 'pendiente',
-      origen: 'alumno',
-      creditoConsumido: true,
-      membresiaId: membership.id,
+      origen: creditoConsumido ? 'alumno' : 'alumno_sin_credito',
+      creditoConsumido,
+      membresiaId,
       creadoEn: serverTimestamp(),
     });
 
-    tx.update(turnRef, {
-      cuposOcupados: occupied + 1,
-      actualizadoEn: serverTimestamp(),
-    });
+    if (turnExists) {
+      tx.update(turnRef, {
+        cuposOcupados: occupied + 1,
+        actualizadoEn: serverTimestamp(),
+      });
+    } else {
+      tx.set(turnRef, {
+        dateKey: turno.dateKey,
+        startTime: turno.startTime,
+        durationMinutes: Number(turno.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES,
+        maxCapacity: capacity,
+        cuposOcupados: 1,
+        instructorName: turno.instructorName || 'Profesora Titular',
+        baseSlotId: turno.baseSlotId || null,
+        estado: 'programado',
+        creadoEn: serverTimestamp(),
+      });
+    }
   });
+
+  return { reservationId, estado: bookedEstado };
 }
 
 /**

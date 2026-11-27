@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   doc,
   getDoc,
@@ -171,6 +172,53 @@ export async function reportPaymentNotice({
     pagoId: pagoRef.id,
     membershipId: memRef.id,
   };
+}
+
+/**
+ * Registers a transfer payment notice for a single-class reservation made without credits.
+ * Only requires the transfer date; amount is fixed to the individual class price and no receipt file is required.
+ */
+export async function reportReservationPaymentNotice({
+  userId,
+  userName,
+  userEmail,
+  reservation,
+  individualPackage,
+  fechaTransferencia,
+}) {
+  if (!userId || !reservation?.id) {
+    throw new Error('No se encontró la reserva para informar el pago.');
+  }
+  if (!fechaTransferencia) {
+    throw new Error('Ingresá la fecha de la transferencia.');
+  }
+
+  const existingPayments = await fetchUserPayments(userId);
+  const alreadyReported = existingPayments.some(
+    (p) => p.reservaId === reservation.id && p.estado === 'pendiente_conciliacion'
+  );
+  if (alreadyReported) {
+    throw new Error('Ya informaste el pago para esta reserva. Queda pendiente de conciliación.');
+  }
+
+  const amount = getPackageNumericPrice(individualPackage) || 1;
+  const ref = await addDoc(collection(db, PAYMENTS_COLLECTION), {
+    usuarioId: userId,
+    alumnoNombre: userName || 'Alumna',
+    alumnoEmail: userEmail || '',
+    paqueteId: individualPackage?.id || 'plan-individual',
+    paqueteNombre: individualPackage?.name || 'Clase individual',
+    clasesCantidad: 1,
+    monto: amount,
+    metodoPago: 'transferencia',
+    fechaTransferencia: String(fechaTransferencia).trim(),
+    reservaId: reservation.id,
+    turnoId: reservation.turnoId || '',
+    estado: 'pendiente_conciliacion',
+    creadoEn: serverTimestamp(),
+  });
+
+  return { pagoId: ref.id };
 }
 
 export async function approvePaymentByAdmin(pago) {
