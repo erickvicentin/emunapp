@@ -357,3 +357,86 @@ export const getPublicPackages = onCall(async (request) => {
 
   return { packages };
 });
+
+async function revokeProvisionalPaymentAndBookings(db, pagoSnap, reason) {
+  const pago = pagoSnap.data() || {};
+  await pagoSnap.ref.update({
+    estado: reason === 'expired' ? 'vencido' : 'rechazado',
+    actualizadoEn: FieldValue.serverTimestamp(),
+  });
+
+  if (!pago.membresiaId) return 0;
+
+  await db.collection('membresias_usuario').doc(pago.membresiaId).set(
+    {
+      estado: 'cancelada',
+      creditosRestantes: 0,
+      provisional: false,
+      actualizadoEn: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  const resSnap = await db
+    .collection('reservas')
+    .where('membresiaId', '==', pago.membresiaId)
+    .where('estado', '==', 'confirmada')
+    .get();
+
+  const cancelResults = await Promise.all(
+    resSnap.docs.map(async (resDoc) => {
+      const resData = resDoc.data();
+      await resDoc.ref.update({
+        estado: 'cancelado_estudio',
+        motivoCancelacion:
+          reason === 'expired'
+            ? 'Pago provisorio vencido sin confirmación'
+            : 'Pago rechazado por administración',
+        actualizadoEn: FieldValue.serverTimestamp(),
+      });
+      if (resData.turnoId) {
+        await db.runTransaction(async (tx) => {
+          const turnRef = db.collection('turnos_clase').doc(resData.turnoId);
+          const turnSnap = await tx.get(turnRef);
+          if (!turnSnap.exists) return;
+          const current = Number(turnSnap.data()?.cuposOcupados) || 0;
+          tx.update(turnRef, {
+            cuposOcupados: Math.max(0, current - 1),
+            actualizadoEn: FieldValue.serverTimestamp(),
+          });
+        });
+      }
+      return 1;
+    })
+  );
+  return cancelResults.reduce((acc, count) => acc + count, 0);
+}
+
+/**
+ * Limpia pagos provisorios vencidos sin confirmación y cancela sus reservas asociadas.
+ */
+export const expireProvisionalPayments = onCall(async (request) => {
+  assertStaffCaller(request);
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const nowIso = new Date().toISOString();
+
+  const pendingSnap = await db
+    .collection('pagos')
+    .where('estado', '==', 'pendiente_conciliacion')
+    .get();
+
+  const expiredDocs = pendingSnap.docs.filter((pagoSnap) => {
+    const data = pagoSnap.data();
+    return Boolean(data.expiresAt && String(data.expiresAt) <= nowIso);
+  });
+
+  const cancelCounts = await Promise.all(
+    expiredDocs.map((pagoSnap) => revokeProvisionalPaymentAndBookings(db, pagoSnap, 'expired'))
+  );
+
+  return {
+    expiredPayments: expiredDocs.length,
+    cancelledBookings: cancelCounts.reduce((acc, count) => acc + count, 0),
+  };
+});

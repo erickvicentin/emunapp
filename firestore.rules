@@ -172,16 +172,34 @@ service cloud.firestore {
     // Colección: membresias_usuario (créditos y vencimientos)
     match /membresias_usuario/{membresiaId} {
       allow read: if isStaff() || (isActiveUser() && resource.data.usuarioId == request.auth.uid);
-      allow write: if isStaff();
+      allow create: if isStaff() || (
+        isActiveUser() &&
+        request.resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.provisional == true &&
+        request.resource.data.estado == 'pendiente_conciliacion'
+      );
+      allow update: if isStaff() || (
+        isActiveUser() &&
+        resource.data.usuarioId == request.auth.uid &&
+        areImmutableFieldsUnchanged(['usuarioId', 'provisional', 'paqueteId', 'creditosTotales', 'pagoId']) &&
+        request.resource.data.creditosRestantes >= 0 &&
+        request.resource.data.creditosRestantes <= resource.data.creditosTotales
+      );
+      allow delete: if isAdmin();
     }
 
     // Colección: pagos (transferencias manuales)
     match /pagos/{pagoId} {
       allow read: if isStaff() || (isActiveUser() && resource.data.usuarioId == request.auth.uid);
-      allow create: if isActiveUser() &&
+      allow create: if (
+        isStaff() ||
+        (isActiveUser() && request.resource.data.usuarioId == request.auth.uid)
+      ) &&
+        request.resource.data.estado in ['pendiente_conciliacion'] &&
         request.resource.data.usuarioId is string &&
-        request.resource.data.usuarioId == request.auth.uid;
-      allow update, delete: if isStaff();
+        request.resource.data.monto is number &&
+        request.resource.data.monto > 0;
+      allow update, delete: if isAdmin();
     }
 
     // Colección: horarios_base (plantilla semanal recurrente de horarios de clase)
@@ -196,6 +214,12 @@ service cloud.firestore {
       allow read: if isStaff() || isActiveUser();
       allow create, update: if isAdmin() && isValidClosedDay(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    // Colección: configuracion (datos de cobro y configuración general del estudio)
+    match /configuracion/{configId} {
+      allow read: if isStaff() || isActiveUser();
+      allow create, update, delete: if isAdmin();
     }
   }
 }
