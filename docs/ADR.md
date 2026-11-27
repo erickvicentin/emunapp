@@ -210,3 +210,27 @@
 ### Pros y Contras
 - **Pros:** Cero duplicación entre `AdminSidebar` y el sidebar de alumno; navegación directa por URL; base limpia para implementar cada sección por separado.
 - **Contras:** Las funcionalidades previas de `CustomerPage` (saldo y reporte de pago) quedan temporalmente reemplazadas por el placeholder de `Pagos` hasta migrarlas a su sección dedicada.
+
+---
+
+## ADR-010: Calendario Semanal de Solo Lectura y Banner de Créditos en la Sección Turnos del Alumno
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Utilidades (`src/utils/scheduleUtils.js`):** Se agregó `STUDENT_BOOK_MIN_MINUTES = 10`, `isTurnBookingOpen` (valida que falten al menos 10 minutos para el inicio del turno) y `buildCustomerWeekTurns` (combina turnos persistidos en `turnos_clase` con turnos virtuales de `horarios_base` para hoy y días futuros sin escribir en Firestore).
+- **Hook (`src/hooks/useCustomerCalendar.js`):** Carga en modo solo lectura `horarios_base`, `dias_cerrados`, `turnos_clase` y `membresias_usuario` del alumno autenticado, calculando los créditos vigentes disponibles (`totalCredits`).
+- **Componentes reutilizables (`src/components/organisms/WeeklyCalendarGrid.jsx`, `src/components/molecules/CalendarDayColumn.jsx`, `src/components/organisms/CalendarSection.jsx`):** Se extrajo la grilla semanal a `WeeklyCalendarGrid` y se extendió `CalendarDayColumn` con `mode="customer"` para deshabilitar días pasados (ocultando la ocupación histórica), turnos dentro de la ventana de 10 minutos previos al inicio, turnos cancelados y turnos con cupo lleno (`Cupo lleno`).
+- **Sección Turnos (`src/components/organisms/CustomerTurnsSection.jsx`, `src/pages/CustomerPage.jsx`):** Muestra el banner **"Mis créditos"** arriba del calendario cuando `totalCredits > 0`, seguido de la grilla semanal de turnos.
+
+### Qué se quitó
+- Se reemplazó el placeholder `"Próximo a implementar"` de la sección `/customer/turnos` por `CustomerTurnsSection`.
+
+### Por qué
+- Las reglas de Firestore (`firestore.rules`) restringen la escritura en `turnos_clase` a `staff` y la lectura global de `reservas` a `staff`/titular; por ello el calendario del alumno opera en modo solo lectura sobre `turnos_clase` + `horarios_base` + `dias_cerrados` sin intentar materializar documentos ni consultar reservas ajenas.
+- Ocultar el indicador de ocupación en días pasados evita exponer si hubo cupo lleno en fechas anteriores, mostrándolos simplemente deshabilitados.
+
+### Pros y Contras
+- **Pros:** Cumple estrictamente las reglas de seguridad de Firestore; reutiliza el mismo calendario semanal que administración; respeta la regla de corte de 10 minutos antes del inicio.
+- **Contras:** La acción de reserva al hacer clic en un turno disponible se implementará en la siguiente iteración.
