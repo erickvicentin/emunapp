@@ -28,6 +28,11 @@ Then('the customer sidebar should be visible', async () => {
   expect(isDisplayed).toBe(true);
 });
 
+Then('the customer header should display the credits badge', async () => {
+  const badgeText = await CustomerPage.getHeaderBadgeText();
+  expect(badgeText.toUpperCase()).toContain('CRÉDITOS:');
+});
+
 Then(
   'the customer URL should contain {string}',
   async (expectedPath) => {
@@ -35,6 +40,16 @@ Then(
     expect(currentUrl).toContain(expectedPath);
   }
 );
+
+Then('the customer turns calendar should be visible', async () => {
+  const isDisplayed = await CustomerPage.isTurnsCalendarDisplayed();
+  expect(isDisplayed).toBe(true);
+});
+
+Then('the customer upcoming turns section should be visible', async () => {
+  const isDisplayed = await CustomerPage.isUpcomingTurnsDisplayed();
+  expect(isDisplayed).toBe(true);
+});
 
 Then(
   'the customer placeholder section should show title {string} and status {string}',

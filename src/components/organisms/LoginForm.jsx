@@ -30,7 +30,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
     setError('');
 
     if (!identifier.trim()) {
-      setError('Por favor ingresá tu correo electrónico.');
+      setError('Por favor ingresá tu correo electrónico o DNI.');
       return;
     }
     if (!password) {
@@ -49,6 +49,11 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
       const res = await loginWithEmail(identifier.trim(), password);
       const profile = res?.profile;
 
+      if (profile?.requiereCambioPassword) {
+        navigate('/cambiar-contrasena');
+        return;
+      }
+
       if (isStaffRole(profile?.rol)) {
         navigate('/administrador/dashboard');
         return;
@@ -61,7 +66,7 @@ export default function LoginForm({ onSubmit, onGoogleLogin }) {
       navigate('/customer');
     } catch (err) {
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Credenciales inválidas. Verificá tu correo y contraseña.');
+        setError('Credenciales inválidas. Verificá tu correo/DNI y contraseña.');
       } else if (err.code === 'auth/invalid-email') {
         setError('El formato del correo electrónico no es válido.');
       } else {

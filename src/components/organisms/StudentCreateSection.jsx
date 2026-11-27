@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
 import StudentFormFields from '../molecules/StudentFormFields';
-import { validateStudentCreate } from '../../utils/registrationValidator';
+import { formatDniInput, validateStudentCreate } from '../../utils/registrationValidator';
 
 const INITIAL_STUDENT_FORM = {
   nombre: '',
@@ -28,7 +28,8 @@ export default function StudentCreateSection({ onCreateStudent }) {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === 'dni' ? formatDniInput(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -99,13 +100,13 @@ export default function StudentCreateSection({ onCreateStudent }) {
             data-testid="student-create-activation-notice"
             className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/60 flex items-start gap-3"
           >
-            <Icon name="mail" className="text-secondary text-[20px] mt-0.5 shrink-0" />
+            <Icon name="badge" className="text-secondary text-[20px] mt-0.5 shrink-0" />
             <div className="font-body-sm text-[13px] text-on-surface-variant leading-relaxed">
               <p className="font-semibold text-primary">
-                Activación de cuenta y contraseña inicial
+                Primer ingreso con DNI y cambio obligatorio
               </p>
               <p className="mt-0.5">
-                El alumno se registrará en Firebase Auth y Firestore con rol <strong>customer</strong> utilizando una contraseña aleatoria segura, y recibirá un correo electrónico de activación para crear su propia contraseña.
+                El alumno se registrará en Firebase Auth y Firestore con rol <strong>customer</strong>. Su primer ingreso será utilizando su <strong>DNI como usuario y contraseña</strong>, y el sistema le solicitará definir una contraseña nueva al iniciar sesión.
               </p>
             </div>
           </div>

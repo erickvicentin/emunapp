@@ -5,10 +5,9 @@ import BaseScheduleModal from '../molecules/BaseScheduleModal';
 import CustomTurnModal from '../molecules/CustomTurnModal';
 import ClosedDayModal from '../molecules/ClosedDayModal';
 import TurnDetailModal from '../molecules/TurnDetailModal';
-import CalendarDayColumn from '../molecules/CalendarDayColumn';
+import WeeklyCalendarGrid from './WeeklyCalendarGrid';
 import { formatDateKey, getWeekStartMonday } from '../../utils/scheduleUtils';
 
-const SKELETON_COL_IDS = ['col-1', 'col-2', 'col-3', 'col-4', 'col-5', 'col-6', 'col-7'];
 const EMPTY_STUDENTS = [];
 
 /**
@@ -137,70 +136,22 @@ export default function CalendarSection({
         </div>
       </section>
 
-      <div className="w-full h-11 inline-flex items-center justify-between rounded-2xl border border-surface-container-high bg-surface-container-lowest px-2 shadow-2xs">
-        <button
-          type="button"
-          data-testid="calendar-prev-week-btn"
-          onClick={goToPreviousWeek}
-          className="inline-flex items-center justify-center w-9 h-8 rounded-xl text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
-          aria-label="Semana anterior"
-        >
-          <Icon name="chevron_left" className="text-[22px]" />
-        </button>
-        <span
-          data-testid="calendar-week-range"
-          className="font-label-lg text-label-lg font-semibold text-primary text-center truncate px-3"
-        >
-          {weekSelectorLabel}
-        </span>
-        <button
-          type="button"
-          data-testid="calendar-next-week-btn"
-          onClick={goToNextWeek}
-          className="inline-flex items-center justify-center w-9 h-8 rounded-xl text-primary hover:bg-surface-container transition-colors cursor-pointer shrink-0"
-          aria-label="Semana siguiente"
-        >
-          <Icon name="chevron_right" className="text-[22px]" />
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div
-          data-testid="calendar-loading-skeleton"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3"
-        >
-          {SKELETON_COL_IDS.map((id) => (
-            <div
-              key={id}
-              className="h-72 rounded-2xl bg-surface-container-lowest border border-surface-container-high p-3 animate-pulse space-y-2.5"
-            >
-              <div className="h-5 w-20 rounded bg-surface-container-high" />
-              <div className="h-16 w-full rounded-xl bg-surface-container-high" />
-              <div className="h-16 w-full rounded-xl bg-surface-container-high" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div
-          data-testid="calendar-week-grid"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 items-start"
-        >
-          {weekDays.map((day) => (
-            <CalendarDayColumn
-              key={day.dateKey}
-              day={day}
-              isToday={day.dateKey === todayKey}
-              closedInfo={closedDaysMap[day.dateKey]}
-              dayTurns={turns.filter((t) => t.dateKey === day.dateKey)}
-              reservations={reservations}
-              isAdmin={isAdmin}
-              onOpenClosedDayModal={openClosedDayModal}
-              onClearDayTurns={calendar.clearDayTurns}
-              onOpenTurnDetail={openTurnDetail}
-            />
-          ))}
-        </div>
-      )}
+      <WeeklyCalendarGrid
+        weekDays={weekDays}
+        todayKey={todayKey}
+        weekSelectorLabel={weekSelectorLabel}
+        closedDaysMap={closedDaysMap}
+        turns={turns}
+        reservations={reservations}
+        isLoading={isLoading}
+        isAdmin={isAdmin}
+        mode="admin"
+        onPrevWeek={goToPreviousWeek}
+        onNextWeek={goToNextWeek}
+        onOpenClosedDayModal={openClosedDayModal}
+        onClearDayTurns={calendar.clearDayTurns}
+        onOpenTurnDetail={openTurnDetail}
+      />
 
       {isAdmin && (
         <BaseScheduleModal

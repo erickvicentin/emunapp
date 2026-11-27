@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DashboardSidebar from '../components/organisms/DashboardSidebar';
+import CustomerTurnsSection from '../components/organisms/CustomerTurnsSection';
+import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
+import { useCustomerCalendar } from '../hooks/useCustomerCalendar';
 import { CUSTOMER_NAV_ITEMS } from '../data/customerNavItems';
 
 function CustomerPlaceholderSection({ activeNavItem }) {
@@ -45,16 +48,29 @@ function CustomerPlaceholderSection({ activeNavItem }) {
 export default function CustomerPage() {
   const { user, userProfile } = useAuth();
   const { section } = useParams();
+  const [snackbar, setSnackbar] = useState({ open: false, variant: 'success', message: '' });
 
-  const activeNavItem = CUSTOMER_NAV_ITEMS.find((item) => item.id === section);
-  if (!activeNavItem) {
-    return <Navigate to="/customer/turnos" replace />;
-  }
+  const showSnackbar = useCallback((variant, message) => {
+    setSnackbar({ open: true, variant, message });
+  }, []);
 
   const fullName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
     : user?.displayName || 'Alumna';
   const email = userProfile?.email || user?.email || '';
+
+  const activeNavItem = CUSTOMER_NAV_ITEMS.find((item) => item.id === section);
+  const calendar = useCustomerCalendar({
+    uid: user?.uid,
+    userName: fullName,
+    userEmail: email,
+    isEnabled: activeNavItem?.id === 'turnos',
+    showSnackbar,
+  });
+
+  if (!activeNavItem) {
+    return <Navigate to="/customer/turnos" replace />;
+  }
 
   return (
     <DashboardLayout
@@ -62,6 +78,8 @@ export default function CustomerPage() {
       roleBadge="customer"
       userName={fullName}
       userEmail={email}
+      badgeLabel={`Créditos: ${calendar.totalCredits}`}
+      badgeIcon="confirmation_number"
       sidebarId="customer-drawer"
       renderSidebar={(sidebarProps) => (
         <DashboardSidebar
@@ -75,7 +93,19 @@ export default function CustomerPage() {
         />
       )}
     >
-      <CustomerPlaceholderSection activeNavItem={activeNavItem} />
+      {activeNavItem.id === 'turnos' ? (
+        <CustomerTurnsSection calendar={calendar} />
+      ) : (
+        <CustomerPlaceholderSection activeNavItem={activeNavItem} />
+      )}
+
+      <Snackbar
+        open={snackbar.open}
+        variant={snackbar.variant}
+        message={snackbar.message}
+        position="bottom-left"
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      />
     </DashboardLayout>
   );
 }

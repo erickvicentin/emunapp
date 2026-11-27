@@ -19,8 +19,10 @@ service cloud.firestore {
 
     // Verifica si el usuario autenticado está activo (active != false)
     function isActiveUser() {
+      let userDoc = /databases/$(database)/documents/usuarios/$(request.auth.uid);
       return isAuthenticated() &&
-        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.active != false;
+        exists(userDoc) &&
+        get(userDoc).data.active != false;
     }
 
     // Verifica si el usuario tiene rol de staff / administradora vía custom claims
@@ -115,7 +117,29 @@ service cloud.firestore {
         data.startTime.size() > 0 &&
         data.startTime.size() <= 10 &&
         data.estado is string &&
-        data.estado in ['confirmada', 'cancelada', 'cancelado_estudio', 'cancelado_tiempo', 'cancelado_tarde'];
+        data.estado in ['confirmada', 'esperando_comprobante', 'comprobante_rechazado', 'cancelada', 'cancelado_estudio', 'cancelado_tiempo', 'cancelado_tarde'];
+    }
+
+    // Validador de dominio para creación de documentos de /turnos_clase/{turnoId} por alumnas
+    function isValidTurnCreate(data) {
+      return data.dateKey is string &&
+        data.dateKey.size() == 10 &&
+        data.startTime is string &&
+        data.startTime.size() > 0 &&
+        data.startTime.size() <= 10 &&
+        data.durationMinutes is int &&
+        data.durationMinutes > 0 &&
+        data.durationMinutes <= 300 &&
+        data.maxCapacity is int &&
+        data.maxCapacity >= 1 &&
+        data.maxCapacity <= 10 &&
+        data.cuposOcupados is int &&
+        data.cuposOcupados >= 0 &&
+        data.cuposOcupados <= data.maxCapacity &&
+        data.estado is string &&
+        data.estado == 'programado' &&
+        isValidOptionalString(data, 'instructorName', 100) &&
+        isValidOptionalString(data, 'baseSlotId', 128);
     }
 
     // ===============================================================
@@ -124,9 +148,10 @@ service cloud.firestore {
 
     // Colección: usuarios (perfiles de alumnas y staff)
     match /usuarios/{userId} {
-      allow read: if isOwner(userId) || isStaff();
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isStaff();
       allow create: if isValidUser(request.resource.data, userId) && (
-        (isOwner(userId) &&
+        (isAuthenticated() &&
+          request.auth.uid == userId &&
           request.resource.data.rol == 'customer' &&
           (!('active' in request.resource.data) || request.resource.data.active == true)) ||
         (isStaff() && request.resource.data.rol == 'customer') ||
@@ -144,6 +169,12 @@ service cloud.firestore {
     match /turnos_clase/{turnoId} {
       allow read: if isStaff() || isActiveUser();
       allow write: if isStaff();
+      allow create: if isActiveUser() && isValidTurnCreate(request.resource.data);
+      allow update: if isActiveUser() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cuposOcupados', 'actualizadoEn']) &&
+        request.resource.data.cuposOcupados is int &&
+        request.resource.data.cuposOcupados >= 0 &&
+        request.resource.data.cuposOcupados <= resource.data.maxCapacity;
     }
 
     // Colección: reservas (vínculo entre alumna y turno)

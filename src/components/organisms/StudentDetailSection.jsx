@@ -18,7 +18,12 @@ function getGenderIcon(genderOrSex) {
  * Displays the student's profile photo (or gender-aware user icon fallback)
  * and personal/enrollment details.
  */
-export default function StudentDetailSection({ student }) {
+export default function StudentDetailSection({
+  student,
+  isAdmin = false,
+  isResettingPassword = false,
+  onResetPassword,
+}) {
   const navigate = useNavigate();
 
   if (!student) {
@@ -78,6 +83,19 @@ export default function StudentDetailSection({ student }) {
             <Icon name="arrow_back" className="text-[18px]" />
             <span>Volver a Alumnos</span>
           </Button>
+          {isAdmin && onResetPassword && (
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="student-reset-password-btn"
+              disabled={isResettingPassword}
+              onClick={() => onResetPassword(student)}
+              className="gap-2 bg-surface-container-lowest cursor-pointer"
+            >
+              <Icon name="lock_reset" className="text-[18px]" />
+              <span>{isResettingPassword ? 'Restableciendo...' : 'Restablecer clave (DNI)'}</span>
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"

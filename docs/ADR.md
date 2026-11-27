@@ -210,3 +210,47 @@
 ### Pros y Contras
 - **Pros:** Cero duplicación entre `AdminSidebar` y el sidebar de alumno; navegación directa por URL; base limpia para implementar cada sección por separado.
 - **Contras:** Las funcionalidades previas de `CustomerPage` (saldo y reporte de pago) quedan temporalmente reemplazadas por el placeholder de `Pagos` hasta migrarlas a su sección dedicada.
+
+---
+
+## ADR-010: Calendario Semanal de Solo Lectura y Banner de Créditos en la Sección Turnos del Alumno
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Utilidades (`src/utils/scheduleUtils.js`):** Se agregó `STUDENT_BOOK_MIN_MINUTES = 10`, `isTurnBookingOpen` (valida que falten al menos 10 minutos para el inicio del turno) y `buildCustomerWeekTurns` (combina turnos persistidos en `turnos_clase` con turnos virtuales de `horarios_base` para hoy y días futuros sin escribir en Firestore).
+- **Hook (`src/hooks/useCustomerCalendar.js`):** Carga en modo solo lectura `horarios_base`, `dias_cerrados`, `turnos_clase` y `membresias_usuario` del alumno autenticado, calculando los créditos vigentes disponibles (`totalCredits`).
+- **Componentes reutilizables (`src/components/organisms/WeeklyCalendarGrid.jsx`, `src/components/molecules/CalendarDayColumn.jsx`, `src/components/organisms/CalendarSection.jsx`):** Se extrajo la grilla semanal a `WeeklyCalendarGrid` y se extendió `CalendarDayColumn` con `mode="customer"` para deshabilitar días pasados (ocultando la ocupación histórica), turnos dentro de la ventana de 10 minutos previos al inicio, turnos cancelados y turnos con cupo lleno (`Cupo lleno`).
+- **Sección Turnos (`src/components/organisms/CustomerTurnsSection.jsx`, `src/pages/CustomerPage.jsx`):** Muestra el banner **"Mis créditos"** arriba del calendario cuando `totalCredits > 0`, seguido de la grilla semanal de turnos.
+
+### Qué se quitó
+- Se reemplazó el placeholder `"Próximo a implementar"` de la sección `/customer/turnos` por `CustomerTurnsSection`.
+
+### Por qué
+- Las reglas de Firestore (`firestore.rules`) restringen la escritura en `turnos_clase` a `staff` y la lectura global de `reservas` a `staff`/titular; por ello el calendario del alumno opera en modo solo lectura sobre `turnos_clase` + `horarios_base` + `dias_cerrados` sin intentar materializar documentos ni consultar reservas ajenas.
+- Ocultar el indicador de ocupación en días pasados evita exponer si hubo cupo lleno en fechas anteriores, mostrándolos simplemente deshabilitados.
+
+### Pros y Contras
+- **Pros:** Cumple estrictamente las reglas de seguridad de Firestore; reutiliza el mismo calendario semanal que administración; respeta la regla de corte de 10 minutos antes del inicio.
+- **Contras:** La acción de reserva al hacer clic en un turno disponible se implementará en la siguiente iteración.
+
+---
+
+## ADR-011: Flujo de Reserva de Turnos del Alumno (Con/Sin Créditos) y Sección "Próximos turnos..."
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se amplió `isValidReservation` con los estados `'esperando_comprobante'` y `'comprobante_rechazado'`, y se habilitó a usuarios activos (`isActiveUser()`) a crear turnos virtuales iniciales o actualizar exclusivamente `cuposOcupados` y `actualizadoEn` en `turnos_clase`.
+- **Servicio de Reservas (`src/services/scheduleService.js`):** Se actualizó `bookTurnAsStudent` para validar el corte de 10 minutos (`isTurnBookingOpen`), materializar turnos virtuales si no existen en `turnos_clase`, descontar 1 crédito (`confirmada`) cuando el alumno posee saldo o registrar la reserva como `esperando_comprobante` cuando no tiene créditos; además se agregó `fetchUserReservations`.
+- **Modal de Confirmación (`src/components/molecules/CustomerBookTurnModal.jsx`):** Al seleccionar un turno disponible se muestra el detalle completo del horario y se informa la deducción de 1 crédito + cancelación hasta 4h antes (si tiene saldo), o los datos bancarios (`cobrosConfig`) + importe de clase individual + aviso de aprobación pendiente (si tiene 0 créditos).
+- **Próximos Turnos y Snackbar (`src/components/molecules/CustomerUpcomingTurns.jsx`, `src/components/molecules/Snackbar.jsx`, `src/pages/CustomerPage.jsx`):** Se agregó la lista `"Próximos turnos..."` debajo del calendario con los estados `"Esperando comprobante"`, `"Turno confirmado"`, `"Comprobante rechazado"` y `"Turno cancelado"`, botón `"Informar pago"` para turnos en espera de comprobante, botón de acciones a la derecha de cada fila y `Snackbar` en posición `bottom-left`.
+
+### Por qué
+- Permitir que tanto alumnas con paquete activo como alumnas sin créditos puedan reservar un lugar en la cama reformer sin fricción, manteniendo trazabilidad del estado de pago y cupos en tiempo real.
+
+### Pros y Contras
+- **Pros:** Flujo completo con y sin créditos; reutilización de `ReportPaymentModal` y `cobrosConfig`; feedback inmediato en esquina inferior izquierda.
+- **Contras:** El menú de acciones a la derecha de cada fila en `"Próximos turnos..."` queda como disparador visual hasta implementar la cancelación/reprogramación del alumno.

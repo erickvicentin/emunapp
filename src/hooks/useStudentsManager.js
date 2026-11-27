@@ -6,6 +6,7 @@ import {
   fetchCustomerStudents,
   formatDni,
   mapStudentProfileToRow,
+  resetStudentPasswordViaAdmin,
   updateStudentActiveStatus,
   updateStudentProfile,
 } from '../services/studentService';
@@ -31,6 +32,7 @@ export function useStudentsManager() {
   );
   const [isLoadingStudents, setIsLoadingStudents] = useState(() => !isWebDriverEnvironment());
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [togglingStudentId, setTogglingStudentId] = useState(null);
   const [snackbar, setSnackbar] = useState(INITIAL_SNACKBAR);
 
@@ -78,17 +80,14 @@ export function useStudentsManager() {
   const createStudent = useCallback(
     async (formData) => {
       try {
-        const { student, emailSent } = await createStudentViaAdmin(formData);
+        const { student } = await createStudentViaAdmin(formData);
         setStudents((prev) => [
           student,
           ...prev.filter((item) => item.id !== student.id),
         ]);
-        const activationNote = emailSent
-          ? 'Se envió un email para que active su contraseña.'
-          : 'Podrá generar su contraseña desde el enlace de recuperación.';
         showSnackbar(
           'success',
-          `Alumno "${student.nombreApellido}" registrado correctamente. ${activationNote}`
+          `Alumno "${student.nombreApellido}" registrado correctamente. Ingresará con su DNI como usuario y contraseña.`
         );
         return student;
       } catch (error) {
@@ -192,10 +191,34 @@ export function useStudentsManager() {
     [showSnackbar]
   );
 
+  const resetStudentPassword = useCallback(
+    async (student) => {
+      if (!student) return false;
+      setIsResettingPassword(true);
+      try {
+        if (!student.isMock) {
+          await resetStudentPasswordViaAdmin(student.id);
+        }
+        showSnackbar(
+          'success',
+          `Contraseña de "${student.nombreApellido}" restablecida a su DNI. Deberá cambiarla en el próximo ingreso.`
+        );
+        return true;
+      } catch (error) {
+        showSnackbar('error', error.message);
+        return false;
+      } finally {
+        setIsResettingPassword(false);
+      }
+    },
+    [showSnackbar]
+  );
+
   return {
     students,
     isLoadingStudents,
     isDeletingStudent,
+    isResettingPassword,
     togglingStudentId,
     snackbar,
     showSnackbar,
@@ -204,5 +227,6 @@ export function useStudentsManager() {
     updateStudent,
     deleteStudent,
     toggleStudentActive,
+    resetStudentPassword,
   };
 }

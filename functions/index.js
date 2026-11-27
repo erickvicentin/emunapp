@@ -9,6 +9,11 @@ initializeApp();
 const ALLOWED_DATABASES = new Set(['emuna-testing', 'emuna-prod']);
 const STAFF_ROLES = new Set(['staff', 'administradora']);
 const RELATED_COLLECTIONS = ['reservas', 'membresias_usuario', 'pagos'];
+const DNI_AUTH_DOMAIN = 'dni.emuna.local';
+
+function buildDniAuthEmail(dniDigits) {
+  return `${dniDigits}@${DNI_AUTH_DOMAIN}`;
+}
 
 function resolveDatabaseId(requestedDatabaseId) {
   const configuredDb = process.env.FIREBASE_DATABASE_ID;
@@ -78,7 +83,7 @@ function formatDni(rawDni) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function validateStudentPayload(data) {
+function validateStudentPayload(data, { requireEmail = true } = {}) {
   const nombre = String(data?.nombre || '').trim();
   const apellido = String(data?.apellido || '').trim();
   const telefono = String(data?.telefono || '').trim();
@@ -87,7 +92,7 @@ function validateStudentPayload(data) {
   const email = String(data?.email || '').trim().toLowerCase();
   const dniDigits = String(data?.dni || '').replace(/\D/g, '');
 
-  if (!nombre || !apellido || !telefono || !fechaNacimiento || !email) {
+  if (!nombre || !apellido || !telefono || !fechaNacimiento || (requireEmail && !email)) {
     throw new HttpsError(
       'invalid-argument',
       'Faltan campos obligatorios para registrar al alumno.'
@@ -101,6 +106,8 @@ function validateStudentPayload(data) {
     );
   }
 
+  const authEmail = email || buildDniAuthEmail(dniDigits);
+
   return {
     nombre,
     apellido,
@@ -108,6 +115,7 @@ function validateStudentPayload(data) {
     fechaNacimiento,
     genero,
     email,
+    authEmail,
     dniDigits,
     dniFormatted: formatDni(dniDigits),
   };
@@ -138,15 +146,18 @@ async function createManagedAccount(request, { targetRole, requireAdminCaller = 
 
   const databaseId = resolveDatabaseId(request.data?.databaseId);
   const db = getFirestore(databaseId);
-  const payload = validateStudentPayload(request.data);
+  const isCustomer = targetRole === 'customer';
+  const payload = validateStudentPayload(request.data, { requireEmail: !isCustomer });
   const auth = getAuth();
-  const initialRandomPassword = randomBytes(24).toString('base64url');
+  const initialPassword = isCustomer
+    ? payload.dniDigits
+    : randomBytes(24).toString('base64url');
 
   let userRecord;
   try {
     userRecord = await auth.createUser({
-      email: payload.email,
-      password: initialRandomPassword,
+      email: payload.authEmail,
+      password: initialPassword,
       displayName: `${payload.nombre} ${payload.apellido}`.trim(),
       emailVerified: false,
     });
@@ -158,7 +169,7 @@ async function createManagedAccount(request, { targetRole, requireAdminCaller = 
     if (error?.code === 'auth/email-already-exists') {
       throw new HttpsError(
         'already-exists',
-        'Ya existe una cuenta registrada con ese correo electrónico.'
+        'Ya existe una cuenta registrada con ese correo electrónico o DNI.'
       );
     }
     throw new HttpsError(
@@ -170,6 +181,7 @@ async function createManagedAccount(request, { targetRole, requireAdminCaller = 
   const userProfile = {
     uid: userRecord.uid,
     email: payload.email,
+    authEmail: payload.authEmail,
     nombre: payload.nombre,
     apellido: payload.apellido,
     telefono: payload.telefono,
@@ -204,11 +216,13 @@ async function createManagedAccount(request, { targetRole, requireAdminCaller = 
   }
 
   let activationLinkGenerated = false;
-  try {
-    await auth.generatePasswordResetLink(payload.email);
-    activationLinkGenerated = true;
-  } catch {
-    activationLinkGenerated = false;
+  if (!isCustomer && payload.email) {
+    try {
+      await auth.generatePasswordResetLink(payload.email);
+      activationLinkGenerated = true;
+    } catch {
+      activationLinkGenerated = false;
+    }
   }
 
   return {
@@ -317,6 +331,80 @@ export const createStudentAccount = onCall(async (request) => {
 export const deleteStudentAccount = onCall(async (request) =>
   deleteManagedAccount(request, { expectedRole: 'customer' })
 );
+
+/**
+ * Restablece la contraseña de un alumno a su DNI (solo dígitos) y marca
+ * `requiereCambioPassword: true` para forzar el cambio en su próximo ingreso.
+ */
+export const resetStudentPasswordToDni = onCall(async (request) => {
+  assertAdminCaller(request);
+
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const auth = getAuth();
+  const uid = String(request.data?.uid || '').trim();
+
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'El identificador del alumno es obligatorio.');
+  }
+
+  const userRef = db.collection('usuarios').doc(uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    throw new HttpsError('not-found', 'El perfil del alumno no existe en Firestore.');
+  }
+
+  const userData = userSnap.data() || {};
+  if (userData.rol !== 'customer') {
+    throw new HttpsError('permission-denied', 'Solo se puede restablecer la clave de alumnos.');
+  }
+
+  const dniDigits = String(userData.dni || '').replace(/\D/g, '');
+  if (dniDigits.length < 6) {
+    throw new HttpsError(
+      'failed-precondition',
+      'El alumno no tiene un DNI válido registrado para usar como contraseña.'
+    );
+  }
+
+  await auth.updateUser(uid, { password: dniDigits });
+  await userRef.update({
+    requiereCambioPassword: true,
+    actualizadoEn: FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, uid };
+});
+
+/**
+ * Resuelve el `authEmail` asociado a un DNI para permitir login con DNI incluso
+ * cuando la cuenta fue registrada con un correo electrónico real.
+ */
+export const resolveAuthEmailByDni = onCall({ cors: true }, async (request) => {
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const dniDigits = String(request.data?.dni || '').replace(/\D/g, '');
+
+  if (dniDigits.length < 6) {
+    throw new HttpsError('invalid-argument', 'Ingresá un DNI válido.');
+  }
+
+  const formattedDni = formatDni(dniDigits);
+  const snap = await db
+    .collection('usuarios')
+    .where('dni', '==', formattedDni)
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    return { authEmail: buildDniAuthEmail(dniDigits) };
+  }
+
+  const data = snap.docs[0].data() || {};
+  return {
+    authEmail: data.authEmail || data.email || buildDniAuthEmail(dniDigits),
+  };
+});
 
 /**
  * Crea un usuario con rol `staff` en Firebase Auth (con custom claim `rol: 'staff'`)

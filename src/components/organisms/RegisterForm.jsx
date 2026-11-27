@@ -10,7 +10,7 @@ import RegisterSuccessCard from '../molecules/RegisterSuccessCard';
 import AccountCredentialsFields from '../molecules/AccountCredentialsFields';
 import TermsNotice from '../molecules/TermsNotice';
 import { calculateAge } from '../../utils/dateUtils';
-import { validateRegistration } from '../../utils/registrationValidator';
+import { formatDniInput, validateRegistration } from '../../utils/registrationValidator';
 import { useAuth } from '../../hooks/useAuth';
 
 const INITIAL_FORM_STATE = {
@@ -21,6 +21,7 @@ const INITIAL_FORM_STATE = {
   fechaNacimiento: '',
   genero: '',
   email: '',
+  noEmail: false,
   password: '',
   confirmPassword: '',
   aceptaTerminos: true,
@@ -121,9 +122,15 @@ export default function RegisterForm({ onSubmit }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const nextValue =
+      type === 'checkbox'
+        ? checked
+        : name === 'dni'
+        ? formatDniInput(value)
+        : value;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: nextValue,
     }));
 
     if (errors[name]) {
@@ -242,6 +249,7 @@ export default function RegisterForm({ onSubmit }) {
                   name="dni"
                   label="DNI"
                   inputMode="numeric"
+                  maxLength={10}
                   value={formData.dni}
                   onChange={handleChange}
                   placeholder="Ej. 38.412.905"
@@ -255,6 +263,17 @@ export default function RegisterForm({ onSubmit }) {
                 {!isGoogleMode && (
                   <AccountCredentialsFields
                     email={formData.email}
+                    noEmail={formData.noEmail}
+                    onToggleNoEmail={(checked) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        noEmail: checked,
+                        email: checked ? '' : prev.email,
+                      }));
+                      if (errors.email) {
+                        setErrors((prev) => ({ ...prev, email: '' }));
+                      }
+                    }}
                     password={formData.password}
                     confirmPassword={formData.confirmPassword}
                     onChange={handleChange}
