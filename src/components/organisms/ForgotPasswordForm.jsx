@@ -82,6 +82,9 @@ export default function ForgotPasswordForm() {
             <p className="font-body-md text-body-md text-on-surface-variant">
               Ingresá el correo electrónico asociado a tu cuenta y te enviaremos las instrucciones para restablecerla.
             </p>
+            <p className="font-body-sm text-body-sm text-on-surface-variant/90 bg-surface-container-low border border-surface-container-high rounded-xl px-3 py-2">
+              ¿Te registraste solo con DNI (sin email)? Solicitale a la administradora del estudio que restablezca tu contraseña a tu DNI.
+            </p>
           </div>
 
           {submitError && (

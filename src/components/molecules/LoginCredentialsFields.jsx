@@ -24,27 +24,27 @@ export default function LoginCredentialsFields({
           htmlFor="user-identifier"
           className="block font-label-md text-label-md text-on-surface"
         >
-          Correo Electrónico
+          Correo Electrónico o DNI
         </label>
         <div className="relative flex items-center">
           <span className="material-symbols-outlined absolute left-3.5 text-on-surface-variant text-[20px] pointer-events-none select-none">
-            alternate_email
+            badge
           </span>
           <input
             id="user-identifier"
             data-testid="login-identifier-input"
             name="identifier"
-            type="email"
-            autoComplete="email"
+            type="text"
+            autoComplete="username"
             value={identifier}
             onChange={(e) => onIdentifierChange(e.target.value)}
-            placeholder="Ej. tu@email.com"
+            placeholder="Ej. tu@email.com o 30123456"
             required
             className="w-full bg-surface-container-low focus:bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 rounded-xl pl-11 pr-space-md py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 focus:ring-secondary/40 shadow-sm border border-transparent"
           />
         </div>
         <p className="font-body-sm text-body-sm text-on-surface-variant/80">
-          Ingresá con tu correo electrónico registrado.
+          Ingresá con tu correo electrónico o tu número de DNI.
         </p>
       </div>
 

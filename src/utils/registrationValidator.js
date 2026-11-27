@@ -23,9 +23,9 @@ export function validateProfileFields(formData) {
   } else {
     const age = calculateAge(formData.fechaNacimiento);
     if (age === null) {
-      errors.fechaNacimiento = 'Ingresá una fecha de nacimiento válida.';
-    } else if (age <= 13) {
-      errors.fechaNacimiento = 'Debes tener más de 13 años para registrarte.';
+      errors.fechaNacimiento = 'Ingresá una fecha de nacimiento válida (año de 4 dígitos).';
+    } else if (age < 14) {
+      errors.fechaNacimiento = 'Debes tener al menos 14 años para registrarte.';
     } else if (age >= 90) {
       errors.fechaNacimiento = 'Debes tener menos de 90 años para registrarte.';
     }
@@ -47,13 +47,21 @@ export function validateEmailField(email) {
   return null;
 }
 
+/**
+ * Strips non-numeric characters, limits to 8 digits, and formats as xx.xxx.xxx.
+ */
+export function formatDniInput(rawValue) {
+  const digits = String(rawValue || '').replace(/\D/g, '').slice(0, 8);
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
 export function validateDniField(rawDni) {
-  const compactDni = String(rawDni || '').replace(/\./g, '').trim();
+  const compactDni = String(rawDni || '').replace(/\D/g, '').trim();
   if (!compactDni) {
     return 'El DNI es obligatorio.';
   }
-  if (!/^\d{7,8}$/.test(compactDni)) {
-    return 'Ingresá un DNI válido de 7 u 8 dígitos.';
+  if (!/^\d{8}$/.test(compactDni)) {
+    return 'Ingresá un DNI válido de 8 dígitos.';
   }
   return null;
 }
@@ -114,8 +122,10 @@ export function validateRegistration(formData, isGoogleMode) {
   if (dniError) errors.dni = dniError;
 
   if (!isGoogleMode) {
-    const emailError = validateEmailField(formData.email);
-    if (emailError) errors.email = emailError;
+    if (!formData.noEmail) {
+      const emailError = validateEmailField(formData.email);
+      if (emailError) errors.email = emailError;
+    }
 
     const passwordError = validatePasswordField(formData.password);
     if (passwordError) errors.password = passwordError;
@@ -144,8 +154,10 @@ export function validateStudentCreate(formData) {
   const dniError = validateDniField(formData.dni);
   if (dniError) errors.dni = dniError;
 
-  const emailError = validateEmailField(formData.email);
-  if (emailError) errors.email = emailError;
+  if (String(formData.email || '').trim()) {
+    const emailError = validateEmailField(formData.email);
+    if (emailError) errors.email = emailError;
+  }
 
   return errors;
 }

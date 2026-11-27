@@ -1,17 +1,17 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Icon from '../components/atoms/Icon';
-import logo from '../assets/logo.jpeg';
-import { useAuth } from '../hooks/useAuth';
+import React, { useCallback, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Icon from "../components/atoms/Icon";
+import logo from "../assets/logo.jpeg";
+import { useAuth } from "../hooks/useAuth";
 
 function DashboardHeaderBadge({ badgeLabel, badgeIcon, effectiveBadge }) {
   const iconName =
-    badgeIcon || (effectiveBadge === 'staff' ? 'admin_panel_settings' : 'spa');
+    badgeIcon || (effectiveBadge === "staff" ? "admin_panel_settings" : "spa");
   const label = badgeLabel || `Rol: ${effectiveBadge}`;
   const badgeClasses =
-    effectiveBadge === 'staff'
-      ? 'bg-secondary-container text-on-secondary-container'
-      : 'bg-surface-container-highest text-primary';
+    effectiveBadge === "staff"
+      ? "bg-secondary-container text-on-secondary-container"
+      : "bg-surface-container-highest text-primary";
 
   return (
     <span
@@ -30,13 +30,13 @@ function DashboardHeaderBadge({ badgeLabel, badgeIcon, effectiveBadge }) {
  */
 export default function DashboardLayout({
   children,
-  roleName = 'Cliente',
-  roleBadge = 'customer',
+  roleName = "Cliente",
+  roleBadge = "customer",
   userName,
   userEmail,
   badgeLabel,
   badgeIcon,
-  sidebarId = 'admin-drawer',
+  sidebarId = "admin-drawer",
   renderSidebar,
 }) {
   const navigate = useNavigate();
@@ -57,15 +57,20 @@ export default function DashboardLayout({
   }, []);
 
   const handleMenuToggle = () => {
-    if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 1024px)").matches
+    ) {
       setIsDesktopCollapsed((prev) => !prev);
     } else {
       handleDrawerOpenChange(true);
     }
   };
 
-  const effectiveName = userName || userProfile?.nombre || user?.displayName || 'Usuario';
-  const effectiveEmail = userEmail || userProfile?.email || user?.email || roleName;
+  const effectiveName =
+    userName || userProfile?.nombre || user?.displayName || "Usuario";
+  const effectiveEmail =
+    userEmail || userProfile?.email || user?.email || roleName;
   const effectiveBadge = userProfile?.rol || roleBadge;
   const photoURL = userProfile?.photoURL || user?.photoURL;
 
@@ -73,7 +78,7 @@ export default function DashboardLayout({
     try {
       await logout();
     } finally {
-      navigate('/login');
+      navigate("/login");
     }
   };
 
@@ -144,7 +149,9 @@ export default function DashboardLayout({
                   {effectiveName}
                 </span>
                 <span className="font-body-sm text-[11px] text-on-surface-variant leading-tight">
-                  {effectiveEmail}
+                  {effectiveEmail.includes("dni.emuna")
+                    ? `DNI: ${effectiveEmail.split("@")[0]}`
+                    : effectiveEmail}
                 </span>
               </div>
             </div>
@@ -172,7 +179,10 @@ export default function DashboardLayout({
           isDesktopCollapsed,
           onToggleDesktopCollapse: () => setIsDesktopCollapsed((prev) => !prev),
         })}
-        <main ref={mainRef} className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <main
+          ref={mainRef}
+          className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8"
+        >
           {children}
         </main>
       </div>
@@ -182,7 +192,8 @@ export default function DashboardLayout({
         ref={footerRef}
         className="w-full py-4 text-center font-label-sm text-label-sm text-on-surface-variant border-t border-surface-container-high/40"
       >
-        © {new Date().getFullYear()} Emuná Estudio Pilates • Desarrollado por Clutch Studio Software
+        © {new Date().getFullYear()} Emuná Estudio Pilates • Desarrollado por
+        Clutch Studio Software
       </footer>
     </div>
   );
