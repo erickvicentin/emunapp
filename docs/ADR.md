@@ -186,3 +186,27 @@
 ### Pros y Contras
 - **Pros:** Reserva inmediata para el alumno; sin dependencia ni mantenimiento de credenciales/APIs externas de MercadoPago; menor carga manual con reconocimiento híbrido de comprobantes; trazabilidad completa en Firestore.
 - **Contras:** Requiere desplegar `firestore.rules` y `functions` (`expireProvisionalPayments`) en Firebase para ejecutar la limpieza automática en la nube.
+
+---
+
+## ADR-009: Sidebar Reutilizable (`DashboardSidebar`) y Enrutamiento del Panel de Alumno (`/customer/:section`)
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Organismo reutilizable (`src/components/organisms/DashboardSidebar.jsx`):** Se extrajo la lógica de navegación responsiva (barra lateral persistente en desktop `>= 1024px` con colapso y drawer deslizable con `popover="manual"`, `IntersectionObserver` y soporte de teclado/swipe en mobile) desde `AdminSidebar.jsx` a `DashboardSidebar.jsx`, manteniendo `AdminSidebar.jsx` como wrapper liviano con filtrado `adminOnly`.
+- **Navegación del Alumno (`src/data/customerNavItems.js`):** Se definieron las 4 secciones iniciales del panel de alumno: `Turnos` (`/customer/turnos`), `Pagos` (`/customer/pagos`), `Historial de Clases` (`/customer/historial`) y `Configuración` (`/customer/configuracion`).
+- **Enrutamiento (`src/App.jsx`, `src/layouts/DashboardLayout.jsx`, `src/pages/CustomerPage.jsx`):** Se configuró `/customer` con redirección a `/customer/turnos` y `/customer/:section` renderizando `CustomerPage` con `DashboardSidebar` (`sidebarId="customer-drawer"`) y vistas placeholder con el mensaje `"Próximo a implementar"`.
+- **Cobertura E2E (`tests/features/customerPanel.feature`, `tests/pages/customer.page.js`, `tests/steps/customerPanel.steps.js`):** Se agregaron los escenarios `@EMUNA-101` y `@EMUNA-102` y el método `loginAsCustomer` en `tests/pages/login.page.js`.
+
+### Qué se quitó
+- Se reemplazó el contenido previo de `CustomerPage.jsx` por el esqueleto de secciones con sidebar y placeholders `"Próximo a implementar"`, mientras se implementan iterativamente cada módulo de alumno.
+
+### Por qué
+- Evitar duplicar la lógica compleja del drawer/sidebar entre administración y alumno siguiendo Atomic Design y el principio DRY.
+- Establecer una estructura de rutas predecible (`/customer/:section`) equivalente a `/administrador/:section` antes de construir las pantallas individuales de Turnos, Pagos, Historial de Clases y Configuración.
+
+### Pros y Contras
+- **Pros:** Cero duplicación entre `AdminSidebar` y el sidebar de alumno; navegación directa por URL; base limpia para implementar cada sección por separado.
+- **Contras:** Las funcionalidades previas de `CustomerPage` (saldo y reporte de pago) quedan temporalmente reemplazadas por el placeholder de `Pagos` hasta migrarlas a su sección dedicada.

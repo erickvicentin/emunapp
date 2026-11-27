@@ -14,6 +14,7 @@ export default function DashboardLayout({
   roleBadge = 'customer',
   userName,
   userEmail,
+  sidebarId = 'admin-drawer',
   renderSidebar,
 }) {
   const navigate = useNavigate();
@@ -72,7 +73,7 @@ export default function DashboardLayout({
                 onClick={handleMenuToggle}
                 aria-label="Alternar menú principal"
                 aria-expanded={isDrawerOpen || !isDesktopCollapsed}
-                aria-controls="admin-drawer"
+                aria-controls={sidebarId}
                 className="w-10 h-10 -ml-1 rounded-full inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
               >
                 <Icon name="menu" className="text-[22px]" />

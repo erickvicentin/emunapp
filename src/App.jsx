@@ -28,6 +28,10 @@ export default function App() {
           <Route path="/reset-password" element={<AuthActionPage />} />
           <Route
             path="/customer"
+            element={<Navigate to="/customer/turnos" replace />}
+          />
+          <Route
+            path="/customer/:section"
             element={
               <ProtectedRoute requiredRole="customer">
                 <CustomerPage />
