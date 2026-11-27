@@ -89,17 +89,27 @@ function renderAlumnosContent({
   students,
   isLoadingStudents,
   isDeletingStudent,
+  isResettingPassword,
   togglingStudentId,
+  isAdmin,
   onCreateStudent,
   onUpdateStudent,
   onDeleteStudent,
   onToggleStudentActive,
+  onResetStudentPassword,
 }) {
   if (action === 'nuevo') {
     return <StudentCreateSection onCreateStudent={onCreateStudent} />;
   }
   if (action === 'detail') {
-    return <StudentDetailSection student={selectedStudent} />;
+    return (
+      <StudentDetailSection
+        student={selectedStudent}
+        isAdmin={isAdmin}
+        isResettingPassword={isResettingPassword}
+        onResetPassword={onResetStudentPassword}
+      />
+    );
   }
   if (action === 'edit') {
     return (
@@ -168,11 +178,14 @@ function AdminSectionContent({
   students,
   isLoadingStudents,
   isDeletingStudent,
+  isResettingPassword,
   togglingStudentId,
+  isAdmin,
   onCreateStudent,
   onUpdateStudent,
   onDeleteStudent,
   onToggleStudentActive,
+  onResetStudentPassword,
   selectedStaff,
   staffUsers,
   isLoadingStaff,
@@ -194,11 +207,14 @@ function AdminSectionContent({
       students,
       isLoadingStudents,
       isDeletingStudent,
+      isResettingPassword,
       togglingStudentId,
+      isAdmin,
       onCreateStudent,
       onUpdateStudent,
       onDeleteStudent,
       onToggleStudentActive,
+      onResetStudentPassword,
     });
   }
   if (activeNavItem.id === 'usuarios') {
@@ -240,6 +256,7 @@ export default function AdministratorPage() {
     students,
     isLoadingStudents,
     isDeletingStudent,
+    isResettingPassword,
     togglingStudentId,
     snackbar,
     showSnackbar,
@@ -248,6 +265,7 @@ export default function AdministratorPage() {
     updateStudent,
     deleteStudent,
     toggleStudentActive,
+    resetStudentPassword,
   } = useStudentsManager();
 
   const {
@@ -322,11 +340,14 @@ export default function AdministratorPage() {
         students={students}
         isLoadingStudents={isLoadingStudents}
         isDeletingStudent={isDeletingStudent}
+        isResettingPassword={isResettingPassword}
         togglingStudentId={togglingStudentId}
+        isAdmin={isAdmin}
         onCreateStudent={createStudent}
         onUpdateStudent={updateStudent}
         onDeleteStudent={deleteStudent}
         onToggleStudentActive={toggleStudentActive}
+        onResetStudentPassword={resetStudentPassword}
         selectedStaff={selectedStaff}
         staffUsers={staffUsers}
         isLoadingStaff={isLoadingStaff}

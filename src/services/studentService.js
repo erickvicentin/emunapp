@@ -1,4 +1,3 @@
-import { sendPasswordResetEmail } from 'firebase/auth';
 import {
   collection,
   doc,
@@ -9,7 +8,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
-import { auth, databaseId, db, functions } from '../config/firebase';
+import { databaseId, db, functions } from '../config/firebase';
 import { calculateAge } from '../utils/dateUtils';
 
 const GENDER_LABEL_MAP = {
@@ -92,21 +91,28 @@ export async function createStudentViaAdmin(formData) {
       throw new Error('No se recibió el perfil del alumno creado.');
     }
 
-    let emailSent = false;
-    try {
-      await sendPasswordResetEmail(auth, formData.email.trim().toLowerCase());
-      emailSent = true;
-    } catch {
-      emailSent = false;
-    }
-
     return {
       student: mapStudentProfileToRow(createdProfile, createdProfile.uid),
-      emailSent,
+      emailSent: false,
     };
   } catch (error) {
     throw new Error(
       mapCallableError(error, 'No se pudo registrar el alumno en Firebase.')
+    );
+  }
+}
+
+export async function resetStudentPasswordViaAdmin(uid) {
+  try {
+    const resetCallable = httpsCallable(functions, 'resetStudentPasswordToDni');
+    await resetCallable({ uid, databaseId });
+    return { success: true, uid };
+  } catch (error) {
+    throw new Error(
+      mapCallableError(
+        error,
+        'No se pudo restablecer la contraseña del alumno.'
+      )
     );
   }
 }
