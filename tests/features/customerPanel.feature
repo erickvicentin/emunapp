@@ -8,10 +8,11 @@ Feature: Customer Panel Navigation
     Given the customer logs in with valid credentials
 
   @EMUNA-101
-  Scenario: Display customer sidebar and default Turnos placeholder on login
+  Scenario: Display customer sidebar and weekly Turnos calendar on login
     Then the customer sidebar should be visible
+    And the customer header should display the credits badge
     And the customer URL should contain "/customer/turnos"
-    And the customer placeholder section should show title "Turnos" and status "Próximo a implementar"
+    And the customer turns calendar should be visible
 
   @EMUNA-102
   Scenario Outline: Customer sidebar navigation updates URL and displays placeholder
@@ -21,7 +22,6 @@ Feature: Customer Panel Navigation
 
     Examples:
       | section       | path                    | title               |
-      | turnos        | /customer/turnos        | Turnos              |
       | pagos         | /customer/pagos         | Pagos               |
       | historial     | /customer/historial     | Historial de Clases |
       | configuracion | /customer/configuracion | Configuración       |
