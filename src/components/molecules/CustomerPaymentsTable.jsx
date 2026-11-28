@@ -1,5 +1,4 @@
 import React from 'react';
-import Button from '../atoms/Button';
 import { formatArsPrice } from '../../services/packageService';
 import { formatPaymentDateTime, PAYMENT_STATUS_META } from '../../services/paymentService';
 
@@ -7,18 +6,14 @@ import { formatPaymentDateTime, PAYMENT_STATUS_META } from '../../services/payme
  * CustomerPaymentsTable Molecule
  * Desktop table view for the student's payment history.
  */
-export default function CustomerPaymentsTable({
-  payments,
-  isMutating = false,
-  onInformPayment,
-}) {
+export default function CustomerPaymentsTable({ payments }) {
   return (
     <div
       tabIndex={0}
       role="region"
       aria-labelledby="customer-payments-table-caption"
       data-testid="customer-payments-list"
-      className="hidden md:block rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-2xs overflow-auto max-h-[540px]"
+      className="hidden md:block rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-2xs overflow-x-auto"
     >
       <table
         data-testid="customer-payments-table"
@@ -33,7 +28,6 @@ export default function CustomerPaymentsTable({
             <th scope="col" className="py-3 px-4 font-semibold">Paquete / Ítem</th>
             <th scope="col" className="py-3 px-4 font-semibold">Importe</th>
             <th scope="col" className="py-3 px-4 font-semibold">Estado</th>
-            <th scope="col" className="py-3 px-4 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-surface-container">
@@ -42,7 +36,6 @@ export default function CustomerPaymentsTable({
               PAYMENT_STATUS_META[pay.estado] || PAYMENT_STATUS_META.pendiente_conciliacion;
             const methodLabel =
               pay.metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia';
-            const canInform = pay.estado === 'pendiente_informar';
 
             return (
               <tr
@@ -95,22 +88,6 @@ export default function CustomerPaymentsTable({
                   >
                     {badge.label}
                   </span>
-                </td>
-                <td className="py-3.5 px-4 whitespace-nowrap text-right">
-                  {canInform ? (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      disabled={isMutating}
-                      data-testid={`customer-inform-payment-btn-${pay.id}`}
-                      onClick={() => onInformPayment?.(pay)}
-                    >
-                      <span>Informar pago</span>
-                    </Button>
-                  ) : (
-                    <span className="text-body-sm text-on-surface-variant">—</span>
-                  )}
                 </td>
               </tr>
             );
