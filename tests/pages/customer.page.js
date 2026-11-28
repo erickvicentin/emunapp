@@ -15,13 +15,22 @@ const PAYMENTS_TITLE = '[data-testid="customer-payments-title"]';
 const PAYMENTS_BANK_DETAILS = '[data-testid="customer-payments-bank-details"]';
 const PAYMENTS_TABLE = '[data-testid="customer-payments-table"]';
 const PAYMENTS_EMPTY = '[data-testid="customer-payments-empty"]';
+const PROFILE_SECTION = '[data-testid="customer-profile-section"]';
+const PROFILE_TITLE = '[data-testid="customer-profile-title"]';
+const PROFILE_PERSONAL_FORM = '[data-testid="customer-profile-personal-form"]';
+const PROFILE_EMAIL_CARD = '[data-testid="customer-profile-email-card"]';
+const PROFILE_GOOGLE_CARD = '[data-testid="customer-profile-google-card"]';
+const PROFILE_SECURITY_CARD = '[data-testid="customer-profile-security-card"]';
+const PROFILE_OPEN_PASSWORD_BTN = '[data-testid="customer-profile-open-password-modal-btn"]';
+const CHANGE_PASSWORD_MODAL = '[data-testid="change-password-modal"]';
+const CHANGE_PASSWORD_MODAL_TITLE = '[data-testid="change-password-modal-title"]';
 
 const NAV_ITEM_BY_SECTION = {
   turnos: '[data-testid="customer-nav-turnos"]',
   paquetes: '[data-testid="customer-nav-paquetes"]',
   pagos: '[data-testid="customer-nav-pagos"]',
   historial: '[data-testid="customer-nav-historial"]',
-  configuracion: '[data-testid="customer-nav-configuracion"]',
+  perfil: '[data-testid="customer-nav-perfil"]',
 };
 
 class CustomerPage {
@@ -134,6 +143,53 @@ class CustomerPage {
       }
     );
     return true;
+  }
+
+  async isProfileSectionDisplayed() {
+    const section = await $(PROFILE_SECTION);
+    await section.waitForDisplayed();
+    return section.isDisplayed();
+  }
+
+  async getProfileTitleText() {
+    const title = await $(PROFILE_TITLE);
+    await title.waitForDisplayed();
+    return title.getText();
+  }
+
+  async areProfileCardsDisplayed() {
+    const form = await $(PROFILE_PERSONAL_FORM);
+    const emailCard = await $(PROFILE_EMAIL_CARD);
+    const googleCard = await $(PROFILE_GOOGLE_CARD);
+    const securityCard = await $(PROFILE_SECURITY_CARD);
+    await form.waitForDisplayed();
+    await emailCard.waitForDisplayed();
+    await googleCard.waitForDisplayed();
+    await securityCard.waitForDisplayed();
+    return (
+      (await form.isDisplayed()) &&
+      (await emailCard.isDisplayed()) &&
+      (await googleCard.isDisplayed()) &&
+      (await securityCard.isDisplayed())
+    );
+  }
+
+  async openChangePasswordModal() {
+    const btn = await $(PROFILE_OPEN_PASSWORD_BTN);
+    await btn.waitForClickable();
+    await btn.click();
+  }
+
+  async isChangePasswordModalDisplayed() {
+    const modal = await $(CHANGE_PASSWORD_MODAL);
+    await modal.waitForDisplayed();
+    return modal.isDisplayed();
+  }
+
+  async getChangePasswordModalTitleText() {
+    const title = await $(CHANGE_PASSWORD_MODAL_TITLE);
+    await title.waitForDisplayed();
+    return title.getText();
   }
 }
 

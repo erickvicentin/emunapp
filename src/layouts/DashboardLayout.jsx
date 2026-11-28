@@ -16,10 +16,10 @@ function DashboardHeaderBadge({ badgeLabel, badgeIcon, effectiveBadge }) {
   return (
     <span
       data-testid="dashboard-header-badge"
-      className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full font-label-sm text-label-sm font-semibold uppercase tracking-wider ${badgeClasses}`}
+      className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 ${badgeClasses}`}
     >
-      <Icon name={iconName} className="text-[14px]" />
-      {label}
+      <Icon name={iconName} className="text-[14px] shrink-0" />
+      <span>{label}</span>
     </span>
   );
 }
@@ -87,11 +87,11 @@ export default function DashboardLayout({
       {/* Top Bar Navigation */}
       <header
         ref={headerRef}
-        className="pt-3 pb-3 sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-container-high/60 shadow-xs"
+        className="py-1.5 sm:py-3 sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-surface-container-high/60 shadow-xs"
       >
-        <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="w-full px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
           {/* Mobile & desktop menu trigger + Brand */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {renderSidebar && (
               <button
                 ref={openBtnRef}
@@ -101,23 +101,23 @@ export default function DashboardLayout({
                 aria-label="Alternar menú principal"
                 aria-expanded={isDrawerOpen || !isDesktopCollapsed}
                 aria-controls={sidebarId}
-                className="w-10 h-10 -ml-1 rounded-full inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors cursor-pointer"
+                className="w-9 h-9 sm:w-10 sm:h-10 -ml-1 rounded-full inline-flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors cursor-pointer shrink-0"
               >
                 <Icon name="menu" className="text-[22px]" />
               </button>
             )}
 
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
               <img
                 src={logo}
                 alt="Logo Emuná"
-                className="h-10 w-10 rounded-full object-cover shadow-xs transition-transform group-hover:scale-105"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover shadow-xs transition-transform group-hover:scale-105 shrink-0"
               />
-              <div className="flex flex-col">
-                <span className="font-headline-sm text-[17px] font-semibold text-primary tracking-tight">
+              <div className="flex flex-col min-w-0">
+                <span className="font-headline-sm text-[15px] sm:text-[17px] font-semibold text-primary tracking-tight whitespace-nowrap truncate">
                   Emuná Pilates
                 </span>
-                <span className="font-label-sm text-[10px] uppercase text-secondary tracking-widest font-semibold">
+                <span className="hidden sm:block font-label-sm text-[10px] uppercase text-secondary tracking-widest font-semibold whitespace-nowrap">
                   Panel de Gestión
                 </span>
               </div>
@@ -125,14 +125,14 @@ export default function DashboardLayout({
           </div>
 
           {/* User info & role/credits badge */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <DashboardHeaderBadge
               badgeLabel={badgeLabel}
               badgeIcon={badgeIcon}
               effectiveBadge={effectiveBadge}
             />
 
-            <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-surface-container-high">
+            <div className="hidden sm:flex items-center gap-2.5 pl-3 border-l border-surface-container-high">
               {photoURL ? (
                 <img
                   src={photoURL}
@@ -161,9 +161,9 @@ export default function DashboardLayout({
               type="button"
               onClick={handleLogout}
               aria-label="Cerrar sesión"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/40 transition-colors font-label-sm text-label-sm ml-1 cursor-pointer"
+              className="inline-flex items-center justify-center gap-1 p-2 sm:px-3 sm:py-1.5 rounded-full text-on-surface-variant hover:text-error hover:bg-error-container/40 transition-colors font-label-sm text-label-sm cursor-pointer"
             >
-              <Icon name="logout" className="text-[16px]" />
+              <Icon name="logout" className="text-[18px] sm:text-[16px]" />
               <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
@@ -178,6 +178,9 @@ export default function DashboardLayout({
           onDrawerOpenChange: handleDrawerOpenChange,
           isDesktopCollapsed,
           onToggleDesktopCollapse: () => setIsDesktopCollapsed((prev) => !prev),
+          badgeLabel,
+          badgeIcon,
+          effectiveBadge,
         })}
         <main
           ref={mainRef}
