@@ -1,6 +1,6 @@
 import {
-  addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -23,6 +23,7 @@ const RESERVATIONS_COLLECTION = 'reservas';
 const TURNS_COLLECTION = 'turnos_clase';
 const CONFIG_COLLECTION = 'configuracion';
 const COBROS_CONFIG_DOC = 'cobros';
+const STUDIO_CONFIG_DOC = 'estudio';
 
 export const DEFAULT_COBROS_CONFIG = {
   alias: 'emuna.pilates.mp',
@@ -30,6 +31,11 @@ export const DEFAULT_COBROS_CONFIG = {
   titularCuenta: 'Emuná Estudio Pilates',
   cuilCuit: '',
   horasVencimientoProvisorio: 24,
+};
+
+export const DEFAULT_STUDIO_CONFIG = {
+  horasVentanaCancelacion: 4,
+  nombreProfesora: 'Profesora Titular',
 };
 
 function toMillis(value) {
@@ -50,13 +56,46 @@ export async function fetchCobrosConfig() {
   };
 }
 
+export function formatCvuInput(rawValue) {
+  return String(rawValue || '').replace(/\D/g, '').slice(0, 22);
+}
+
+export function formatCuilInput(rawValue) {
+  const digits = String(rawValue || '').replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 10) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
+}
+
+export function validateCobrosConfig(config = {}) {
+  const errors = {};
+  const cvuDigits = String(config.cvu || '').replace(/\D/g, '');
+  if (String(config.cvu || '').trim() && cvuDigits.length !== 22) {
+    errors.cvu = 'El CVU / CBU debe tener exactamente 22 dígitos numéricos.';
+  }
+  const cuilDigits = String(config.cuilCuit || '').replace(/\D/g, '');
+  if (String(config.cuilCuit || '').trim() && cuilDigits.length !== 11) {
+    errors.cuilCuit = 'El CUIL / CUIT debe tener exactamente 11 dígitos (XX-XXXXXXXX-X).';
+  }
+  return errors;
+}
+
 export async function saveCobrosConfig(config) {
+  const validationErrors = validateCobrosConfig(config);
+  const firstError = validationErrors.cvu || validationErrors.cuilCuit;
+  if (firstError) {
+    throw new Error(firstError);
+  }
+
+  const cvuDigits = formatCvuInput(config.cvu);
+  const cuilFormatted = formatCuilInput(config.cuilCuit);
+
   const payload = {
     alias: String(config.alias ?? config.aliasCbu ?? '').trim() || DEFAULT_COBROS_CONFIG.alias,
-    cvu: String(config.cvu || '').trim(),
+    cvu: cvuDigits,
     titularCuenta:
       String(config.titularCuenta || '').trim() || DEFAULT_COBROS_CONFIG.titularCuenta,
-    cuilCuit: String(config.cuilCuit || '').trim(),
+    cuilCuit: cuilFormatted,
     horasVencimientoProvisorio: Math.max(
       1,
       Math.min(168, Number(config.horasVencimientoProvisorio) || 24)
@@ -64,6 +103,32 @@ export async function saveCobrosConfig(config) {
     actualizadoEn: serverTimestamp(),
   };
   await setDoc(doc(db, CONFIG_COLLECTION, COBROS_CONFIG_DOC), payload, { merge: true });
+  return payload;
+}
+
+export async function fetchStudioConfig() {
+  const snap = await getDoc(doc(db, CONFIG_COLLECTION, STUDIO_CONFIG_DOC));
+  if (!snap.exists()) return { ...DEFAULT_STUDIO_CONFIG };
+  const data = snap.data() || {};
+  return {
+    horasVentanaCancelacion:
+      Number(data.horasVentanaCancelacion) || DEFAULT_STUDIO_CONFIG.horasVentanaCancelacion,
+    nombreProfesora:
+      String(data.nombreProfesora || '').trim() || DEFAULT_STUDIO_CONFIG.nombreProfesora,
+  };
+}
+
+export async function saveStudioConfig(config = {}) {
+  const hours = Math.max(1, Math.min(48, Number(config.horasVentanaCancelacion) || 4));
+  const professorName =
+    String(config.nombreProfesora || '').trim() || DEFAULT_STUDIO_CONFIG.nombreProfesora;
+
+  const payload = {
+    horasVentanaCancelacion: hours,
+    nombreProfesora: professorName,
+    actualizadoEn: serverTimestamp(),
+  };
+  await setDoc(doc(db, CONFIG_COLLECTION, STUDIO_CONFIG_DOC), payload, { merge: true });
   return payload;
 }
 
@@ -202,7 +267,11 @@ export async function reportReservationPaymentNotice({
   }
 
   const amount = getPackageNumericPrice(individualPackage) || 1;
-  const ref = await addDoc(collection(db, PAYMENTS_COLLECTION), {
+  const pagoRef = doc(collection(db, PAYMENTS_COLLECTION));
+  const resRef = doc(db, RESERVATIONS_COLLECTION, reservation.id);
+  const batch = writeBatch(db);
+
+  batch.set(pagoRef, {
     usuarioId: userId,
     alumnoNombre: userName || 'Alumna',
     alumnoEmail: userEmail || '',
@@ -218,7 +287,15 @@ export async function reportReservationPaymentNotice({
     creadoEn: serverTimestamp(),
   });
 
-  return { pagoId: ref.id };
+  batch.update(resRef, {
+    estado: 'pendiente_confirmacion',
+    pagoId: pagoRef.id,
+    actualizadoEn: serverTimestamp(),
+  });
+
+  await batch.commit();
+
+  return { pagoId: pagoRef.id };
 }
 
 export async function approvePaymentByAdmin(pago) {
@@ -228,6 +305,17 @@ export async function approvePaymentByAdmin(pago) {
     if (!pagoSnap.exists()) {
       throw new Error('El cobro ya no existe.');
     }
+
+    const memRef = pago.membresiaId
+      ? doc(db, MEMBERSHIPS_COLLECTION, pago.membresiaId)
+      : null;
+    const memSnap = memRef ? await tx.get(memRef) : null;
+
+    const resRef = pago.reservaId
+      ? doc(db, RESERVATIONS_COLLECTION, pago.reservaId)
+      : null;
+    const resSnap = resRef ? await tx.get(resRef) : null;
+
     tx.update(pagoRef, {
       estado: 'aprobado',
       validadoPor: 'administradora',
@@ -235,26 +323,39 @@ export async function approvePaymentByAdmin(pago) {
       actualizadoEn: serverTimestamp(),
     });
 
-    if (pago.membresiaId) {
-      const memRef = doc(db, MEMBERSHIPS_COLLECTION, pago.membresiaId);
-      const memSnap = await tx.get(memRef);
-      if (memSnap.exists()) {
-        tx.update(memRef, {
-          estado: 'activa',
-          provisional: false,
-          actualizadoEn: serverTimestamp(),
-        });
-      }
+    if (memSnap?.exists()) {
+      tx.update(memRef, {
+        estado: 'activa',
+        provisional: false,
+        actualizadoEn: serverTimestamp(),
+      });
+    }
+
+    if (resSnap?.exists()) {
+      tx.update(resRef, {
+        estado: 'confirmada',
+        actualizadoEn: serverTimestamp(),
+      });
     }
   });
 }
 
 export async function rejectPaymentByAdmin(pago, motivo = 'Comprobante no validado') {
+  const cleanReason = String(motivo || '').trim() || 'Pago rechazado por administración';
+
   await updateDoc(doc(db, PAYMENTS_COLLECTION, pago.id), {
     estado: 'rechazado',
-    motivoRechazo: String(motivo || '').trim() || 'Pago rechazado por administración',
+    motivoRechazo: cleanReason,
     actualizadoEn: serverTimestamp(),
   });
+
+  if (pago.reservaId) {
+    await updateDoc(doc(db, RESERVATIONS_COLLECTION, pago.reservaId), {
+      estado: 'comprobante_rechazado',
+      motivoRechazo: cleanReason,
+      actualizadoEn: serverTimestamp(),
+    });
+  }
 
   if (!pago.membresiaId) return;
 
@@ -299,4 +400,15 @@ export async function sweepExpiredProvisionalPayments() {
   const expireFn = httpsCallable(functions, 'expireProvisionalPayments');
   const res = await expireFn({ databaseId });
   return res?.data || { expiredPayments: 0, cancelledBookings: 0 };
+}
+
+export async function deleteRejectedPaymentByAdmin(pago) {
+  if (!pago?.id) {
+    throw new Error('No se encontró el cobro a eliminar.');
+  }
+  if (pago.estado !== 'rechazado') {
+    throw new Error('Solo se pueden eliminar cobros en estado rechazado.');
+  }
+  await deleteDoc(doc(db, PAYMENTS_COLLECTION, pago.id));
+  return { success: true, id: pago.id };
 }
