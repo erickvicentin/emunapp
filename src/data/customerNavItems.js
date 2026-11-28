@@ -10,6 +10,13 @@ export const CUSTOMER_NAV_ITEMS = [
     description: 'Reservá y gestioná tus próximos turnos en las 4 camas reformer.',
   },
   {
+    id: 'paquetes',
+    path: '/customer/paquetes',
+    label: 'Paquetes',
+    icon: 'inventory_2',
+    description: 'Explorá los paquetes de clases disponibles y reservá créditos.',
+  },
+  {
     id: 'pagos',
     path: '/customer/pagos',
     label: 'Pagos',

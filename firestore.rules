@@ -238,11 +238,36 @@ service cloud.firestore {
         isStaff() ||
         (isActiveUser() && request.resource.data.usuarioId == request.auth.uid)
       ) &&
-        request.resource.data.estado in ['pendiente_conciliacion'] &&
+        request.resource.data.estado in ['pendiente_conciliacion', 'pendiente_informar'] &&
         request.resource.data.usuarioId is string &&
         request.resource.data.monto is number &&
         request.resource.data.monto > 0;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isActiveUser() &&
+        resource.data.usuarioId == request.auth.uid &&
+        resource.data.estado == 'rechazado' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ocultoParaAlumno', 'actualizadoEn']) &&
+        request.resource.data.ocultoParaAlumno == true &&
+        (!('actualizadoEn' in request.resource.data) || request.resource.data.actualizadoEn is timestamp)
+      ) || (
+        isActiveUser() &&
+        resource.data.usuarioId == request.auth.uid &&
+        resource.data.estado == 'pendiente_informar' &&
+        request.resource.data.estado == 'pendiente_conciliacion' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'estado',
+          'numeroOperacion',
+          'monto',
+          'comprobanteNombre',
+          'comprobanteDataUrl',
+          'informadoEn',
+          'actualizadoEn'
+        ]) &&
+        request.resource.data.monto is number &&
+        request.resource.data.monto > 0 &&
+        (!('actualizadoEn' in request.resource.data) || request.resource.data.actualizadoEn is timestamp)
+      );
+      allow delete: if isAdmin();
     }
 
     // Colección: horarios_base (plantilla semanal recurrente de horarios de clase)

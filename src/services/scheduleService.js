@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  onSnapshot,
   query,
   runTransaction,
   serverTimestamp,
@@ -415,6 +416,24 @@ export async function fetchWeekTurns(dateKeys = []) {
   return sortTurns(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() })));
 }
 
+export function subscribeWeekTurns(dateKeys = [], onData, onError) {
+  if (!dateKeys.length) {
+    onData([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, TURNS_COLLECTION),
+    where('dateKey', 'in', dateKeys)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      onData(sortTurns(snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))));
+    },
+    onError
+  );
+}
+
 /**
  * Ensures dated `turnos_clase` documents exist for active base slots on non-closed days.
  */
@@ -793,6 +812,30 @@ export async function fetchUserReservations(userId) {
       if (a.dateKey !== b.dateKey) return String(a.dateKey).localeCompare(String(b.dateKey));
       return String(a.startTime).localeCompare(String(b.startTime));
     });
+}
+
+export function subscribeUserReservations(userId, onData, onError) {
+  if (!userId) {
+    onData([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, RESERVATIONS_COLLECTION),
+    where('usuarioId', '==', userId)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          if (a.dateKey !== b.dateKey) return String(a.dateKey).localeCompare(String(b.dateKey));
+          return String(a.startTime).localeCompare(String(b.startTime));
+        });
+      onData(list);
+    },
+    onError
+  );
 }
 
 /**

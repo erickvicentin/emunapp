@@ -254,3 +254,47 @@
 ### Pros y Contras
 - **Pros:** Flujo completo con y sin créditos; reutilización de `ReportPaymentModal` y `cobrosConfig`; feedback inmediato en esquina inferior izquierda.
 - **Contras:** El menú de acciones a la derecha de cada fila en `"Próximos turnos..."` queda como disparador visual hasta implementar la cancelación/reprogramación del alumno.
+
+---
+
+## ADR-012: Secciones "Paquetes" y "Pagos" del Panel de Alumna, Bloqueo por Pagos Pendientes y Limpieza de Rechazados
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Navegación del Alumno (`src/data/customerNavItems.js`, `src/pages/CustomerPage.jsx`):** Se incorporó la opción **"Paquetes"** (`/customer/paquetes`) en el sidebar de alumna y se reemplazó el placeholder de **"Pagos"** (`/customer/pagos`) por su sección funcional.
+- **Catálogo y Reserva de Paquetes (`src/components/organisms/CustomerPackagesSection.jsx`, `src/components/molecules/PackageCard.jsx`, `src/components/molecules/ReportPaymentModal.jsx`):** Se muestran todos los paquetes activos desde `paquetes_catalogo` (incluida la clase individual), reutilizando `PackageCard` y `ReportPaymentModal` con preselección del paquete elegido. Al confirmar un paquete, se registra el aviso de pago provisorio y se redirige automáticamente a `/customer/pagos`.
+- **Bloqueo por Pagos o Avisos Pendientes (`src/hooks/useCustomerPayments.js`, `src/services/paymentService.js`):** Se bloquea la reserva de cualquier paquete (tanto en UI con banner explicativo y botones deshabilitados como en `reportPaymentNotice`) cuando existe un pago en estado `pendiente_conciliacion` o una reserva en estado `esperando_comprobante` / `pendiente_confirmacion`.
+- **Historial de Pagos y Limpieza de Rechazados (`src/components/organisms/CustomerPaymentsSection.jsx`, `src/services/paymentService.js`, `firestore.rules`):** Se implementó la tabla responsive de pagos (columnas `Fecha`, `Paquete / Ítem`, `Importe` y `Estado`) unificando pagos de paquetes, clases individuales y cobros en efectivo registrados por administración. Se agregó `hideRejectedPaymentsForStudent` (`ocultoParaAlumno: true`) y la regla en `firestore.rules` para que la alumna pueda ocultar sus pagos rechazados sin eliminar el registro de auditoría en administración. Se centralizó `formatPaymentDateTime` y `PAYMENT_STATUS_META` para reutilizarlos también en `CobrosTable`.
+
+### Qué se quitó
+- Se eliminó el placeholder `"Próximo a implementar"` de `/customer/pagos` y la duplicación de formato de fecha/estados en `CobrosTable`.
+
+### Por qué
+- Permitir a la alumna adquirir paquetes de créditos de forma autónoma sin duplicar deuda pendiente mientras tenga pagos o comprobantes sin resolver, y mantener un historial de pagos limpio conservando la trazabilidad contable del estudio.
+
+### Pros y Contras
+- **Pros:** Reutilización de `PackageCard`, `ReportPaymentModal` y helpers de `paymentService`; consistencia entre reglas de negocio en UI, servicio y `firestore.rules`; historial unificado.
+- **Contras:** El ocultamiento lógico (`ocultoParaAlumno`) requiere que futuras consultas de historial en cliente filtren ese campo.
+
+---
+
+## ADR-013: Sincronización en Tiempo Real con Firestore `onSnapshot` para Cobros, Pagos, Créditos, Reservas y Cupos
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Servicios (`src/services/paymentService.js`, `src/services/scheduleService.js`):** Se agregaron listeners en tiempo real mediante `onSnapshot`: `subscribeAllPayments`, `subscribeUserPayments`, `subscribeUserMemberships`, `subscribeWeekTurns` y `subscribeUserReservations`.
+- **Hooks (`src/hooks/usePaymentsManager.js`, `src/hooks/useCustomerPayments.js`, `src/hooks/useCustomerCalendar.js`):** Se reemplazaron las cargas iniciales puntuales (`getDocs`) de cobros, pagos de alumna, membresías/créditos, reservas y turnos semanales por suscripciones `onSnapshot` con limpieza (`unsubscribe`) al desmontar o cambiar de usuario/semana.
+
+### Qué se quitó
+- La dependencia exclusiva de recarga manual o `getDocs` puntual para reflejar cambios entre la sesión de alumna y la sesión de administración.
+
+### Por qué
+- Permitir que cualquier aviso de pago, reserva de paquete, acreditación, rechazo o cambio de cupo se refleje de forma inmediata en todas las sesiones abiertas sin necesidad de refrescar la página.
+
+### Pros y Contras
+- **Pros:** Actualización instantánea entre ventana de alumna y administradora; cero polling; reutiliza las mismas `firestore.rules`.
+- **Contras:** Mantiene listeners activos mientras las vistas están montadas, requiriendo limpieza estricta en `useEffect`.

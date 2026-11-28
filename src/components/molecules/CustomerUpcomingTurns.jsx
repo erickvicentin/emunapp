@@ -119,7 +119,7 @@ export default function CustomerUpcomingTurns({
                     </span>
                   </div>
                   <p className="text-[12px] text-on-surface-variant">
-                    {res.instructorName || "Profesora Titular"}
+                    Profesor/a: {res.instructorName || "Profesora Titular"}
                   </p>
                 </div>
 

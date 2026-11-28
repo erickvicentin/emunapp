@@ -5,14 +5,18 @@ import {
   fetchClosedDaysForKeys,
   fetchUserReservations,
   fetchWeeklyScheduleTemplate,
-  fetchWeekTurns,
   hideCancelledReservationsForStudent,
+  subscribeUserReservations,
+  subscribeWeekTurns,
 } from '../services/scheduleService';
 import {
   DEFAULT_COBROS_CONFIG,
+  DEFAULT_STUDIO_CONFIG,
   fetchCobrosConfig,
   fetchUserMemberships,
   reportReservationPaymentNotice,
+  subscribeStudioConfig,
+  subscribeUserMemberships,
 } from '../services/paymentService';
 import { fetchPackages } from '../services/packageService';
 import {
@@ -21,6 +25,7 @@ import {
   buildWeekDays,
   formatDateKey,
   getWeekStartMonday,
+  resolveInstructorName,
 } from '../utils/scheduleUtils';
 
 function toDateOrNull(val) {
@@ -55,6 +60,7 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
   const [totalCredits, setTotalCredits] = useState(0);
   const [reservations, setReservations] = useState([]);
   const [cobrosConfig, setCobrosConfig] = useState(DEFAULT_COBROS_CONFIG);
+  const [studioConfig, setStudioConfig] = useState(DEFAULT_STUDIO_CONFIG);
   const [packages, setPackages] = useState([]);
   const [isLoading, setIsLoading] = useState(Boolean(isEnabled));
   const [isMutating, setIsMutating] = useState(false);
@@ -85,75 +91,108 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     if (!uid) return undefined;
     let active = true;
 
-    Promise.all([
-      fetchUserMemberships(uid),
-      fetchUserReservations(uid),
-      fetchCobrosConfig(),
-      fetchPackages(),
-    ])
-      .then(([userMemberships, userReservations, cfg, pkgs]) => {
+    const unsubscribeMemberships = subscribeUserMemberships(
+      uid,
+      (userMemberships) => {
         if (!active) return;
         setTotalCredits(computeAvailableCredits(userMemberships, Date.now()));
+      },
+      () => {
+        if (active) setTotalCredits(0);
+      }
+    );
+
+    const unsubscribeReservations = subscribeUserReservations(
+      uid,
+      (userReservations) => {
+        if (!active) return;
         setReservations(userReservations);
+      },
+      () => {}
+    );
+
+    const unsubscribeStudio = subscribeStudioConfig(
+      (studio) => {
+        if (!active) return;
+        setStudioConfig(studio);
+      },
+      () => {}
+    );
+
+    Promise.all([fetchCobrosConfig(), fetchPackages()])
+      .then(([cfg, pkgs]) => {
+        if (!active) return;
         setCobrosConfig(cfg);
         setPackages(pkgs);
       })
-      .catch(() => {
-        if (active) setTotalCredits(0);
-      });
+      .catch(() => {});
 
     return () => {
       active = false;
+      unsubscribeMemberships();
+      unsubscribeReservations();
+      unsubscribeStudio();
     };
   }, [uid]);
-
-  const reloadWeek = useCallback(async () => {
-    if (!isEnabled) return;
-    const [template, closed, existingTurns] = await Promise.all([
-      fetchWeeklyScheduleTemplate(),
-      fetchClosedDaysForKeys(weekDateKeys),
-      fetchWeekTurns(weekDateKeys),
-    ]);
-    setClosedDaysMap(closed);
-    setTurns(buildCustomerWeekTurns(weekDays, template, closed, existingTurns));
-  }, [isEnabled, weekDays, weekDateKeys]);
 
   useEffect(() => {
     if (!isEnabled) return undefined;
     let active = true;
+    let unsubscribeTurns = () => {};
 
     Promise.all([
       fetchWeeklyScheduleTemplate(),
       fetchClosedDaysForKeys(weekDateKeys),
-      fetchWeekTurns(weekDateKeys),
     ])
-      .then(([template, closed, existingTurns]) => {
+      .then(([template, closed]) => {
         if (!active) return;
         setClosedDaysMap(closed);
-        setTurns(buildCustomerWeekTurns(weekDays, template, closed, existingTurns));
-        setLoadError('');
+        unsubscribeTurns = subscribeWeekTurns(
+          weekDateKeys,
+          (existingTurns) => {
+            if (!active) return;
+            setTurns(
+              buildCustomerWeekTurns(
+                weekDays,
+                template,
+                closed,
+                existingTurns,
+                studioConfig.nombreProfesora
+              )
+            );
+            setLoadError('');
+            setIsLoading(false);
+          },
+          () => {
+            if (!active) return;
+            setLoadError('No se pudo cargar la agenda semanal.');
+            setIsLoading(false);
+          }
+        );
       })
       .catch(() => {
         if (!active) return;
         setLoadError('No se pudo cargar la agenda semanal.');
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
+        setIsLoading(false);
       });
 
     return () => {
       active = false;
+      unsubscribeTurns();
     };
-  }, [isEnabled, weekDays, weekDateKeys]);
+  }, [isEnabled, weekDays, weekDateKeys, studioConfig.nombreProfesora]);
 
   const [todayKey] = useState(() => formatDateKey(new Date()));
 
   const upcomingReservations = useMemo(
     () =>
-      reservations.filter(
-        (r) => String(r.dateKey || '') >= todayKey && !r.ocultoParaAlumno
-      ),
-    [reservations, todayKey]
+      reservations
+        .filter((r) => String(r.dateKey || '') >= todayKey && !r.ocultoParaAlumno)
+        .map((r) => ({
+          ...r,
+          instructorName: resolveInstructorName(r.instructorName, studioConfig.nombreProfesora),
+        })),
+    [reservations, todayKey, studioConfig.nombreProfesora]
   );
 
   const individualPackage = useMemo(
@@ -176,7 +215,25 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
           email: userEmail,
         },
       });
-      await Promise.all([reloadWeek(), loadAccountData()]);
+      setReservations((prev) => {
+        if (prev.some((r) => r.id === result.reservationId)) return prev;
+        return [
+          ...prev,
+          {
+            id: result.reservationId,
+            turnoId: turno.id,
+            dateKey: turno.dateKey,
+            startTime: turno.startTime,
+            durationMinutes: turno.durationMinutes,
+            instructorName: resolveInstructorName(
+              turno.instructorName,
+              studioConfig.nombreProfesora
+            ),
+            usuarioId: uid,
+            estado: result.estado,
+          },
+        ];
+      });
       showSnackbar?.(
         'success',
         result.estado === 'confirmada'
@@ -204,7 +261,11 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
         individualPackage,
         fechaTransferencia,
       });
-      await loadAccountData();
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.id === reservation.id ? { ...r, estado: 'pendiente_confirmacion' } : r
+        )
+      );
       showSnackbar?.(
         'success',
         'Pago informado correctamente. Queda pendiente de aprobación del administrador.'
@@ -223,7 +284,11 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     setIsMutating(true);
     try {
       const res = await cancelReservationAsStudent(reserva);
-      await Promise.all([reloadWeek(), loadAccountData()]);
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.id === reserva.id ? { ...r, estado: res?.estado || 'cancelada' } : r
+        )
+      );
       showSnackbar?.(
         'success',
         res?.credited
@@ -244,7 +309,15 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     setIsMutating(true);
     try {
       const count = await hideCancelledReservationsForStudent(upcomingReservations);
-      await loadAccountData();
+      setReservations((prev) =>
+        prev.map((r) =>
+          ['cancelada', 'cancelado_estudio', 'cancelado_tiempo', 'cancelado_tarde'].includes(
+            r.estado
+          )
+            ? { ...r, ocultoParaAlumno: true }
+            : r
+        )
+      );
       if (count > 0) {
         showSnackbar?.('success', 'Turnos cancelados limpiados de tu lista.');
       }
@@ -277,6 +350,7 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     closedDaysMap,
     turns,
     totalCredits,
+    reservations,
     upcomingReservations,
     cobrosConfig,
     packages,
@@ -284,6 +358,7 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     isLoading,
     isMutating,
     loadError,
+    reloadAccountData: loadAccountData,
     goToPreviousWeek,
     goToNextWeek,
     goToCurrentWeek,

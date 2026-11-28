@@ -23,6 +23,17 @@ Feature: Customer Panel Navigation
 
     Examples:
       | section       | path                    | title               |
-      | pagos         | /customer/pagos         | Pagos               |
       | historial     | /customer/historial     | Historial de Clases |
       | configuracion | /customer/configuracion | Configuración       |
+
+  @EMUNA-103
+  Scenario: Customer can view available credit packages including individual class
+    When the customer navigates to the "paquetes" section from the sidebar
+    Then the customer URL should contain "/customer/paquetes"
+    And the customer packages section should display title "Paquetes" and the individual package card
+
+  @EMUNA-104
+  Scenario: Customer can view payment history section
+    When the customer navigates to the "pagos" section from the sidebar
+    Then the customer URL should contain "/customer/pagos"
+    And the customer payments section should display title "Pagos" and the history view
