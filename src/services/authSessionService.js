@@ -28,9 +28,24 @@ export function getLocalProfile(uid) {
   }
 }
 
+function sanitizeProfileForStorage(profile) {
+  if (!profile || typeof profile !== 'object') return null;
+  return {
+    uid: String(profile.uid || ''),
+    nombre: String(profile.nombre || ''),
+    apellido: String(profile.apellido || ''),
+    photoURL: String(profile.photoURL || ''),
+    rol: String(profile.rol || 'customer'),
+    registroCompleto: Boolean(profile.registroCompleto),
+    active: profile.active !== false,
+  };
+}
+
 export function setLocalProfile(uid, profile) {
   try {
-    localStorage.setItem(`emuna_profile_${uid}`, JSON.stringify(profile));
+    const safeProfile = sanitizeProfileForStorage(profile);
+    if (!safeProfile) return;
+    localStorage.setItem(`emuna_profile_${uid}`, JSON.stringify(safeProfile));
   } catch {
     // Ignore storage quota errors
   }
@@ -228,6 +243,6 @@ export async function completeForcedPasswordUpdate(userProfile, newPassword) {
     actualizadoEn: serverTimestamp(),
   });
   const next = { ...(userProfile || {}), requiereCambioPassword: false };
-  setLocalProfile(auth.currentUser.uid, next);
+  setLocalProfile(auth.currentUser.uid, userProfile);
   return next;
 }

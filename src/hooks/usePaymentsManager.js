@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG,
   DEFAULT_COBROS_CONFIG,
   DEFAULT_STUDIO_CONFIG,
   approvePaymentByAdmin,
   deleteRejectedPaymentByAdmin,
+  fetchAdminEmailNotifConfig,
   fetchAllPayments,
   fetchCobrosConfig,
   fetchStudioConfig,
   rejectPaymentByAdmin,
   reportPaymentNotice,
+  saveAdminEmailNotifConfig,
   saveCobrosConfig,
   saveStudioConfig,
   subscribeAllPayments,
@@ -22,6 +25,9 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
   const [payments, setPayments] = useState([]);
   const [cobrosConfig, setCobrosConfig] = useState(DEFAULT_COBROS_CONFIG);
   const [studioConfig, setStudioConfig] = useState(DEFAULT_STUDIO_CONFIG);
+  const [adminEmailNotifConfig, setAdminEmailNotifConfig] = useState(
+    DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
 
@@ -32,14 +38,16 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
     }
     setIsLoading(true);
     try {
-      const [list, config, studio] = await Promise.all([
+      const [list, config, studio, adminNotif] = await Promise.all([
         fetchAllPayments(),
         fetchCobrosConfig(),
         fetchStudioConfig(),
+        fetchAdminEmailNotifConfig(),
       ]);
       setPayments(list);
       setCobrosConfig(config);
       setStudioConfig(studio);
+      setAdminEmailNotifConfig(adminNotif);
     } catch (error) {
       showSnackbar?.('error', error.message || 'No se pudieron cargar los cobros.');
     } finally {
@@ -68,11 +76,12 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
       }
     );
 
-    Promise.all([fetchCobrosConfig(), fetchStudioConfig()])
-      .then(([config, studio]) => {
+    Promise.all([fetchCobrosConfig(), fetchStudioConfig(), fetchAdminEmailNotifConfig()])
+      .then(([config, studio, adminNotif]) => {
         if (!active) return;
         setCobrosConfig(config);
         setStudioConfig(studio);
+        setAdminEmailNotifConfig(adminNotif);
       })
       .catch((error) => {
         if (!active) return;
@@ -104,6 +113,7 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
     payments,
     cobrosConfig,
     studioConfig,
+    adminEmailNotifConfig,
     isLoading,
     isMutating,
     refreshPayments: loadData,
@@ -118,6 +128,12 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
         () => saveStudioConfig(nextStudio),
         'Configuración del estudio actualizada.',
         (saved) => setStudioConfig((prev) => ({ ...prev, ...saved }))
+      ),
+    saveAdminEmailNotifSettings: (nextNotif) =>
+      runMutation(
+        () => saveAdminEmailNotifConfig(nextNotif),
+        'Preferencias de notificaciones por email actualizadas.',
+        (saved) => setAdminEmailNotifConfig((prev) => ({ ...prev, ...saved }))
       ),
     approvePayment: (pago) =>
       runMutation(

@@ -5,7 +5,9 @@ import Button from '../atoms/Button';
 import ReportPaymentModal from '../molecules/ReportPaymentModal';
 import CustomerPaymentMobileCard from '../molecules/CustomerPaymentMobileCard';
 import CustomerPaymentsTable from '../molecules/CustomerPaymentsTable';
+import PaginationBar from '../molecules/PaginationBar';
 import TransferDetailsCard from '../molecules/TransferDetailsCard';
+import { DEFAULT_PAGE_SIZE, usePagination } from '../../hooks/usePagination';
 
 const EMPTY_LIST = [];
 
@@ -34,6 +36,8 @@ export default function CustomerPaymentsSection({
     () => reservations.some((r) => r.estado === 'esperando_comprobante'),
     [reservations]
   );
+
+  const pagination = usePagination(payments, DEFAULT_PAGE_SIZE);
 
   const handleOpenInformModal = (pay) => {
     setPaymentToInform(pay);
@@ -149,7 +153,7 @@ export default function CustomerPaymentsSection({
             data-testid="customer-payments-mobile-list"
             className="md:hidden space-y-3"
           >
-            {payments.map((pay) => (
+            {pagination.paginatedItems.map((pay) => (
               <CustomerPaymentMobileCard
                 key={pay.id}
                 payment={pay}
@@ -160,10 +164,17 @@ export default function CustomerPaymentsSection({
           </div>
 
           {/* Desktop table (>= md) */}
-          <CustomerPaymentsTable
-            payments={payments}
-            isMutating={isMutating}
-            onInformPayment={handleOpenInformModal}
+          <CustomerPaymentsTable payments={pagination.paginatedItems} />
+
+          <PaginationBar
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            startIndex={pagination.startIndex}
+            endIndex={pagination.endIndex}
+            onPrevPage={pagination.prevPage}
+            onNextPage={pagination.nextPage}
+            testIdPrefix="customer-payments"
           />
         </>
       )}

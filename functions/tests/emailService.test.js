@@ -4,6 +4,10 @@ import nodemailer from 'nodemailer';
 import {
   isValidRecipientEmail,
   resetTransporterCache,
+  sendAdminDailySummaryEmail,
+  sendAdminLastMinuteBookingEmail,
+  sendAdminNewPaymentEmail,
+  sendAdminStudentCancelledEmail,
   sendClassReminderEmail,
   sendEmail,
   sendPaymentStatusEmail,
@@ -139,6 +143,63 @@ describe('emailService', () => {
       assert.match(sentPayloads[1].html, /Feriado/);
       assert.match(sentPayloads[2].subject, /Pago aprobado/);
       assert.match(sentPayloads[3].subject, /Recordatorio/);
+    });
+
+    it('formats admin notification emails (new payment, cancellation, last-minute booking, daily summary)', async () => {
+      process.env.SMTP_USER = 'smtp-user';
+      process.env.SMTP_PASS = 'smtp-pass';
+
+      const sentPayloads = [];
+      mock.method(nodemailer, 'createTransport', () => ({
+        sendMail: async (payload) => {
+          sentPayloads.push(payload);
+          return { messageId: '<admin-ok>' };
+        },
+      }));
+
+      await sendAdminNewPaymentEmail({
+        to: 'admin@emuna-pilates.com.ar',
+        adminName: 'Sofía',
+        alumnoNombre: 'Camila Paz',
+        paqueteNombre: 'Pack 8 Clases',
+        monto: 48000,
+        metodoPago: 'transferencia',
+        fechaTransferencia: '28/11/2026',
+      });
+      await sendAdminStudentCancelledEmail({
+        to: 'admin@emuna-pilates.com.ar',
+        adminName: 'Sofía',
+        alumnoNombre: 'Camila Paz',
+        dateKey: '2026-12-01',
+        startTime: '18:00',
+        status: 'cancelado_tiempo',
+      });
+      await sendAdminLastMinuteBookingEmail({
+        to: 'admin@emuna-pilates.com.ar',
+        adminName: 'Sofía',
+        alumnoNombre: 'Camila Paz',
+        dateKey: '2026-12-01',
+        startTime: '19:00',
+        instructorName: 'Sofía',
+      });
+      await sendAdminDailySummaryEmail({
+        to: 'admin@emuna-pilates.com.ar',
+        adminName: 'Sofía',
+        dateKey: '2026-12-01',
+        totalTurns: 4,
+        totalReserved: 12,
+        totalCapacity: 16,
+        emptyTurns: 1,
+        pendingPaymentsCount: 2,
+        classesList: [{ startTime: '09:00', occupied: 4, capacity: 4, instructorName: 'Sofía' }],
+      });
+
+      assert.equal(sentPayloads.length, 4);
+      assert.match(sentPayloads[0].subject, /Nuevo pago pendiente: Camila Paz/);
+      assert.match(sentPayloads[1].subject, /Cancelación de alumno: Camila Paz/);
+      assert.match(sentPayloads[2].subject, /Reserva de último momento: Camila Paz/);
+      assert.match(sentPayloads[3].subject, /Resumen del día 01\/12\/2026/);
+      assert.match(sentPayloads[3].html, /12 \/ 16 camas/);
     });
   });
 });
