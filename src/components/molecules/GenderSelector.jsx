@@ -43,10 +43,10 @@ export default function GenderSelector({
           required
           aria-invalid={Boolean(error)}
           aria-describedby={errorId}
-          className={`w-full bg-surface-container-low focus:bg-surface-container-lowest text-on-surface rounded-xl pl-11 pr-10 py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 shadow-sm border appearance-none cursor-pointer ${
+          className={`w-full bg-surface-container-lowest text-on-surface rounded-xl pl-11 pr-10 py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 shadow-xs border appearance-none cursor-pointer ${
             error
               ? 'border-error focus:ring-error/40'
-              : 'border-transparent focus:ring-secondary/40'
+              : 'border-outline-variant focus:border-secondary focus:ring-secondary/30'
           } ${!value ? 'text-on-surface-variant/70' : ''}`}
         >
           <option value="" disabled>

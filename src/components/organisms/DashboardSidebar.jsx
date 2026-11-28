@@ -21,6 +21,9 @@ export default function DashboardSidebar({
   openBtnRef,
   isDesktopCollapsed = false,
   onToggleDesktopCollapse,
+  badgeLabel,
+  badgeIcon,
+  effectiveBadge,
 }) {
   const drawerRef = useRef(null);
   const scrollerRef = useRef(null);
@@ -275,6 +278,25 @@ export default function DashboardSidebar({
               </li>
             ))}
           </ul>
+
+          {badgeLabel && (
+            <div className="sm:hidden pt-3 mt-3 border-t border-surface-container-high/70">
+              <div
+                data-testid={`${testIdPrefix}-sidebar-mobile-badge`}
+                className={`w-full inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-label-sm text-label-sm font-semibold uppercase tracking-wider ${
+                  effectiveBadge === 'staff'
+                    ? 'bg-secondary-container text-on-secondary-container'
+                    : 'bg-surface-container-highest text-primary'
+                }`}
+              >
+                <Icon
+                  name={badgeIcon || (effectiveBadge === 'staff' ? 'admin_panel_settings' : 'spa')}
+                  className="text-[16px] shrink-0"
+                />
+                <span>{badgeLabel}</span>
+              </div>
+            </div>
+          )}
         </nav>
       </div>
     </aside>
