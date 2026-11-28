@@ -23,12 +23,16 @@ export default function PackageCard({
   features = [],
   isPopular = false,
   ctaText,
+  disabled = false,
+  testId,
+  ctaTestId,
   onSelect,
 }) {
   const defaultCta = isPopular ? `Reservar Membresía ${name}` : `Elegir Plan ${name}`;
 
   return (
     <div
+      data-testid={testId}
       className={`p-space-lg rounded-2xl bg-surface-container-lowest flex flex-col justify-between relative transition-all duration-200 ${
         isPopular
           ? 'shadow-md border-2 border-secondary/40 lg:-translate-y-2'
@@ -83,9 +87,11 @@ export default function PackageCard({
           variant={isPopular ? 'primary' : 'light'}
           size="md"
           className="w-full text-center"
+          disabled={disabled}
+          data-testid={ctaTestId}
           onClick={onSelect}
           href={!onSelect ? '#contacto' : undefined}
-          ariaLabel={`${ctaText || defaultCta} por ${price} mensuales`}
+          ariaLabel={`${ctaText || defaultCta} por ${price}`}
         >
           {ctaText || defaultCta}
         </Button>
