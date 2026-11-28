@@ -14,6 +14,7 @@ import PackagesSection from '../components/organisms/PackagesSection';
 import CalendarSection from '../components/organisms/CalendarSection';
 import CobrosSection from '../components/organisms/CobrosSection';
 import AdminConfigSection from '../components/organisms/AdminConfigSection';
+import AdminNoticeSection from '../components/organisms/AdminNoticeSection';
 import AdminDashboardOverview from '../components/organisms/AdminDashboardOverview';
 import AdminProfileSection from '../components/organisms/AdminProfileSection';
 import Snackbar from '../components/molecules/Snackbar';
@@ -25,6 +26,7 @@ import { usePackagesManager } from '../hooks/usePackagesManager';
 import { useCalendarManager } from '../hooks/useCalendarManager';
 import { usePaymentsManager } from '../hooks/usePaymentsManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
+import { sendActiveStudentsNotice } from '../services/noticeService';
 
 /**
  * AdministratorPage View
@@ -193,6 +195,7 @@ function AdminSectionContent({
   renderPackages,
   renderCalendar,
   renderCobros,
+  renderAvisos,
   renderConfig,
   renderProfile,
   renderDashboard,
@@ -236,6 +239,9 @@ function AdminSectionContent({
   }
   if (activeNavItem.id === 'cobros') {
     return renderCobros();
+  }
+  if (activeNavItem.id === 'avisos') {
+    return renderAvisos();
   }
   if (activeNavItem.id === 'configuracion') {
     return renderConfig();
@@ -375,16 +381,15 @@ export default function AdministratorPage() {
             packages={packages}
           />
         )}
-        renderConfig={() => (
-          <AdminConfigSection
-            paymentsManager={paymentsManager}
-            onSendBulkEmailNotice={() =>
-              showSnackbar(
-                'success',
-                'Próximo a implementar: envío de aviso por mail a todos los alumnos.'
-              )
-            }
+        renderAvisos={() => (
+          <AdminNoticeSection
+            students={students}
+            onSendNotice={sendActiveStudentsNotice}
+            showSnackbar={showSnackbar}
           />
+        )}
+        renderConfig={() => (
+          <AdminConfigSection paymentsManager={paymentsManager} />
         )}
         renderProfile={() => (
           <AdminProfileSection showSnackbar={showSnackbar} />

@@ -26,6 +26,7 @@ Feature: Administrator Panel
       | cobros     | /administrador/cobros     |
       | precios       | /administrador/precios       |
       | usuarios      | /administrador/usuarios      |
+      | avisos        | /administrador/avisos        |
       | configuracion | /administrador/configuracion |
       | perfil        | /administrador/perfil        |
 
@@ -40,3 +41,9 @@ Feature: Administrator Panel
     And the admin profile section should display title "Mi perfil" with personal, email, Google, and security cards
     When the administrator opens the change password modal
     Then the admin change password modal should be visible with title "Cambiar contraseña"
+
+  @EMUNA-035
+  Scenario: Administrator can view Emitir aviso section with subject, body, and live preview
+    When the administrator navigates to the "avisos" section from the sidebar
+    Then the current URL should contain "/administrador/avisos"
+    And the admin notice section should display title "Emitir aviso", recipient summary, form fields, and email preview

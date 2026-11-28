@@ -47,11 +47,19 @@ export const ADMIN_NAV_ITEMS = [
     adminOnly: true,
   },
   {
+    id: 'avisos',
+    path: '/administrador/avisos',
+    label: 'Emitir aviso',
+    icon: 'campaign',
+    description: 'Envío de comunicados por correo electrónico a alumnos activos.',
+    adminOnly: true,
+  },
+  {
     id: 'configuracion',
     path: '/administrador/configuracion',
     label: 'Configuración',
     icon: 'settings',
-    description: 'Cuenta destino, ventana de cancelación, profesora y avisos generales.',
+    description: 'Cuenta destino, ventana de cancelación, profesora y notificaciones.',
     adminOnly: true,
   },
   {

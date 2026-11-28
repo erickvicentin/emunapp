@@ -24,7 +24,6 @@ const NOTIF_SWITCH_STUDENT_CANCEL = '[data-testid="admin-notif-switch-cancelacio
 const NOTIF_SWITCH_LAST_MINUTE = '[data-testid="admin-notif-switch-reserva-ultimo-momento"]';
 const NOTIF_SWITCH_DAILY_SUMMARY = '[data-testid="admin-notif-switch-resumen-diario"]';
 const NOTIF_SAVE_BTN = '[data-testid="admin-email-notif-save-btn"]';
-const BULK_EMAIL_BTN = '[data-testid="admin-config-bulk-email-btn"]';
 
 class CobrosPage extends BasePage {
   async waitForPageLoad() {
@@ -77,7 +76,6 @@ class CobrosPage extends BasePage {
       this.isElementDisplayed(STUDIO_CANCEL_INPUT),
       this.isElementDisplayed(STUDIO_PROFESSOR_INPUT),
       this.isElementDisplayed(ADMIN_EMAIL_NOTIF_CARD),
-      this.isElementDisplayed(BULK_EMAIL_BTN),
     ]);
     return checks.every(Boolean);
   }
