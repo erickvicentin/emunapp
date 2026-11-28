@@ -25,6 +25,7 @@ const TURNS_COLLECTION = 'turnos_clase';
 const CONFIG_COLLECTION = 'configuracion';
 const COBROS_CONFIG_DOC = 'cobros';
 const STUDIO_CONFIG_DOC = 'estudio';
+const ADMIN_EMAIL_NOTIF_DOC = 'notificaciones_admin';
 
 export const DEFAULT_COBROS_CONFIG = {
   alias: 'emuna.pilates.mp',
@@ -80,6 +81,25 @@ export const DEFAULT_STUDIO_CONFIG = {
   horasVentanaCancelacion: 4,
   nombreProfesora: 'Profesora Titular',
 };
+
+export const DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG = {
+  nuevoPagoPendiente: true,
+  cancelacionAlumno: true,
+  reservaUltimoMomento: true,
+  resumenDiario: true,
+};
+
+function normalizeAdminEmailNotifConfig(data = {}) {
+  return {
+    nuevoPagoPendiente:
+      data.nuevoPagoPendiente ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.nuevoPagoPendiente,
+    cancelacionAlumno:
+      data.cancelacionAlumno ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.cancelacionAlumno,
+    reservaUltimoMomento:
+      data.reservaUltimoMomento ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.reservaUltimoMomento,
+    resumenDiario: data.resumenDiario ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.resumenDiario,
+  };
+}
 
 function toMillis(value) {
   if (!value) return 0;
@@ -193,6 +213,27 @@ export async function saveStudioConfig(config = {}) {
   };
   await setDoc(doc(db, CONFIG_COLLECTION, STUDIO_CONFIG_DOC), payload, { merge: true });
   return payload;
+}
+
+export async function fetchAdminEmailNotifConfig() {
+  const snap = await getDoc(doc(db, CONFIG_COLLECTION, ADMIN_EMAIL_NOTIF_DOC));
+  if (!snap.exists()) return { ...DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG };
+  return normalizeAdminEmailNotifConfig(snap.data() || {});
+}
+
+export async function saveAdminEmailNotifConfig(config = {}) {
+  const normalized = normalizeAdminEmailNotifConfig({
+    nuevoPagoPendiente: Boolean(config.nuevoPagoPendiente),
+    cancelacionAlumno: Boolean(config.cancelacionAlumno),
+    reservaUltimoMomento: Boolean(config.reservaUltimoMomento),
+    resumenDiario: Boolean(config.resumenDiario),
+  });
+  const payload = {
+    ...normalized,
+    actualizadoEn: serverTimestamp(),
+  };
+  await setDoc(doc(db, CONFIG_COLLECTION, ADMIN_EMAIL_NOTIF_DOC), payload, { merge: true });
+  return normalized;
 }
 
 export async function fetchAllPayments() {
