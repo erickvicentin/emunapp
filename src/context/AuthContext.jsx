@@ -106,9 +106,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const completeRequiredPasswordChange = useCallback(async (newPassword) => {
-    const next = await completeForcedPasswordUpdate(userProfile, newPassword);
-    setUserProfile(next);
-  }, [userProfile]);
+    await completeForcedPasswordUpdate(newPassword);
+    setUserProfile((prev) =>
+      prev ? { ...prev, requiereCambioPassword: false } : prev
+    );
+  }, []);
 
   const updateOwnProfile = useCallback(async (profileData) => {
     const nextProfile = await updateStudentOwnProfile(userProfile, profileData);
