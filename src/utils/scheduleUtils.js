@@ -306,3 +306,30 @@ export function calculateAttendancePercentage(reservations = []) {
   if (totalFixed === 0) return 100;
   return Math.round((attended / totalFixed) * 100);
 }
+
+export const ATTENDANCE_STATUS_META = {
+  presente: {
+    label: 'Presente',
+    classes: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  },
+  ausente: {
+    label: 'Ausente',
+    classes: 'bg-error-container text-on-error-container border-error/30',
+  },
+  pendiente: {
+    label: 'Sin registrar',
+    classes: 'bg-surface-container-high text-on-surface-variant border-outline-variant',
+  },
+};
+
+export function formatHistoryDate(dateKey = '') {
+  const [year, month, day] = String(dateKey).split('-');
+  if (!year || !month || !day) return dateKey || '-';
+  return `${day}/${month}/${year}`;
+}
+
+export function getAttendanceMeta(asistencia) {
+  if (asistencia === 'presente') return ATTENDANCE_STATUS_META.presente;
+  if (asistencia === 'ausente') return ATTENDANCE_STATUS_META.ausente;
+  return ATTENDANCE_STATUS_META.pendiente;
+}

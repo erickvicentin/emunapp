@@ -16,14 +16,11 @@ Feature: Customer Panel Navigation
     And the customer upcoming turns section should be visible
 
   @EMUNA-102
-  Scenario Outline: Customer sidebar navigation updates URL and displays placeholder
-    When the customer navigates to the "<section>" section from the sidebar
-    Then the customer URL should contain "<path>"
-    And the customer placeholder section should show title "<title>" and status "Próximo a implementar"
-
-    Examples:
-      | section   | path                | title               |
-      | historial | /customer/historial | Historial de Clases |
+  Scenario: Customer can view Historial de Clases section
+    When the customer navigates to the "historial" section from the sidebar
+    Then the customer URL should contain "/customer/historial"
+    And the customer history section should be visible with title "Historial de Clases"
+    And the customer attendance percentage card should be visible
 
   @EMUNA-103
   Scenario: Customer can view available credit packages including individual class

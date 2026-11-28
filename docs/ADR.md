@@ -367,3 +367,24 @@
 ### Pros y Contras
 - **Pros:** Sin infraestructura vectorial ni costos de embeddings; clave de API protegida en Cloud Functions; chips rápidos con 0 latencia y 0 consumo de tokens; actualización automática de profesora, alias y precios desde Firestore.
 - **Contras:** Requiere configurar `GEMINI_API_KEY` en `functions/.env` (o Secrets de Firebase) y desplegar la función `askLandingAssistant` para respuestas de texto libre en producción.
+
+---
+
+## ADR-017: Sección "Historial de Clases" en el Portal de Alumna
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Moléculas (`CustomerHistoryTable`, `CustomerHistoryMobileCard`):** Vista responsive diferenciada (tabla desktop `hidden md:block` y tarjetas móviles `md:hidden`) mostrando exclusivamente **Fecha**, **Hora del turno** y estado de **Asistencia** (`Presente`, `Ausente` o `Sin registrar`).
+- **Organismo (`CustomerHistorySection`) y Ruta (`CustomerPage.jsx`):** Se reemplazó el placeholder de `/customer/historial` por `CustomerHistorySection`, reutilizando la suscripción en tiempo real `calendar.reservations`, filtrando las clases confirmadas no canceladas que ya ocurrieron (o ya tienen asistencia registrada) y calculando el porcentaje de presentismo sobre la cabecera mediante `calculateAttendancePercentage` (`src/utils/scheduleUtils.js`) con paginación `PaginationBar`.
+
+### Qué se quitó
+- El uso del placeholder `"Próximo a implementar"` para la ruta `/customer/historial`.
+
+### Por qué
+- Permitir que cada alumna consulte de forma clara y responsive su historial real de clases realizadas y su porcentaje de presentismo sin depender de consultas adicionales a Firestore.
+
+### Pros y Contras
+- **Pros:** Reutiliza el listener `onSnapshot` ya activo en `useCustomerCalendar` y el helper `calculateAttendancePercentage`; diseño responsive limpio de 3 campos por fila.
+- **Contras:** El filtrado de clases pasadas toma como referencia el horario del turno respecto al instante de renderizado del cliente.

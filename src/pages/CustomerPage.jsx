@@ -5,6 +5,7 @@ import DashboardSidebar from '../components/organisms/DashboardSidebar';
 import CustomerTurnsSection from '../components/organisms/CustomerTurnsSection';
 import CustomerPackagesSection from '../components/organisms/CustomerPackagesSection';
 import CustomerPaymentsSection from '../components/organisms/CustomerPaymentsSection';
+import CustomerHistorySection from '../components/organisms/CustomerHistorySection';
 import CustomerProfileSection from '../components/organisms/CustomerProfileSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
@@ -120,6 +121,9 @@ export default function CustomerPage() {
           onClearRejected={customerPayments.clearRejectedPayments}
         />
       );
+    }
+    if (activeNavItem.id === 'historial') {
+      return <CustomerHistorySection reservations={calendar.reservations} />;
     }
     if (activeNavItem.id === 'perfil') {
       return <CustomerProfileSection showSnackbar={showSnackbar} />;
