@@ -3,8 +3,10 @@ import Button from '../atoms/Button';
 import Icon from '../atoms/Icon';
 import CobrosFiltersBar from '../molecules/CobrosFiltersBar';
 import CobrosTable from '../molecules/CobrosTable';
+import PaginationBar from '../molecules/PaginationBar';
 import ReceiptPreviewModal from '../molecules/ReceiptPreviewModal';
 import CashNoticeModal from '../molecules/CashNoticeModal';
+import { DEFAULT_PAGE_SIZE, usePagination } from '../../hooks/usePagination';
 import { formatDateKey } from '../../utils/scheduleUtils';
 
 const EMPTY_LIST = [];
@@ -105,11 +107,34 @@ export default function CobrosSection({
   const hasActiveFilters =
     filter !== 'todos' || Boolean(dateFrom) || Boolean(dateTo) || Boolean(studentSearch.trim());
 
+  const pagination = usePagination(filteredPayments, DEFAULT_PAGE_SIZE);
+
+  const handleFilterChange = (nextFilter) => {
+    setFilter(nextFilter);
+    pagination.setPage(1);
+  };
+
+  const handleStudentSearchChange = (nextQuery) => {
+    setStudentSearch(nextQuery);
+    pagination.setPage(1);
+  };
+
+  const handleDateFromChange = (nextDate) => {
+    setDateFrom(nextDate);
+    pagination.setPage(1);
+  };
+
+  const handleDateToChange = (nextDate) => {
+    setDateTo(nextDate);
+    pagination.setPage(1);
+  };
+
   const handleClearFilters = () => {
     setFilter('todos');
     setStudentSearch('');
     setDateFrom('');
     setDateTo('');
+    pagination.setPage(1);
   };
 
   const handlePreviewReceipt = (pay) => {
@@ -160,13 +185,13 @@ export default function CobrosSection({
 
       <CobrosFiltersBar
         studentSearch={studentSearch}
-        onStudentSearchChange={setStudentSearch}
+        onStudentSearchChange={handleStudentSearchChange}
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={handleFilterChange}
         dateFrom={dateFrom}
-        onDateFromChange={setDateFrom}
+        onDateFromChange={handleDateFromChange}
         dateTo={dateTo}
-        onDateToChange={setDateTo}
+        onDateToChange={handleDateToChange}
         todayKey={todayKey}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={handleClearFilters}
@@ -176,7 +201,7 @@ export default function CobrosSection({
       />
 
       <CobrosTable
-        payments={filteredPayments}
+        payments={pagination.paginatedItems}
         isLoading={isLoading}
         isAdmin={isAdmin}
         isMutating={isMutating}
@@ -185,6 +210,19 @@ export default function CobrosSection({
         onRejectPayment={rejectPayment}
         onApprovePayment={approvePayment}
       />
+
+      {!isLoading && (
+        <PaginationBar
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          onPrevPage={pagination.prevPage}
+          onNextPage={pagination.nextPage}
+          testIdPrefix="cobros"
+        />
+      )}
 
       <ReceiptPreviewModal
         dialogRef={previewDialogRef}
