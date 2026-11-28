@@ -2,9 +2,30 @@ import { randomBytes } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import {
+  isValidRecipientEmail,
+  sendClassReminderEmail,
+  sendPaymentStatusEmail,
+  sendReservationCancelledEmail,
+  sendReservationConfirmedEmail,
+  sendWelcomeEmail,
+} from './services/emailService.js';
 
 initializeApp();
+
+const TARGET_DATABASES = process.env.FIREBASE_DATABASE_ID
+  ? [process.env.FIREBASE_DATABASE_ID]
+  : ['emuna-testing', 'emuna-prod'];
+const CANCELLATION_NOTIFY_STATES = new Set([
+  'cancelada',
+  'cancelada_a_tiempo',
+  'cancelado_tarde',
+  'cancelado_estudio',
+]);
+const PAYMENT_NOTIFY_STATES = new Set(['aprobado', 'rechazado', 'vencido']);
 
 const ALLOWED_DATABASES = new Set(['emuna-testing', 'emuna-prod']);
 const STAFF_ROLES = new Set(['staff', 'administradora']);
@@ -223,6 +244,13 @@ async function createManagedAccount(request, { targetRole, requireAdminCaller = 
     } catch {
       activationLinkGenerated = false;
     }
+  }
+
+  if (isCustomer && isValidRecipientEmail(payload.email)) {
+    await sendWelcomeEmail({
+      to: payload.email,
+      nombre: payload.nombre,
+    }).catch(() => {});
   }
 
   return {
@@ -528,3 +556,248 @@ export const expireProvisionalPayments = onCall(async (request) => {
     cancelledBookings: cancelCounts.reduce((acc, count) => acc + count, 0),
   };
 });
+
+async function resolveStudentRecipient(db, usuarioId, fallbackEmail, fallbackName) {
+  if (!usuarioId) {
+    return { email: fallbackEmail || '', nombre: fallbackName || 'alumne' };
+  }
+
+  const userSnap = await db.collection('usuarios').doc(usuarioId).get();
+  if (!userSnap.exists) {
+    return { email: '', nombre: fallbackName || 'alumne' };
+  }
+
+  const userData = userSnap.data() || {};
+  const isDeactivated =
+    userData.active === false ||
+    userData.estado === 'inactivo' ||
+    userData.estado === 'desactivado';
+
+  if (isDeactivated) {
+    return { email: '', nombre: fallbackName || userData.nombre || 'alumne' };
+  }
+
+  const resolvedEmail = isValidRecipientEmail(userData.email)
+    ? userData.email
+    : fallbackEmail || '';
+
+  return {
+    email: resolvedEmail,
+    nombre: fallbackName || userData.nombre || 'alumne',
+  };
+}
+
+function parseArgentinaClassDate(dateKey, startTime) {
+  if (!dateKey || !startTime) return null;
+  const iso = `${String(dateKey).trim()}T${String(startTime).trim()}:00-03:00`;
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const ARGENTINA_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function getArgentinaDateKey(offsetDays = 0) {
+  const target = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = ARGENTINA_DATE_FORMATTER.formatToParts(target);
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+async function handleReservationCreated(databaseId, event) {
+  const data = event.data?.data();
+  if (!data || data.estado !== 'confirmada') return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    data.usuarioId,
+    data.alumnoEmail,
+    data.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  await sendReservationConfirmedEmail({
+    to: recipient.email,
+    nombre: recipient.nombre,
+    dateKey: data.dateKey,
+    startTime: data.startTime,
+    instructorName: data.instructorName,
+  });
+}
+
+async function handleReservationUpdated(databaseId, event) {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.estado === after.estado) return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    after.usuarioId,
+    after.alumnoEmail,
+    after.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  if (after.estado === 'confirmada') {
+    await sendReservationConfirmedEmail({
+      to: recipient.email,
+      nombre: recipient.nombre,
+      dateKey: after.dateKey,
+      startTime: after.startTime,
+      instructorName: after.instructorName,
+    });
+    return;
+  }
+
+  if (CANCELLATION_NOTIFY_STATES.has(after.estado)) {
+    await sendReservationCancelledEmail({
+      to: recipient.email,
+      nombre: recipient.nombre,
+      dateKey: after.dateKey,
+      startTime: after.startTime,
+      status: after.estado,
+      reason: after.motivoCancelacion,
+    });
+  }
+}
+
+async function handlePaymentUpdated(databaseId, event) {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.estado === after.estado) return;
+  if (!PAYMENT_NOTIFY_STATES.has(after.estado)) return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    after.usuarioId,
+    after.alumnoEmail,
+    after.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  await sendPaymentStatusEmail({
+    to: recipient.email,
+    nombre: recipient.nombre,
+    paqueteNombre: after.paqueteNombre,
+    monto: after.monto,
+    estado: after.estado,
+    motivoRechazo: after.motivoRechazo,
+  });
+}
+
+async function processClassRemindersForDatabase(databaseId, candidateDates, nowMs) {
+  const db = getFirestore(databaseId);
+  const snap = await db
+    .collection('reservas')
+    .where('estado', '==', 'confirmada')
+    .where('dateKey', 'in', candidateDates)
+    .get();
+
+  await Promise.all(
+    snap.docs.map(async (docSnap) => {
+      const data = docSnap.data() || {};
+      if (data.recordatorioEnviado === true) return;
+
+      const classDate = parseArgentinaClassDate(data.dateKey, data.startTime);
+      if (!classDate) return;
+
+      const diffHours = (classDate.getTime() - nowMs) / (1000 * 60 * 60);
+      if (diffHours < 18 || diffHours > 26) return;
+
+      const recipient = await resolveStudentRecipient(
+        db,
+        data.usuarioId,
+        data.alumnoEmail,
+        data.alumnoNombre
+      );
+
+      if (!isValidRecipientEmail(recipient.email)) return;
+
+      const result = await sendClassReminderEmail({
+        to: recipient.email,
+        nombre: recipient.nombre,
+        dateKey: data.dateKey,
+        startTime: data.startTime,
+        instructorName: data.instructorName,
+      });
+
+      if (result.sent) {
+        await docSnap.ref.update({
+          recordatorioEnviado: true,
+          recordatorioEnviadoEn: FieldValue.serverTimestamp(),
+        });
+      }
+    })
+  );
+}
+
+/**
+ * Envían confirmación por email cuando se crea una reserva ya confirmada (testing y prod).
+ */
+export const onReservationCreatedTesting = onDocumentCreated(
+  { document: 'reservas/{reservaId}', database: 'emuna-testing' },
+  (event) => handleReservationCreated('emuna-testing', event)
+);
+
+export const onReservationCreatedProd = onDocumentCreated(
+  { document: 'reservas/{reservaId}', database: 'emuna-prod' },
+  (event) => handleReservationCreated('emuna-prod', event)
+);
+
+/**
+ * Envían avisos por email cuando una reserva pasa a confirmada o se cancela (testing y prod).
+ */
+export const onReservationUpdatedTesting = onDocumentUpdated(
+  { document: 'reservas/{reservaId}', database: 'emuna-testing' },
+  (event) => handleReservationUpdated('emuna-testing', event)
+);
+
+export const onReservationUpdatedProd = onDocumentUpdated(
+  { document: 'reservas/{reservaId}', database: 'emuna-prod' },
+  (event) => handleReservationUpdated('emuna-prod', event)
+);
+
+/**
+ * Notifican por email cuando la administración aprueba, rechaza o vence un pago (testing y prod).
+ */
+export const onPaymentUpdatedTesting = onDocumentUpdated(
+  { document: 'pagos/{pagoId}', database: 'emuna-testing' },
+  (event) => handlePaymentUpdated('emuna-testing', event)
+);
+
+export const onPaymentUpdatedProd = onDocumentUpdated(
+  { document: 'pagos/{pagoId}', database: 'emuna-prod' },
+  (event) => handlePaymentUpdated('emuna-prod', event)
+);
+
+/**
+ * Cron cada hora: envía recordatorio ~24 hs antes de cada clase confirmada.
+ */
+export const sendUpcomingClassReminders = onSchedule(
+  {
+    schedule: '0 * * * *',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  },
+  async () => {
+    const candidateDates = [
+      getArgentinaDateKey(0),
+      getArgentinaDateKey(1),
+      getArgentinaDateKey(2),
+    ];
+    const nowMs = Date.now();
+
+    await Promise.all(
+      TARGET_DATABASES.map((databaseId) =>
+        processClassRemindersForDatabase(databaseId, candidateDates, nowMs)
+      )
+    );
+  }
+);
