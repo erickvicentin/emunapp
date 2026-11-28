@@ -233,7 +233,7 @@ export async function completeGoogleUserProfile(profileData) {
   return updatedProfile;
 }
 
-export async function completeForcedPasswordUpdate(userProfile, newPassword) {
+export async function completeForcedPasswordUpdate(newPassword) {
   if (!auth.currentUser) {
     throw new Error('No hay una sesión activa.');
   }
@@ -242,7 +242,4 @@ export async function completeForcedPasswordUpdate(userProfile, newPassword) {
     requiereCambioPassword: false,
     actualizadoEn: serverTimestamp(),
   });
-  const next = { ...(userProfile || {}), requiereCambioPassword: false };
-  setLocalProfile(auth.currentUser.uid, userProfile);
-  return next;
 }
