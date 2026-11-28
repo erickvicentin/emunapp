@@ -9,6 +9,7 @@ const COBROS_TITULAR_INPUT = '[data-testid="cobros-titular-input"]';
 const COBROS_CUIL_INPUT = '[data-testid="cobros-cuil-input"]';
 const COBROS_EXPIRY_HOURS_INPUT = '[data-testid="cobros-expiry-hours-input"]';
 const COBROS_FILTER_TABS = '[data-testid="cobros-filter-tabs"]';
+const COBROS_STUDENT_SEARCH = '[data-testid="cobros-student-search-input"]';
 const COBROS_FILTER_SELECT = '[data-testid="cobros-filter-select"]';
 const COBROS_DATE_FROM = '[data-testid="cobros-date-from-input"]';
 const COBROS_DATE_TO = '[data-testid="cobros-date-to-input"]';
@@ -46,6 +47,7 @@ class CobrosPage extends BasePage {
   async isFilterTabsDisplayed() {
     const checks = await Promise.all([
       this.isElementDisplayed(COBROS_FILTER_TABS),
+      this.isElementDisplayed(COBROS_STUDENT_SEARCH),
       this.isElementDisplayed(COBROS_FILTER_SELECT),
       this.isElementDisplayed(COBROS_DATE_FROM),
       this.isElementDisplayed(COBROS_DATE_TO),

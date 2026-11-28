@@ -81,7 +81,16 @@ function getDateRangeError(dateFrom, dateTo) {
   return '';
 }
 
-function matchesPaymentFilters(pay, filter, dateFrom, dateTo, hasDateError) {
+function matchesPaymentFilters(pay, filter, dateFrom, dateTo, hasDateError, studentSearch) {
+  const normalizedQuery = studentSearch.trim().toLowerCase();
+  if (normalizedQuery) {
+    const studentName = String(pay.alumnoNombre || '').toLowerCase();
+    const studentEmail = String(pay.alumnoEmail || '').toLowerCase();
+    if (!studentName.includes(normalizedQuery) && !studentEmail.includes(normalizedQuery)) {
+      return false;
+    }
+  }
+
   if (filter === 'cerrados') {
     if (pay.estado !== 'rechazado' && pay.estado !== 'vencido') return false;
   } else if (filter !== 'todos' && pay.estado !== filter) {
@@ -109,6 +118,7 @@ export default function CobrosSection({
   packages = EMPTY_LIST,
 }) {
   const [filter, setFilter] = useState('todos');
+  const [studentSearch, setStudentSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [todayKey] = useState(() => formatDateKey(new Date()));
@@ -132,14 +142,15 @@ export default function CobrosSection({
   const filteredPayments = useMemo(
     () =>
       payments.filter((pay) =>
-        matchesPaymentFilters(pay, filter, dateFrom, dateTo, Boolean(dateRangeError))
+        matchesPaymentFilters(pay, filter, dateFrom, dateTo, Boolean(dateRangeError), studentSearch)
       ),
-    [payments, filter, dateFrom, dateTo, dateRangeError]
+    [payments, filter, dateFrom, dateTo, dateRangeError, studentSearch]
   );
 
   const pendingCount = payments.filter((p) => p.estado === 'pendiente_conciliacion').length;
   const approvedCount = payments.filter((p) => p.estado === 'aprobado').length;
-  const hasActiveFilters = filter !== 'todos' || Boolean(dateFrom) || Boolean(dateTo);
+  const hasActiveFilters =
+    filter !== 'todos' || Boolean(dateFrom) || Boolean(dateTo) || Boolean(studentSearch.trim());
 
   return (
     <div data-testid="cobros-section" className="space-y-5">
@@ -186,7 +197,26 @@ export default function CobrosSection({
         data-testid="cobros-filter-tabs"
         className="p-4 rounded-2xl bg-surface-container-low border border-surface-container-high space-y-3"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+          <label className="space-y-1">
+            <span className="block text-label-sm font-semibold text-on-surface">Alumno</span>
+            <div className="relative flex items-center">
+              <Icon
+                name="search"
+                className="absolute left-3 text-on-surface-variant text-[18px] pointer-events-none select-none"
+              />
+              <input
+                type="search"
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Nombre o email..."
+                aria-label="Buscar alumno"
+                data-testid="cobros-student-search-input"
+                className="w-full rounded-xl border border-outline-variant bg-surface-container-lowest pl-9 pr-3 py-2 text-body-sm text-on-surface placeholder:text-on-surface-variant/60"
+              />
+            </div>
+          </label>
+
           <label className="space-y-1">
             <span className="block text-label-sm font-semibold text-on-surface">Estado</span>
             <div className="relative">
@@ -241,6 +271,7 @@ export default function CobrosSection({
                 data-testid="cobros-clear-filters-btn"
                 onClick={() => {
                   setFilter('todos');
+                  setStudentSearch('');
                   setDateFrom('');
                   setDateTo('');
                 }}
