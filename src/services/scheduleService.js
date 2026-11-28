@@ -77,27 +77,27 @@ async function findEarliestActiveMembership(usuarioId, now = new Date()) {
   return candidates[0] || null;
 }
 
-async function refundMembershipCreditInTx(tx, membershipId, { applyGrace = false } = {}) {
-  if (!membershipId) return;
-  const memRef = doc(db, MEMBERSHIPS_COLLECTION, membershipId);
-  const memSnap = await tx.get(memRef);
-  if (!memSnap.exists()) return;
-
-  const memData = memSnap.data() || {};
-  const nextRemaining = (Number(memData.creditosRestantes) || 0) + 1;
-  const updates = {
-    creditosRestantes: nextRemaining,
+function createIndividualRefundMembershipInTx(
+  tx,
+  { usuarioId, reservaId, origen, paqueteNombre }
+) {
+  if (!usuarioId) return;
+  const newMemRef = doc(collection(db, MEMBERSHIPS_COLLECTION));
+  const extendedExp = computeGraceExpiration(null);
+  tx.set(newMemRef, {
+    usuarioId,
+    paqueteId: 'plan-individual',
+    paqueteNombre,
+    creditosTotales: 1,
+    creditosRestantes: 1,
+    fechaVencimiento: Timestamp.fromDate(extendedExp),
     estado: 'activa',
+    provisional: false,
+    origen,
+    reservaId,
+    creadoEn: serverTimestamp(),
     actualizadoEn: serverTimestamp(),
-  };
-
-  if (applyGrace) {
-    const currentExp = toDateOrNull(memData.fechaVencimiento);
-    const extendedExp = computeGraceExpiration(currentExp);
-    updates.fechaVencimiento = Timestamp.fromDate(extendedExp);
-  }
-
-  tx.update(memRef, updates);
+  });
 }
 
 // ===============================================================
@@ -540,6 +540,7 @@ export async function cancelTurnByStudio(turnoId, reason = 'Cancelado por el est
     );
 
     const creditRefundCount = {};
+    const individualGrantDocs = [];
     for (const resDoc of activeReservations) {
       const resData = resDoc.data();
       tx.update(resDoc.ref, {
@@ -550,6 +551,8 @@ export async function cancelTurnByStudio(turnoId, reason = 'Cancelado por el est
       if (resData.creditoConsumido && resData.membresiaId) {
         creditRefundCount[resData.membresiaId] =
           (creditRefundCount[resData.membresiaId] || 0) + 1;
+      } else if (resData.usuarioId) {
+        individualGrantDocs.push({ id: resDoc.id, usuarioId: resData.usuarioId });
       }
     }
 
@@ -564,6 +567,15 @@ export async function cancelTurnByStudio(turnoId, reason = 'Cancelado por el est
           actualizadoEn: serverTimestamp(),
         });
       }
+    }
+
+    for (const grant of individualGrantDocs) {
+      createIndividualRefundMembershipInTx(tx, {
+        usuarioId: grant.usuarioId,
+        reservaId: grant.id,
+        origen: 'cancelacion_estudio',
+        paqueteNombre: 'Clase individual (crédito por cancelación del estudio)',
+      });
     }
 
     tx.update(turnRef, {
@@ -709,9 +721,17 @@ export async function removeReservationByAdmin(reserva) {
     const resSnap = await tx.get(resRef);
     if (!resSnap.exists()) return;
 
-    const turnRef = doc(db, TURNS_COLLECTION, reserva.turnoId);
-    const turnSnap = await tx.get(turnRef);
-    if (turnSnap.exists()) {
+    const resData = resSnap.data() || {};
+    const turnRef = reserva.turnoId ? doc(db, TURNS_COLLECTION, reserva.turnoId) : null;
+    const turnSnap = turnRef ? await tx.get(turnRef) : null;
+
+    const shouldRefundExisting = Boolean(resData.creditoConsumido && resData.membresiaId);
+    const memRef = shouldRefundExisting
+      ? doc(db, MEMBERSHIPS_COLLECTION, resData.membresiaId)
+      : null;
+    const memSnap = memRef ? await tx.get(memRef) : null;
+
+    if (turnSnap?.exists()) {
       const occupied = Number(turnSnap.data().cuposOcupados) || 0;
       tx.update(turnRef, {
         cuposOcupados: Math.max(0, occupied - 1),
@@ -719,8 +739,20 @@ export async function removeReservationByAdmin(reserva) {
       });
     }
 
-    if (reserva.creditoConsumido && reserva.membresiaId) {
-      await refundMembershipCreditInTx(tx, reserva.membresiaId, { applyGrace: false });
+    if (memSnap?.exists()) {
+      const nextRemaining = (Number(memSnap.data()?.creditosRestantes) || 0) + 1;
+      tx.update(memRef, {
+        creditosRestantes: nextRemaining,
+        estado: 'activa',
+        actualizadoEn: serverTimestamp(),
+      });
+    } else if (resData.estado === 'confirmada' && resData.usuarioId) {
+      createIndividualRefundMembershipInTx(tx, {
+        usuarioId: resData.usuarioId,
+        reservaId: reserva.id,
+        origen: 'cancelacion_admin',
+        paqueteNombre: 'Clase individual (crédito por cancelación)',
+      });
     }
 
     tx.delete(resRef);
@@ -942,21 +974,11 @@ export async function cancelReservationAsStudent(reserva) {
       });
       credited = true;
     } else if (shouldGrantIndividualCredit) {
-      const newMemRef = doc(collection(db, MEMBERSHIPS_COLLECTION));
-      const extendedExp = computeGraceExpiration(null);
-      tx.set(newMemRef, {
+      createIndividualRefundMembershipInTx(tx, {
         usuarioId: resData.usuarioId,
-        paqueteId: 'plan-individual',
-        paqueteNombre: 'Clase individual (crédito por cancelación)',
-        creditosTotales: 1,
-        creditosRestantes: 1,
-        fechaVencimiento: Timestamp.fromDate(extendedExp),
-        estado: 'activa',
-        provisional: false,
-        origen: 'cancelacion_clase_individual',
         reservaId: reserva.id,
-        creadoEn: serverTimestamp(),
-        actualizadoEn: serverTimestamp(),
+        origen: 'cancelacion_clase_individual',
+        paqueteNombre: 'Clase individual (crédito por cancelación)',
       });
       credited = true;
     }

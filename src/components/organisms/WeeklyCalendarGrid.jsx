@@ -76,7 +76,7 @@ export default function WeeklyCalendarGrid({
       ) : (
         <div
           data-testid="calendar-week-grid"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 items-stretch"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 pt-5 items-stretch"
         >
           {weekDays.map((day) => (
             <CalendarDayColumn
