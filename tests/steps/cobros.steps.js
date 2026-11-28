@@ -10,11 +10,18 @@ Then(
   }
 );
 
-Then('the transfer account configuration card and filter tabs should be visible', async () => {
-  expect(await CobrosPage.isConfigCardDisplayed()).toBe(true);
-  expect(await CobrosPage.areAccountConfigFieldsDisplayed()).toBe(true);
+Then('the cobros filter tabs should be visible', async () => {
   expect(await CobrosPage.isFilterTabsDisplayed()).toBe(true);
 });
+
+Then(
+  'the admin configuration section should display cobros, studio settings, and bulk email button',
+  async () => {
+    expect(await CobrosPage.isAdminConfigSectionDisplayed()).toBe(true);
+    expect(await CobrosPage.isConfigCardDisplayed()).toBe(true);
+    expect(await CobrosPage.areAccountConfigFieldsDisplayed()).toBe(true);
+  }
+);
 
 When('the administrator clicks the register cash payment button', async () => {
   await CobrosPage.waitForPageLoad();

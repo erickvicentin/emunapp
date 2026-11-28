@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   DEFAULT_COBROS_CONFIG,
+  DEFAULT_STUDIO_CONFIG,
   approvePaymentByAdmin,
+  deleteRejectedPaymentByAdmin,
   fetchAllPayments,
   fetchCobrosConfig,
+  fetchStudioConfig,
   rejectPaymentByAdmin,
   reportPaymentNotice,
   saveCobrosConfig,
+  saveStudioConfig,
   sweepExpiredProvisionalPayments,
 } from '../services/paymentService';
 
 /**
- * Hook for managing Cobros (payments, transfer account config, and provisional expiry).
+ * Hook for managing Cobros (payments, transfer account config, studio config, and provisional expiry).
  */
 export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
   const [payments, setPayments] = useState([]);
   const [cobrosConfig, setCobrosConfig] = useState(DEFAULT_COBROS_CONFIG);
+  const [studioConfig, setStudioConfig] = useState(DEFAULT_STUDIO_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
 
@@ -26,9 +31,14 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
     }
     setIsLoading(true);
     try {
-      const [list, config] = await Promise.all([fetchAllPayments(), fetchCobrosConfig()]);
+      const [list, config, studio] = await Promise.all([
+        fetchAllPayments(),
+        fetchCobrosConfig(),
+        fetchStudioConfig(),
+      ]);
       setPayments(list);
       setCobrosConfig(config);
+      setStudioConfig(studio);
     } catch (error) {
       showSnackbar?.('error', error.message || 'No se pudieron cargar los cobros.');
     } finally {
@@ -43,11 +53,12 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
         active = false;
       };
     }
-    Promise.all([fetchAllPayments(), fetchCobrosConfig()])
-      .then(([list, config]) => {
+    Promise.all([fetchAllPayments(), fetchCobrosConfig(), fetchStudioConfig()])
+      .then(([list, config, studio]) => {
         if (!active) return;
         setPayments(list);
         setCobrosConfig(config);
+        setStudioConfig(studio);
       })
       .catch((error) => {
         if (!active) return;
@@ -79,6 +90,7 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
   return {
     payments,
     cobrosConfig,
+    studioConfig,
     isLoading,
     isMutating,
     refreshPayments: loadData,
@@ -86,6 +98,11 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
       runMutation(
         () => saveCobrosConfig(nextConfig),
         'Configuración de cobros actualizada.'
+      ),
+    saveStudioSettings: (nextStudio) =>
+      runMutation(
+        () => saveStudioConfig(nextStudio),
+        'Configuración del estudio actualizada.'
       ),
     approvePayment: (pago) =>
       runMutation(
@@ -96,6 +113,11 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
       runMutation(
         () => rejectPaymentByAdmin(pago, motivo),
         `Pago de ${pago.alumnoNombre} rechazado y créditos provisorios revocados.`
+      ),
+    deletePayment: (pago) =>
+      runMutation(
+        () => deleteRejectedPaymentByAdmin(pago),
+        `Registro de pago rechazado de ${pago.alumnoNombre} eliminado.`
       ),
     registerCashNotice: ({ student, pkg, montoInformado }) =>
       runMutation(

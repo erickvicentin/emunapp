@@ -117,7 +117,7 @@ service cloud.firestore {
         data.startTime.size() > 0 &&
         data.startTime.size() <= 10 &&
         data.estado is string &&
-        data.estado in ['confirmada', 'esperando_comprobante', 'comprobante_rechazado', 'cancelada', 'cancelado_estudio', 'cancelado_tiempo', 'cancelado_tarde'];
+        data.estado in ['confirmada', 'pendiente_confirmacion', 'esperando_comprobante', 'comprobante_rechazado', 'cancelada', 'cancelado_estudio', 'cancelado_tiempo', 'cancelado_tarde'];
     }
 
     // Validador de dominio para creación de documentos de /turnos_clase/{turnoId} por alumnas
@@ -208,6 +208,18 @@ service cloud.firestore {
         request.resource.data.usuarioId == request.auth.uid &&
         request.resource.data.provisional == true &&
         request.resource.data.estado == 'pendiente_conciliacion'
+      ) || (
+        isActiveUser() &&
+        request.resource.data.usuarioId == request.auth.uid &&
+        request.resource.data.estado == 'activa' &&
+        request.resource.data.provisional == false &&
+        request.resource.data.creditosTotales == 1 &&
+        request.resource.data.creditosRestantes == 1 &&
+        request.resource.data.origen == 'cancelacion_clase_individual' &&
+        request.resource.data.reservaId is string &&
+        request.resource.data.reservaId.size() > 0 &&
+        exists(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)) &&
+        get(/databases/$(database)/documents/reservas/$(request.resource.data.reservaId)).data.usuarioId == request.auth.uid
       );
       allow update: if isStaff() || (
         isActiveUser() &&

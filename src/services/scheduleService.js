@@ -786,8 +786,8 @@ export async function bookTurnAsStudent({ turno, student }) {
     where('usuarioId', '==', student.id)
   );
   const userReservationsSnap = await getDocs(userReservationsQ);
-  const hasPendingSinglePayment = userReservationsSnap.docs.some(
-    (d) => d.data()?.estado === 'esperando_comprobante'
+  const hasPendingSinglePayment = userReservationsSnap.docs.some((d) =>
+    ['esperando_comprobante', 'pendiente_confirmacion'].includes(d.data()?.estado)
   );
   if (hasPendingSinglePayment) {
     throw new Error(
@@ -893,39 +893,106 @@ export async function bookTurnAsStudent({ turno, student }) {
  * < 4h before start -> marks `cancelado_tarde` (slot stays fixed, credit consumed).
  */
 export async function cancelReservationAsStudent(reserva) {
-  const refundable = canCancelWithRefund(reserva.dateKey, reserva.startTime);
+  if (!reserva?.id) {
+    throw new Error('No se encontró la reserva a cancelar.');
+  }
+
+  if (!canCancelWithRefund(reserva.dateKey, reserva.startTime)) {
+    throw new Error('Solo podés cancelar un turno con al menos 4 horas de anticipación.');
+  }
+
+  let credited = false;
 
   await runTransaction(db, async (tx) => {
     const resRef = doc(db, RESERVATIONS_COLLECTION, reserva.id);
     const resSnap = await tx.get(resRef);
     if (!resSnap.exists()) return;
+    const resData = resSnap.data() || {};
 
-    if (refundable) {
-      const turnRef = doc(db, TURNS_COLLECTION, reserva.turnoId);
-      const turnSnap = await tx.get(turnRef);
-      if (turnSnap.exists()) {
-        const occupied = Number(turnSnap.data().cuposOcupados) || 0;
-        tx.update(turnRef, {
-          cuposOcupados: Math.max(0, occupied - 1),
-          actualizadoEn: serverTimestamp(),
-        });
-      }
+    const turnRef = reserva.turnoId ? doc(db, TURNS_COLLECTION, reserva.turnoId) : null;
+    const turnSnap = turnRef ? await tx.get(turnRef) : null;
 
-      if (reserva.creditoConsumido && reserva.membresiaId) {
-        await refundMembershipCreditInTx(tx, reserva.membresiaId, { applyGrace: true });
-      }
+    const shouldRefundExisting = Boolean(resData.creditoConsumido && resData.membresiaId);
+    const shouldGrantIndividualCredit =
+      !shouldRefundExisting && resData.estado === 'confirmada';
 
-      tx.update(resRef, {
-        estado: 'cancelado_tiempo',
-        actualizadoEn: serverTimestamp(),
-      });
-    } else {
-      tx.update(resRef, {
-        estado: 'cancelado_tarde',
+    const memRef = shouldRefundExisting
+      ? doc(db, MEMBERSHIPS_COLLECTION, resData.membresiaId)
+      : null;
+    const memSnap = memRef ? await tx.get(memRef) : null;
+
+    if (turnSnap?.exists()) {
+      const occupied = Number(turnSnap.data().cuposOcupados) || 0;
+      tx.update(turnRef, {
+        cuposOcupados: Math.max(0, occupied - 1),
         actualizadoEn: serverTimestamp(),
       });
     }
+
+    if (memSnap?.exists()) {
+      const memData = memSnap.data() || {};
+      const nextRemaining = (Number(memData.creditosRestantes) || 0) + 1;
+      const currentExp = toDateOrNull(memData.fechaVencimiento);
+      const extendedExp = computeGraceExpiration(currentExp);
+      tx.update(memRef, {
+        creditosRestantes: nextRemaining,
+        estado: 'activa',
+        fechaVencimiento: Timestamp.fromDate(extendedExp),
+        actualizadoEn: serverTimestamp(),
+      });
+      credited = true;
+    } else if (shouldGrantIndividualCredit) {
+      const newMemRef = doc(collection(db, MEMBERSHIPS_COLLECTION));
+      const extendedExp = computeGraceExpiration(null);
+      tx.set(newMemRef, {
+        usuarioId: resData.usuarioId,
+        paqueteId: 'plan-individual',
+        paqueteNombre: 'Clase individual (crédito por cancelación)',
+        creditosTotales: 1,
+        creditosRestantes: 1,
+        fechaVencimiento: Timestamp.fromDate(extendedExp),
+        estado: 'activa',
+        provisional: false,
+        origen: 'cancelacion_clase_individual',
+        reservaId: reserva.id,
+        creadoEn: serverTimestamp(),
+        actualizadoEn: serverTimestamp(),
+      });
+      credited = true;
+    }
+
+    tx.update(resRef, {
+      estado: 'cancelado_tiempo',
+      actualizadoEn: serverTimestamp(),
+    });
   });
 
-  return { refundable };
+  return { refundable: true, credited };
+}
+
+const CANCELLED_RESERVATION_STATES = new Set([
+  'cancelada',
+  'cancelado_estudio',
+  'cancelado_tiempo',
+  'cancelado_tarde',
+]);
+
+/**
+ * Hides cancelled reservations from the student's upcoming list without deleting audit history.
+ */
+export async function hideCancelledReservationsForStudent(reservations = []) {
+  const toHide = reservations.filter(
+    (r) => r?.id && CANCELLED_RESERVATION_STATES.has(r.estado) && !r.ocultoParaAlumno
+  );
+  if (toHide.length === 0) return 0;
+
+  const batch = writeBatch(db);
+  for (const res of toHide) {
+    batch.update(doc(db, RESERVATIONS_COLLECTION, res.id), {
+      ocultoParaAlumno: true,
+      actualizadoEn: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return toHide.length;
 }

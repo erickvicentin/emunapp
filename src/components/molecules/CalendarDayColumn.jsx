@@ -222,6 +222,7 @@ export default function CalendarDayColumn({
   onOpenTurnDetail,
 }) {
   const visibleTurns = dayTurns.filter((t) => t.estado !== 'inhabilitado');
+  const isPastCustomerDay = mode === 'customer' && Boolean(todayKey && day.dateKey < todayKey);
 
   const columnClasses = closedInfo
     ? 'bg-error-container/25 border-error/30'
@@ -233,7 +234,9 @@ export default function CalendarDayColumn({
     <section
       data-testid={`calendar-day-col-${day.dateKey}`}
       data-today={isToday ? 'true' : 'false'}
-      className={`relative h-full flex flex-col rounded-2xl border p-3 space-y-3 min-h-44 min-w-0 transition-shadow ${columnClasses}`}
+      className={`relative h-full ${
+        isPastCustomerDay ? 'hidden md:flex' : 'flex'
+      } flex-col rounded-2xl border p-3 space-y-3 min-h-0 md:min-h-44 min-w-0 transition-shadow ${columnClasses}`}
     >
       <div className="flex items-start justify-between gap-1.5 pb-2 border-b border-surface-container min-w-0">
         <div className="min-w-0 flex-1">

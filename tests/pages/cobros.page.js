@@ -9,8 +9,16 @@ const COBROS_TITULAR_INPUT = '[data-testid="cobros-titular-input"]';
 const COBROS_CUIL_INPUT = '[data-testid="cobros-cuil-input"]';
 const COBROS_EXPIRY_HOURS_INPUT = '[data-testid="cobros-expiry-hours-input"]';
 const COBROS_FILTER_TABS = '[data-testid="cobros-filter-tabs"]';
+const COBROS_STUDENT_SEARCH = '[data-testid="cobros-student-search-input"]';
+const COBROS_FILTER_SELECT = '[data-testid="cobros-filter-select"]';
+const COBROS_DATE_FROM = '[data-testid="cobros-date-from-input"]';
+const COBROS_DATE_TO = '[data-testid="cobros-date-to-input"]';
 const COBROS_REGISTER_CASH_BTN = '[data-testid="cobros-register-cash-btn"]';
 const CASH_NOTICE_DIALOG = '[data-testid="cash-notice-dialog"]';
+const ADMIN_CONFIG_SECTION = '[data-testid="admin-config-section"]';
+const STUDIO_CANCEL_INPUT = '[data-testid="studio-cancel-window-input"]';
+const STUDIO_PROFESSOR_INPUT = '[data-testid="studio-professor-name-input"]';
+const BULK_EMAIL_BTN = '[data-testid="admin-config-bulk-email-btn"]';
 
 class CobrosPage extends BasePage {
   async waitForPageLoad() {
@@ -37,7 +45,14 @@ class CobrosPage extends BasePage {
   }
 
   async isFilterTabsDisplayed() {
-    return this.isElementDisplayed(COBROS_FILTER_TABS);
+    const checks = await Promise.all([
+      this.isElementDisplayed(COBROS_FILTER_TABS),
+      this.isElementDisplayed(COBROS_STUDENT_SEARCH),
+      this.isElementDisplayed(COBROS_FILTER_SELECT),
+      this.isElementDisplayed(COBROS_DATE_FROM),
+      this.isElementDisplayed(COBROS_DATE_TO),
+    ]);
+    return checks.every(Boolean);
   }
 
   async openCashNoticeModal() {
@@ -47,6 +62,17 @@ class CobrosPage extends BasePage {
 
   async isCashNoticeModalDisplayed() {
     return this.isElementDisplayed(CASH_NOTICE_DIALOG);
+  }
+
+  async isAdminConfigSectionDisplayed() {
+    await this.waitForElement(ADMIN_CONFIG_SECTION);
+    const checks = await Promise.all([
+      this.isElementDisplayed(COBROS_CONFIG_CARD),
+      this.isElementDisplayed(STUDIO_CANCEL_INPUT),
+      this.isElementDisplayed(STUDIO_PROFESSOR_INPUT),
+      this.isElementDisplayed(BULK_EMAIL_BTN),
+    ]);
+    return checks.every(Boolean);
   }
 }
 

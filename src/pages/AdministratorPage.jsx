@@ -13,6 +13,7 @@ import StaffEditSection from '../components/organisms/StaffEditSection';
 import PackagesSection from '../components/organisms/PackagesSection';
 import CalendarSection from '../components/organisms/CalendarSection';
 import CobrosSection from '../components/organisms/CobrosSection';
+import AdminConfigSection from '../components/organisms/AdminConfigSection';
 import AdminDashboardOverview from '../components/organisms/AdminDashboardOverview';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
@@ -198,6 +199,7 @@ function AdminSectionContent({
   renderPackages,
   renderCalendar,
   renderCobros,
+  renderConfig,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -239,6 +241,9 @@ function AdminSectionContent({
   }
   if (activeNavItem.id === 'cobros') {
     return renderCobros();
+  }
+  if (activeNavItem.id === 'configuracion') {
+    return renderConfig();
   }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
@@ -383,6 +388,17 @@ export default function AdministratorPage() {
             paymentsManager={paymentsManager}
             students={students}
             packages={packages}
+          />
+        )}
+        renderConfig={() => (
+          <AdminConfigSection
+            paymentsManager={paymentsManager}
+            onSendBulkEmailNotice={() =>
+              showSnackbar(
+                'success',
+                'Próximo a implementar: envío de aviso por mail a todos los alumnos.'
+              )
+            }
           />
         )}
         renderDashboard={() => (

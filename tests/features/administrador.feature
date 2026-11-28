@@ -24,8 +24,9 @@ Feature: Administrator Panel
       | calendario | /administrador/calendario |
       | alumnos    | /administrador/alumnos    |
       | cobros     | /administrador/cobros     |
-      | precios    | /administrador/precios    |
-      | usuarios   | /administrador/usuarios   |
+      | precios       | /administrador/precios       |
+      | usuarios      | /administrador/usuarios      |
+      | configuracion | /administrador/configuracion |
 
   @EMUNA-003
   Scenario: Toggle bed check-in status on the dashboard

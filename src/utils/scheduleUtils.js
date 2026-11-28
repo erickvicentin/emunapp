@@ -17,6 +17,41 @@ export const STUDENT_BOOK_MIN_HOURS = 1;
 export const STUDENT_BOOK_MIN_MINUTES = 10;
 export const STUDENT_BOOK_MAX_DAYS = 30;
 
+export const UPCOMING_STATUS_META = {
+  esperando_comprobante: {
+    label: 'Esperando informe de pago',
+    badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+  },
+  pendiente_confirmacion: {
+    label: 'Esperando confirmación',
+    badgeClass: 'bg-sky-100 text-sky-900 border-sky-300',
+  },
+  confirmada: {
+    label: 'Turno confirmado',
+    badgeClass: 'bg-secondary-container text-on-secondary-container border-secondary/30',
+  },
+  comprobante_rechazado: {
+    label: 'Comprobante rechazado',
+    badgeClass: 'bg-error-container text-on-error-container border-error/40',
+  },
+  cancelada: {
+    label: 'Turno cancelado',
+    badgeClass: 'bg-surface-container-highest text-on-surface-variant border-outline-variant/60',
+  },
+  cancelado_estudio: {
+    label: 'Turno cancelado',
+    badgeClass: 'bg-surface-container-highest text-on-surface-variant border-outline-variant/60',
+  },
+  cancelado_tiempo: {
+    label: 'Turno cancelado',
+    badgeClass: 'bg-surface-container-highest text-on-surface-variant border-outline-variant/60',
+  },
+  cancelado_tarde: {
+    label: 'Turno cancelado',
+    badgeClass: 'bg-surface-container-highest text-on-surface-variant border-outline-variant/60',
+  },
+};
+
 export const PRESET_HOUR_SLOTS = Array.from({ length: 15 }, (_, idx) => {
   const hour = String(idx + 7).padStart(2, '0');
   return `${hour}:00`;
