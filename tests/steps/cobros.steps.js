@@ -15,7 +15,7 @@ Then('the cobros filter tabs should be visible', async () => {
 });
 
 Then(
-  'the admin configuration section should display cobros, studio settings, and bulk email button',
+  'the admin configuration section should display cobros, studio settings, and email notification toggles',
   async () => {
     expect(await CobrosPage.isAdminConfigSectionDisplayed()).toBe(true);
     expect(await CobrosPage.isConfigCardDisplayed()).toBe(true);

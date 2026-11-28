@@ -8,6 +8,7 @@ import {
   sendAdminLastMinuteBookingEmail,
   sendAdminNewPaymentEmail,
   sendAdminStudentCancelledEmail,
+  sendBulkNoticeEmail,
   sendClassReminderEmail,
   sendEmail,
   sendPaymentStatusEmail,
@@ -200,6 +201,39 @@ describe('emailService', () => {
       assert.match(sentPayloads[2].subject, /Reserva de último momento: Camila Paz/);
       assert.match(sentPayloads[3].subject, /Resumen del día 01\/12\/2026/);
       assert.match(sentPayloads[3].html, /12 \/ 16 camas/);
+    });
+
+    it('formats bulk notice emails with Emuná branding, justified text, and HTML escaping', async () => {
+      process.env.SMTP_USER = 'smtp-user';
+      process.env.SMTP_PASS = 'smtp-pass';
+      process.env.APP_URL = 'https://emuna-pilates.com.ar';
+
+      const sentPayloads = [];
+      mock.method(nodemailer, 'createTransport', () => ({
+        sendMail: async (payload) => {
+          sentPayloads.push(payload);
+          return { messageId: '<notice-1>' };
+        },
+      }));
+
+      const result = await sendBulkNoticeEmail({
+        to: 'alumna@example.com',
+        nombre: 'Lucía',
+        subject: 'Horarios de diciembre',
+        body: 'Primer párrafo del aviso.\nCon salto de línea.\n\nSegundo párrafo con <script>alert(1)</script>.',
+      });
+
+      assert.deepEqual(result, { sent: true, messageId: '<notice-1>' });
+      assert.equal(sentPayloads.length, 1);
+      assert.equal(sentPayloads[0].subject, 'Horarios de diciembre');
+      assert.match(sentPayloads[0].html, /Hola Lucía,/);
+      assert.match(sentPayloads[0].html, /#2c2422/);
+      assert.match(sentPayloads[0].html, /#82533e/);
+      assert.match(sentPayloads[0].html, /https:\/\/emuna-pilates\.com\.ar\/logo-email\.jpg/);
+      assert.match(sentPayloads[0].html, /text-align:justify/);
+      assert.match(sentPayloads[0].html, /Primer párrafo del aviso\.<br \/>Con salto de línea\./);
+      assert.doesNotMatch(sentPayloads[0].html, /<script>alert\(1\)<\/script>/);
+      assert.match(sentPayloads[0].html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
     });
   });
 });

@@ -14,6 +14,13 @@ const PROFILE_SECURITY_CARD = '[data-testid="customer-profile-security-card"]';
 const PROFILE_OPEN_PASSWORD_BTN = '[data-testid="customer-profile-open-password-modal-btn"]';
 const CHANGE_PASSWORD_MODAL = '[data-testid="change-password-modal"]';
 const CHANGE_PASSWORD_MODAL_TITLE = '[data-testid="change-password-modal-title"]';
+const NOTICE_SECTION = '[data-testid="admin-notice-section"]';
+const NOTICE_TITLE = '[data-testid="admin-notice-title"]';
+const NOTICE_RECIPIENTS_SUMMARY = '[data-testid="admin-notice-recipients-summary"]';
+const NOTICE_SUBJECT_INPUT = '[data-testid="admin-notice-subject-input"]';
+const NOTICE_BODY_INPUT = '[data-testid="admin-notice-body-input"]';
+const NOTICE_SUBMIT_BTN = '[data-testid="admin-notice-submit-btn"]';
+const NOTICE_PREVIEW = '[data-testid="admin-notice-preview"]';
 
 const NAV_ITEM_BY_SECTION = {
   dashboard: '[data-testid="admin-nav-dashboard"]',
@@ -22,6 +29,7 @@ const NAV_ITEM_BY_SECTION = {
   cobros: '[data-testid="admin-nav-cobros"]',
   precios: '[data-testid="admin-nav-precios"]',
   usuarios: '[data-testid="admin-nav-usuarios"]',
+  avisos: '[data-testid="admin-nav-avisos"]',
   configuracion: '[data-testid="admin-nav-configuracion"]',
   perfil: '[data-testid="admin-nav-perfil"]',
 };
@@ -133,6 +141,29 @@ class AdminPage {
     const title = await $(CHANGE_PASSWORD_MODAL_TITLE);
     await title.waitForDisplayed();
     return title.getText();
+  }
+
+  async isNoticeSectionDisplayed() {
+    const section = await $(NOTICE_SECTION);
+    await section.waitForDisplayed();
+    return section.isDisplayed();
+  }
+
+  async getNoticeTitleText() {
+    const title = await $(NOTICE_TITLE);
+    await title.waitForDisplayed();
+    return title.getText();
+  }
+
+  async areNoticeElementsDisplayed() {
+    const checks = await Promise.all([
+      $(NOTICE_RECIPIENTS_SUMMARY).isDisplayed(),
+      $(NOTICE_SUBJECT_INPUT).isDisplayed(),
+      $(NOTICE_BODY_INPUT).isDisplayed(),
+      $(NOTICE_SUBMIT_BTN).isDisplayed(),
+      $(NOTICE_PREVIEW).isDisplayed(),
+    ]);
+    return checks.every(Boolean);
   }
 }
 
