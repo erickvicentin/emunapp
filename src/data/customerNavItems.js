@@ -31,10 +31,10 @@ export const CUSTOMER_NAV_ITEMS = [
     description: 'Revisá el detalle de tus asistencias y clases realizadas.',
   },
   {
-    id: 'configuracion',
-    path: '/customer/configuracion',
-    label: 'Configuración',
-    icon: 'settings',
-    description: 'Visualizá y actualizá tus datos personales y de contacto.',
+    id: 'perfil',
+    path: '/customer/perfil',
+    label: 'Mi perfil',
+    icon: 'manage_accounts',
+    description: 'Visualizá y actualizá tus datos personales, correo, Google y contraseña.',
   },
 ];
