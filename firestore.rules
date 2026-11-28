@@ -68,7 +68,8 @@ service cloud.firestore {
         isValidOptionalString(data, 'photoURL', 1000) &&
         isValidOptionalString(data, 'estado', 30) &&
         (!('registroCompleto' in data) || data.registroCompleto is bool) &&
-        (!('active' in data) || data.active is bool);
+        (!('active' in data) || data.active is bool) &&
+        (!('notificacionesEmail' in data) || data.notificacionesEmail is map);
     }
 
     // Validador de dominio para documentos de /paquetes_catalogo/{paqueteId}

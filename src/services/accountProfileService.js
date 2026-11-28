@@ -14,6 +14,40 @@ import { auth, databaseId, db, functions, googleProvider } from '../config/fireb
 import { formatDni } from './studentService';
 import { buildDniAuthEmail } from '../utils/authIdentifier';
 
+export const DEFAULT_CUSTOMER_EMAIL_NOTIF_CONFIG = {
+  confirmacionReserva: true,
+  cancelacionReserva: true,
+  estadoPago: true,
+  recordatorioClase: true,
+};
+
+export function normalizeCustomerEmailNotifConfig(raw = {}) {
+  return {
+    confirmacionReserva: raw.confirmacionReserva !== false,
+    cancelacionReserva: raw.cancelacionReserva !== false,
+    estadoPago: raw.estadoPago !== false,
+    recordatorioClase: raw.recordatorioClase !== false,
+  };
+}
+
+export async function updateStudentEmailNotifications(userProfile, notificationsConfig) {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('No hay una sesión activa.');
+  }
+
+  const normalized = normalizeCustomerEmailNotifConfig(notificationsConfig);
+  await updateDoc(doc(db, 'usuarios', currentUser.uid), {
+    notificacionesEmail: normalized,
+    actualizadoEn: serverTimestamp(),
+  });
+
+  return {
+    ...(userProfile || {}),
+    notificacionesEmail: normalized,
+  };
+}
+
 export async function updateStudentOwnProfile(userProfile, profileData) {
   const currentUser = auth.currentUser;
   if (!currentUser) {

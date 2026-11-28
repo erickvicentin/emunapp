@@ -20,6 +20,7 @@ import {
   linkStudentGoogleAccount,
   requestStudentEmailChange,
   unlinkStudentGoogleAccount,
+  updateStudentEmailNotifications,
   updateStudentOwnProfile,
 } from '../services/accountProfileService';
 
@@ -119,6 +120,13 @@ export function AuthProvider({ children }) {
     return nextProfile;
   }, [userProfile]);
 
+  const updateEmailNotifications = useCallback(async (notificationsConfig) => {
+    const nextProfile = await updateStudentEmailNotifications(userProfile, notificationsConfig);
+    if (auth.currentUser) setLocalProfile(auth.currentUser.uid, nextProfile);
+    setUserProfile(nextProfile);
+    return nextProfile;
+  }, [userProfile]);
+
   const linkGoogleAccount = useCallback(async () => {
     const updatedUser = await linkStudentGoogleAccount(userProfile);
     setUser(updatedUser);
@@ -173,6 +181,7 @@ export function AuthProvider({ children }) {
       completeGoogleRegistration,
       completeRequiredPasswordChange,
       updateOwnProfile,
+      updateEmailNotifications,
       linkGoogleAccount,
       unlinkGoogleAccount,
       requestEmailChange,
@@ -190,6 +199,7 @@ export function AuthProvider({ children }) {
       completeGoogleRegistration,
       completeRequiredPasswordChange,
       updateOwnProfile,
+      updateEmailNotifications,
       linkGoogleAccount,
       unlinkGoogleAccount,
       requestEmailChange,

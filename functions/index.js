@@ -580,13 +580,27 @@ export const expireProvisionalPayments = onCall(async (request) => {
 });
 
 async function resolveStudentRecipient(db, usuarioId, fallbackEmail, fallbackName) {
+  const defaultPrefs = {
+    confirmacionReserva: true,
+    cancelacionReserva: true,
+    estadoPago: true,
+    recordatorioClase: true,
+  };
   if (!usuarioId) {
-    return { email: fallbackEmail || '', nombre: fallbackName || 'alumne' };
+    return {
+      email: fallbackEmail || '',
+      nombre: fallbackName || 'alumne',
+      notificacionesEmail: defaultPrefs,
+    };
   }
 
   const userSnap = await db.collection('usuarios').doc(usuarioId).get();
   if (!userSnap.exists) {
-    return { email: '', nombre: fallbackName || 'alumne' };
+    return {
+      email: '',
+      nombre: fallbackName || 'alumne',
+      notificacionesEmail: defaultPrefs,
+    };
   }
 
   const userData = userSnap.data() || {};
@@ -595,8 +609,20 @@ async function resolveStudentRecipient(db, usuarioId, fallbackEmail, fallbackNam
     userData.estado === 'inactivo' ||
     userData.estado === 'desactivado';
 
+  const prefs = userData.notificacionesEmail || {};
+  const notificacionesEmail = {
+    confirmacionReserva: prefs.confirmacionReserva !== false,
+    cancelacionReserva: prefs.cancelacionReserva !== false,
+    estadoPago: prefs.estadoPago !== false,
+    recordatorioClase: prefs.recordatorioClase !== false,
+  };
+
   if (isDeactivated) {
-    return { email: '', nombre: fallbackName || userData.nombre || 'alumne' };
+    return {
+      email: '',
+      nombre: fallbackName || userData.nombre || 'alumne',
+      notificacionesEmail,
+    };
   }
 
   const resolvedEmail = isValidRecipientEmail(userData.email)
@@ -606,6 +632,7 @@ async function resolveStudentRecipient(db, usuarioId, fallbackEmail, fallbackNam
   return {
     email: resolvedEmail,
     nombre: fallbackName || userData.nombre || 'alumne',
+    notificacionesEmail,
   };
 }
 
@@ -691,7 +718,10 @@ async function handleReservationCreated(databaseId, event) {
     data.alumnoEmail,
     data.alumnoNombre
   );
-  if (isValidRecipientEmail(recipient.email)) {
+  if (
+    recipient.notificacionesEmail.confirmacionReserva &&
+    isValidRecipientEmail(recipient.email)
+  ) {
     await sendReservationConfirmedEmail({
       to: recipient.email,
       nombre: recipient.nombre,
@@ -735,7 +765,10 @@ async function handleReservationUpdated(databaseId, event) {
   );
 
   if (after.estado === 'confirmada') {
-    if (isValidRecipientEmail(recipient.email)) {
+    if (
+      recipient.notificacionesEmail.confirmacionReserva &&
+      isValidRecipientEmail(recipient.email)
+    ) {
       await sendReservationConfirmedEmail({
         to: recipient.email,
         nombre: recipient.nombre,
@@ -747,7 +780,11 @@ async function handleReservationUpdated(databaseId, event) {
     return;
   }
 
-  if (CANCELLATION_NOTIFY_STATES.has(after.estado) && isValidRecipientEmail(recipient.email)) {
+  if (
+    CANCELLATION_NOTIFY_STATES.has(after.estado) &&
+    recipient.notificacionesEmail.cancelacionReserva &&
+    isValidRecipientEmail(recipient.email)
+  ) {
     await sendReservationCancelledEmail({
       to: recipient.email,
       nombre: recipient.nombre,
@@ -816,7 +853,12 @@ async function handlePaymentUpdated(databaseId, event) {
     after.alumnoEmail,
     after.alumnoNombre
   );
-  if (!isValidRecipientEmail(recipient.email)) return;
+  if (
+    !recipient.notificacionesEmail.estadoPago ||
+    !isValidRecipientEmail(recipient.email)
+  ) {
+    return;
+  }
 
   await sendPaymentStatusEmail({
     to: recipient.email,
@@ -854,7 +896,12 @@ async function processClassRemindersForDatabase(databaseId, candidateDates, nowM
         data.alumnoNombre
       );
 
-      if (!isValidRecipientEmail(recipient.email)) return;
+      if (
+        !recipient.notificacionesEmail.recordatorioClase ||
+        !isValidRecipientEmail(recipient.email)
+      ) {
+        return;
+      }
 
       const result = await sendClassReminderEmail({
         to: recipient.email,

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import Button from '../atoms/Button';
-import Icon from '../atoms/Icon';
-import Switch from '../atoms/Switch';
+import React from 'react';
+import EmailNotificationsCard from './EmailNotificationsCard';
+
+const EMPTY_CONFIG = {};
 
 const NOTIFICATION_ITEMS = [
   {
@@ -35,71 +35,20 @@ const NOTIFICATION_ITEMS = [
  * Allows the administrator to enable or disable each automated admin email notification.
  */
 export default function AdminEmailNotifCard({
-  config = {},
+  config = EMPTY_CONFIG,
   isMutating = false,
   onSave,
 }) {
-  const [draft, setDraft] = useState(null);
-  const current = draft || config;
-
-  const handleToggle = (key, nextValue) => {
-    setDraft((prev) => ({ ...(prev || config), [key]: nextValue }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const ok = await onSave?.(current);
-    if (ok) setDraft(null);
-  };
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      data-testid="admin-email-notif-card"
-      className="p-5 rounded-2xl bg-surface-container-low border border-surface-container-high space-y-4"
-    >
-      <div className="pb-3 border-b border-surface-container-high">
-        <h2 className="font-headline-sm text-headline-sm text-primary font-semibold flex items-center gap-2">
-          <Icon name="notifications_active" className="text-secondary text-[20px]" />
-          <span>Notificaciones por Email (Administración)</span>
-        </h2>
-        <p className="font-body-sm text-body-sm text-on-surface-variant">
-          Elegí qué avisos automáticos querés recibir en tu correo de administradora.
-        </p>
-      </div>
-
-      <div className="divide-y divide-surface-container-high/70">
-        {NOTIFICATION_ITEMS.map((item) => (
-          <div
-            key={item.key}
-            className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-4"
-          >
-            <div className="space-y-0.5">
-              <p className="text-body-md font-semibold text-on-surface">{item.label}</p>
-              <p className="text-body-sm text-on-surface-variant">{item.description}</p>
-            </div>
-            <Switch
-              checked={Boolean(current[item.key])}
-              onChange={(val) => handleToggle(item.key, val)}
-              disabled={isMutating}
-              ariaLabel={item.label}
-              testId={item.testId}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-end pt-1">
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={isMutating}
-          data-testid="admin-email-notif-save-btn"
-        >
-          <span>{isMutating ? 'Guardando...' : 'Guardar notificaciones'}</span>
-        </Button>
-      </div>
-    </form>
+    <EmailNotificationsCard
+      title="Notificaciones por Email (Administración)"
+      description="Elegí qué avisos automáticos querés recibir en tu correo de administradora."
+      items={NOTIFICATION_ITEMS}
+      config={config}
+      isMutating={isMutating}
+      onSave={onSave}
+      cardTestId="admin-email-notif-card"
+      saveBtnTestId="admin-email-notif-save-btn"
+    />
   );
 }

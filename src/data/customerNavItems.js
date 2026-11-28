@@ -37,4 +37,11 @@ export const CUSTOMER_NAV_ITEMS = [
     icon: 'manage_accounts',
     description: 'Visualizá y actualizá tus datos personales, correo, Google y contraseña.',
   },
+  {
+    id: 'notificaciones',
+    path: '/customer/notificaciones',
+    label: 'Notificaciones',
+    icon: 'notifications_active',
+    description: 'Elegí qué avisos automáticos querés recibir por correo electrónico.',
+  },
 ];
