@@ -22,9 +22,8 @@ Feature: Customer Panel Navigation
     And the customer placeholder section should show title "<title>" and status "Próximo a implementar"
 
     Examples:
-      | section       | path                    | title               |
-      | historial     | /customer/historial     | Historial de Clases |
-      | configuracion | /customer/configuracion | Configuración       |
+      | section   | path                | title               |
+      | historial | /customer/historial | Historial de Clases |
 
   @EMUNA-103
   Scenario: Customer can view available credit packages including individual class
@@ -37,3 +36,11 @@ Feature: Customer Panel Navigation
     When the customer navigates to the "pagos" section from the sidebar
     Then the customer URL should contain "/customer/pagos"
     And the customer payments section should display title "Pagos" and the history view
+
+  @EMUNA-105
+  Scenario: Customer can view Mi perfil section and open change password modal
+    When the customer navigates to the "perfil" section from the sidebar
+    Then the customer URL should contain "/customer/perfil"
+    And the customer profile section should display title "Mi perfil" with personal, email, Google, and security cards
+    When the customer opens the change password modal
+    Then the change password modal should be visible with title "Cambiar contraseña"

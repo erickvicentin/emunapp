@@ -298,3 +298,29 @@
 ### Pros y Contras
 - **Pros:** Actualización instantánea entre ventana de alumna y administradora; cero polling; reutiliza las mismas `firestore.rules`.
 - **Contras:** Mantiene listeners activos mientras las vistas están montadas, requiriendo limpieza estricta en `useEffect`.
+
+---
+
+## ADR-014: Sección "Mi perfil" de Alumna, Vinculación Google, Cambio de Email por Código OTP y Modal de Contraseña
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Navegación y Ruta (`src/data/customerNavItems.js`, `src/pages/CustomerPage.jsx`):** Se renombró la sección `Configuración` a **"Mi perfil"** (`/customer/perfil`), manteniendo redirección automática desde `/customer/configuracion` por compatibilidad.
+- **Datos Personales, Google y Contraseña (`src/components/organisms/CustomerProfileSection.jsx`, `src/context/AuthContext.jsx`, `src/components/molecules/ChangePasswordModal.jsx`):**
+  - Se reutilizaron `RegisterProfileFields`, `PasswordRequirementsChecklist`, `validateProfileFields`, `validateDniField` y `formatDniInput` para editar los datos personales del registro (`nombre`, `apellido`, `telefono`, `fechaNacimiento`, `genero`, `dni`).
+  - Se agregaron `linkGoogleAccount` (`linkWithPopup`) y `unlinkGoogleAccount` (`unlink`, exigiendo proveedor `password` activo para evitar bloqueo de acceso).
+  - Se implementó `ChangePasswordModal` con `<dialog>` nativo (`showModal()`), reautenticación con contraseña actual (`reauthenticateWithCredential` + `updatePassword`) o creación de contraseña para cuentas Google-only (`linkWithCredential`).
+- **Cambio/Alta de Correo con Código de 6 Dígitos (`functions/index.js`, `functions/services/emailService.js`, `src/components/molecules/EmailChangeModal.jsx`):**
+  - Se agregaron las Cloud Functions `requestEmailChangeCode` y `confirmEmailChangeCode` junto con `sendEmailChangeVerificationCodeEmail` (SMTP Brevo vía `nodemailer`), almacenando el hash SHA-256 del código de 6 dígitos con TTL de 10 minutos y límite de 5 intentos en `email_verification_codes` antes de actualizar Firebase Auth (`emailVerified: true`) y `usuarios/{uid}`.
+
+### Qué se quitó
+- El placeholder `"Próximo a implementar"` de la antigua sección de configuración del alumno.
+
+### Por qué
+- Permitir que cada alumna administre sus datos personales, agregue un correo real si se registró solo con DNI, vincule/desvincule Google y cambie su contraseña de forma segura sin salir de la aplicación.
+
+### Pros y Contras
+- **Pros:** Verificación de correo con código de 6 dígitos dentro de la app compatible con cuentas DNI; reutilización de moléculas y validadores de registro; protección contra bloqueo al desvincular Google.
+- **Contras:** Requiere desplegar Cloud Functions (`requestEmailChangeCode` y `confirmEmailChangeCode`) y contar con variables SMTP en `functions/.env`.
