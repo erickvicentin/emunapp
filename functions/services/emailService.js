@@ -376,3 +376,171 @@ export async function sendEmailChangeVerificationCodeEmail({
     }),
   });
 }
+
+export async function sendAdminNewPaymentEmail({
+  to,
+  adminName,
+  alumnoNombre,
+  paqueteNombre,
+  monto,
+  metodoPago,
+  fechaTransferencia,
+  numeroOperacion,
+}) {
+  const greetingName = String(adminName || '').trim() || 'Administradora';
+  const student = String(alumnoNombre || 'Alumna/o').trim();
+  const pkgName = String(paqueteNombre || 'Clase / Paquete').trim();
+  const formattedAmount = formatCurrencyAr(monto);
+  const method = String(metodoPago || 'transferencia').trim();
+  const appUrl = String(process.env.APP_URL || DEFAULT_APP_URL).trim().replace(/\/+$/, '');
+
+  return sendEmail({
+    to,
+    subject: `Nuevo pago pendiente: ${student} (${pkgName})`,
+    text: `Hola ${greetingName}, ${student} registró un pago pendiente de conciliación por ${pkgName}${formattedAmount ? ` (${formattedAmount})` : ''}. Revisalo en ${appUrl}/administrador/cobros.`,
+    html: buildEmailLayout({
+      title: 'Nuevo pago pendiente de conciliación',
+      greeting: `Hola ${greetingName},`,
+      bodyHtml: `
+        <p style="margin:0 0 12px;">Se registró un nuevo informe de pago que requiere tu revisión en el panel de Cobros:</p>
+        <div style="background:#f5eddf;border-left:4px solid #82533e;border-radius:10px;padding:14px 16px;margin:0 0 14px;color:#1e1b13;">
+          <p style="margin:0 0 6px;"><strong>Alumno:</strong> ${escapeHtml(student)}</p>
+          <p style="margin:0 0 6px;"><strong>Concepto:</strong> ${escapeHtml(pkgName)}</p>
+          ${formattedAmount ? `<p style="margin:0 0 6px;"><strong>Monto:</strong> ${escapeHtml(formattedAmount)}</p>` : ''}
+          <p style="margin:0 0 6px;"><strong>Método:</strong> ${escapeHtml(method)}</p>
+          ${fechaTransferencia ? `<p style="margin:0 0 6px;"><strong>Fecha de transferencia:</strong> ${escapeHtml(fechaTransferencia)}</p>` : ''}
+          ${numeroOperacion ? `<p style="margin:0;"><strong>N° operación:</strong> ${escapeHtml(numeroOperacion)}</p>` : ''}
+        </div>
+      `,
+      ctaLabel: 'Revisar en Cobros',
+      ctaUrl: `${appUrl}/administrador/cobros`,
+    }),
+  });
+}
+
+export async function sendAdminStudentCancelledEmail({
+  to,
+  adminName,
+  alumnoNombre,
+  dateKey,
+  startTime,
+  status,
+}) {
+  const greetingName = String(adminName || '').trim() || 'Administradora';
+  const student = String(alumnoNombre || 'Alumna/o').trim();
+  const fecha = formatDateAr(dateKey);
+  const hora = String(startTime || '').trim();
+  const isLate = status === 'cancelado_tarde';
+  const refundLabel = isLate
+    ? 'Fuera de término (sin devolución de crédito)'
+    : 'En término (crédito reintegrado y cama liberada)';
+  const appUrl = String(process.env.APP_URL || DEFAULT_APP_URL).trim().replace(/\/+$/, '');
+
+  return sendEmail({
+    to,
+    subject: `Cancelación de alumno: ${student} (${fecha} ${hora} hs)`,
+    text: `Hola ${greetingName}, ${student} canceló su reserva del ${fecha} a las ${hora} hs. ${refundLabel}.`,
+    html: buildEmailLayout({
+      title: 'Un alumno canceló su turno',
+      greeting: `Hola ${greetingName},`,
+      bodyHtml: `
+        <p style="margin:0 0 12px;">Te informamos que se registró una cancelación desde el portal de alumnos:</p>
+        <div style="background:#f5eddf;border-left:4px solid #82533e;border-radius:10px;padding:14px 16px;margin:0 0 14px;color:#1e1b13;">
+          <p style="margin:0 0 6px;"><strong>Alumno:</strong> ${escapeHtml(student)}</p>
+          <p style="margin:0 0 6px;"><strong>Fecha:</strong> ${escapeHtml(fecha)}</p>
+          <p style="margin:0 0 6px;"><strong>Horario:</strong> ${escapeHtml(hora)} hs</p>
+          <p style="margin:0;"><strong>Condición:</strong> ${escapeHtml(refundLabel)}</p>
+        </div>
+      `,
+      ctaLabel: 'Ver calendario',
+      ctaUrl: `${appUrl}/administrador/calendario`,
+    }),
+  });
+}
+
+export async function sendAdminLastMinuteBookingEmail({
+  to,
+  adminName,
+  alumnoNombre,
+  dateKey,
+  startTime,
+  instructorName,
+}) {
+  const greetingName = String(adminName || '').trim() || 'Administradora';
+  const student = String(alumnoNombre || 'Alumna/o').trim();
+  const fecha = formatDateAr(dateKey);
+  const hora = String(startTime || '').trim();
+  const profe = String(instructorName || '').trim();
+  const appUrl = String(process.env.APP_URL || DEFAULT_APP_URL).trim().replace(/\/+$/, '');
+
+  return sendEmail({
+    to,
+    subject: `Reserva de último momento: ${student} (${fecha} ${hora} hs)`,
+    text: `Hola ${greetingName}, ${student} realizó una reserva de último momento para el ${fecha} a las ${hora} hs.`,
+    html: buildEmailLayout({
+      title: 'Reserva de último momento',
+      greeting: `Hola ${greetingName},`,
+      bodyHtml: `
+        <p style="margin:0 0 12px;">Se confirmó una nueva reserva para hoy o las próximas horas:</p>
+        <div style="background:#f5eddf;border-left:4px solid #82533e;border-radius:10px;padding:14px 16px;margin:0 0 14px;color:#1e1b13;">
+          <p style="margin:0 0 6px;"><strong>Alumno:</strong> ${escapeHtml(student)}</p>
+          <p style="margin:0 0 6px;"><strong>Fecha:</strong> ${escapeHtml(fecha)}</p>
+          <p style="margin:0 0 6px;"><strong>Horario:</strong> ${escapeHtml(hora)} hs</p>
+          ${profe ? `<p style="margin:0;"><strong>Profesora:</strong> ${escapeHtml(profe)}</p>` : ''}
+        </div>
+      `,
+      ctaLabel: 'Ver agenda de hoy',
+      ctaUrl: `${appUrl}/administrador/calendario`,
+    }),
+  });
+}
+
+export async function sendAdminDailySummaryEmail({
+  to,
+  adminName,
+  dateKey,
+  totalTurns,
+  totalReserved,
+  totalCapacity,
+  emptyTurns,
+  pendingPaymentsCount,
+  classesList = [],
+}) {
+  const greetingName = String(adminName || '').trim() || 'Administradora';
+  const fecha = formatDateAr(dateKey);
+  const appUrl = String(process.env.APP_URL || DEFAULT_APP_URL).trim().replace(/\/+$/, '');
+
+  const classesRowsHtml = classesList.length
+    ? classesList
+        .map(
+          (c) =>
+            `<li style="margin:0 0 4px;"><strong>${escapeHtml(c.startTime)} hs</strong> — ${escapeHtml(c.occupied)}/${escapeHtml(c.capacity)} camas${c.instructorName ? ` (${escapeHtml(c.instructorName)})` : ''}</li>`
+        )
+        .join('')
+    : '<li style="margin:0;">No hay clases programadas para hoy.</li>';
+
+  return sendEmail({
+    to,
+    subject: `Resumen del día ${fecha} - Emuná Pilates`,
+    text: `Hola ${greetingName}, resumen de ${fecha}: ${totalTurns} clases, ${totalReserved}/${totalCapacity} camas ocupadas, ${pendingPaymentsCount} pagos pendientes.`,
+    html: buildEmailLayout({
+      title: `Resumen de la jornada (${fecha})`,
+      greeting: `Hola ${greetingName},`,
+      bodyHtml: `
+        <p style="margin:0 0 12px;">Este es el panorama del estudio para hoy:</p>
+        <div style="background:#f5eddf;border-left:4px solid #82533e;border-radius:10px;padding:14px 16px;margin:0 0 14px;color:#1e1b13;">
+          <p style="margin:0 0 6px;"><strong>Clases programadas:</strong> ${escapeHtml(totalTurns)}</p>
+          <p style="margin:0 0 6px;"><strong>Ocupación total:</strong> ${escapeHtml(totalReserved)} / ${escapeHtml(totalCapacity)} camas</p>
+          <p style="margin:0 0 6px;"><strong>Turnos sin reservas:</strong> ${escapeHtml(emptyTurns)}</p>
+          <p style="margin:0;"><strong>Pagos pendientes de conciliación:</strong> ${escapeHtml(pendingPaymentsCount)}</p>
+        </div>
+        <p style="margin:0 0 8px;font-weight:600;color:#160f0e;">Detalle de horarios de hoy:</p>
+        <ul style="margin:0 0 12px;padding-left:18px;">
+          ${classesRowsHtml}
+        </ul>
+      `,
+      ctaLabel: 'Ir al Panel de Administración',
+      ctaUrl: `${appUrl}/administrador`,
+    }),
+  });
+}

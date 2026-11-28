@@ -7,6 +7,10 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import {
   isValidRecipientEmail,
+  sendAdminDailySummaryEmail,
+  sendAdminLastMinuteBookingEmail,
+  sendAdminNewPaymentEmail,
+  sendAdminStudentCancelledEmail,
   sendClassReminderEmail,
   sendEmailChangeVerificationCodeEmail,
   sendPaymentStatusEmail,
@@ -23,10 +27,23 @@ const TARGET_DATABASES = process.env.FIREBASE_DATABASE_ID
 const CANCELLATION_NOTIFY_STATES = new Set([
   'cancelada',
   'cancelada_a_tiempo',
+  'cancelado_tiempo',
   'cancelado_tarde',
   'cancelado_estudio',
 ]);
+const STUDENT_CANCELLATION_STATES = new Set([
+  'cancelada',
+  'cancelada_a_tiempo',
+  'cancelado_tiempo',
+  'cancelado_tarde',
+]);
 const PAYMENT_NOTIFY_STATES = new Set(['aprobado', 'rechazado', 'vencido']);
+const DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG = {
+  nuevoPagoPendiente: true,
+  cancelacionAlumno: true,
+  reservaUltimoMomento: true,
+  resumenDiario: true,
+};
 
 const ALLOWED_DATABASES = new Set(['emuna-testing', 'emuna-prod']);
 const STAFF_ROLES = new Set(['staff', 'administradora']);
@@ -610,6 +627,55 @@ function getArgentinaDateKey(offsetDays = 0) {
   return `${map.year}-${map.month}-${map.day}`;
 }
 
+async function getAdminNotificationSettings(db) {
+  const snap = await db.collection('configuracion').doc('notificaciones_admin').get();
+  if (!snap.exists) {
+    return { ...DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG };
+  }
+  const data = snap.data() || {};
+  return {
+    nuevoPagoPendiente:
+      data.nuevoPagoPendiente ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.nuevoPagoPendiente,
+    cancelacionAlumno:
+      data.cancelacionAlumno ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.cancelacionAlumno,
+    reservaUltimoMomento:
+      data.reservaUltimoMomento ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.reservaUltimoMomento,
+    resumenDiario:
+      data.resumenDiario ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.resumenDiario,
+  };
+}
+
+async function resolveAdminRecipients(db) {
+  const snap = await db
+    .collection('usuarios')
+    .where('rol', '==', 'administradora')
+    .get();
+
+  return snap.docs
+    .map((docSnap) => docSnap.data() || {})
+    .filter((userData) => {
+      const isDeactivated =
+        userData.active === false ||
+        userData.estado === 'inactivo' ||
+        userData.estado === 'desactivado';
+      return !isDeactivated && isValidRecipientEmail(userData.email);
+    })
+    .map((userData) => ({
+      email: String(userData.email).trim(),
+      nombre: String(userData.nombre || '').trim() || 'Administradora',
+    }));
+}
+
+async function notifyAdmins(db, settingKey, sendToAdmin) {
+  const settings = await getAdminNotificationSettings(db);
+  if (settings[settingKey] === false) return;
+
+  const admins = await resolveAdminRecipients(db);
+  if (!admins.length) return;
+
+  await Promise.all(admins.map((admin) => sendToAdmin(admin)));
+}
+
 async function handleReservationCreated(databaseId, event) {
   const data = event.data?.data();
   if (!data || data.estado !== 'confirmada') return;
@@ -621,15 +687,34 @@ async function handleReservationCreated(databaseId, event) {
     data.alumnoEmail,
     data.alumnoNombre
   );
-  if (!isValidRecipientEmail(recipient.email)) return;
+  if (isValidRecipientEmail(recipient.email)) {
+    await sendReservationConfirmedEmail({
+      to: recipient.email,
+      nombre: recipient.nombre,
+      dateKey: data.dateKey,
+      startTime: data.startTime,
+      instructorName: data.instructorName,
+    });
+  }
 
-  await sendReservationConfirmedEmail({
-    to: recipient.email,
-    nombre: recipient.nombre,
-    dateKey: data.dateKey,
-    startTime: data.startTime,
-    instructorName: data.instructorName,
-  });
+  const classDate = parseArgentinaClassDate(data.dateKey, data.startTime);
+  const diffHours = classDate ? (classDate.getTime() - Date.now()) / (1000 * 60 * 60) : null;
+  const isToday = data.dateKey === getArgentinaDateKey(0);
+  const isLastMinute =
+    isToday || (diffHours !== null && diffHours >= 0 && diffHours <= 12);
+
+  if (isLastMinute) {
+    await notifyAdmins(db, 'reservaUltimoMomento', (admin) =>
+      sendAdminLastMinuteBookingEmail({
+        to: admin.email,
+        adminName: admin.nombre,
+        alumnoNombre: recipient.nombre || data.alumnoNombre,
+        dateKey: data.dateKey,
+        startTime: data.startTime,
+        instructorName: data.instructorName,
+      })
+    );
+  }
 }
 
 async function handleReservationUpdated(databaseId, event) {
@@ -644,20 +729,21 @@ async function handleReservationUpdated(databaseId, event) {
     after.alumnoEmail,
     after.alumnoNombre
   );
-  if (!isValidRecipientEmail(recipient.email)) return;
 
   if (after.estado === 'confirmada') {
-    await sendReservationConfirmedEmail({
-      to: recipient.email,
-      nombre: recipient.nombre,
-      dateKey: after.dateKey,
-      startTime: after.startTime,
-      instructorName: after.instructorName,
-    });
+    if (isValidRecipientEmail(recipient.email)) {
+      await sendReservationConfirmedEmail({
+        to: recipient.email,
+        nombre: recipient.nombre,
+        dateKey: after.dateKey,
+        startTime: after.startTime,
+        instructorName: after.instructorName,
+      });
+    }
     return;
   }
 
-  if (CANCELLATION_NOTIFY_STATES.has(after.estado)) {
+  if (CANCELLATION_NOTIFY_STATES.has(after.estado) && isValidRecipientEmail(recipient.email)) {
     await sendReservationCancelledEmail({
       to: recipient.email,
       nombre: recipient.nombre,
@@ -667,15 +753,59 @@ async function handleReservationUpdated(databaseId, event) {
       reason: after.motivoCancelacion,
     });
   }
+
+  if (STUDENT_CANCELLATION_STATES.has(after.estado)) {
+    await notifyAdmins(db, 'cancelacionAlumno', (admin) =>
+      sendAdminStudentCancelledEmail({
+        to: admin.email,
+        adminName: admin.nombre,
+        alumnoNombre: recipient.nombre || after.alumnoNombre,
+        dateKey: after.dateKey,
+        startTime: after.startTime,
+        status: after.estado,
+      })
+    );
+  }
+}
+
+async function notifyAdminsOfPendingPayment(db, data) {
+  await notifyAdmins(db, 'nuevoPagoPendiente', (admin) =>
+    sendAdminNewPaymentEmail({
+      to: admin.email,
+      adminName: admin.nombre,
+      alumnoNombre: data.alumnoNombre,
+      paqueteNombre: data.paqueteNombre,
+      monto: data.monto,
+      metodoPago: data.metodoPago,
+      fechaTransferencia: data.fechaTransferencia,
+      numeroOperacion: data.numeroOperacion,
+    })
+  );
+}
+
+async function handlePaymentCreated(databaseId, event) {
+  const data = event.data?.data();
+  if (!data) return;
+  if (data.estado !== 'pendiente_conciliacion' && data.estado !== 'pendiente') return;
+
+  const db = getFirestore(databaseId);
+  await notifyAdminsOfPendingPayment(db, data);
 }
 
 async function handlePaymentUpdated(databaseId, event) {
   const before = event.data?.before?.data();
   const after = event.data?.after?.data();
   if (!before || !after || before.estado === after.estado) return;
-  if (!PAYMENT_NOTIFY_STATES.has(after.estado)) return;
 
   const db = getFirestore(databaseId);
+
+  if (after.estado === 'pendiente_conciliacion' || after.estado === 'pendiente') {
+    await notifyAdminsOfPendingPayment(db, after);
+    return;
+  }
+
+  if (!PAYMENT_NOTIFY_STATES.has(after.estado)) return;
+
   const recipient = await resolveStudentRecipient(
     db,
     after.usuarioId,
@@ -777,6 +907,83 @@ export const onPaymentUpdatedTesting = onDocumentUpdated(
 export const onPaymentUpdatedProd = onDocumentUpdated(
   { document: 'pagos/{pagoId}', database: 'emuna-prod' },
   (event) => handlePaymentUpdated('emuna-prod', event)
+);
+
+/**
+ * Notifican a las administradoras cuando ingresa un nuevo pago pendiente de conciliación (testing y prod).
+ */
+export const onPaymentCreatedTesting = onDocumentCreated(
+  { document: 'pagos/{pagoId}', database: 'emuna-testing' },
+  (event) => handlePaymentCreated('emuna-testing', event)
+);
+
+export const onPaymentCreatedProd = onDocumentCreated(
+  { document: 'pagos/{pagoId}', database: 'emuna-prod' },
+  (event) => handlePaymentCreated('emuna-prod', event)
+);
+
+async function processDailyAdminSummaryForDatabase(databaseId, todayKey) {
+  const db = getFirestore(databaseId);
+  const settings = await getAdminNotificationSettings(db);
+  if (settings.resumenDiario === false) return;
+
+  const admins = await resolveAdminRecipients(db);
+  if (!admins.length) return;
+
+  const [turnsSnap, pendingPaymentsSnap] = await Promise.all([
+    db.collection('turnos_clase').where('dateKey', '==', todayKey).get(),
+    db.collection('pagos').where('estado', '==', 'pendiente_conciliacion').get(),
+  ]);
+
+  const activeTurns = turnsSnap.docs
+    .map((docSnap) => docSnap.data() || {})
+    .filter((t) => t.estado !== 'cancelado' && t.estado !== 'inhabilitado')
+    .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+
+  const totalTurns = activeTurns.length;
+  const totalReserved = activeTurns.reduce((sum, t) => sum + (Number(t.cuposOcupados) || 0), 0);
+  const totalCapacity = activeTurns.reduce((sum, t) => sum + (Number(t.capacidad) || 4), 0);
+  const emptyTurns = activeTurns.filter((t) => (Number(t.cuposOcupados) || 0) === 0).length;
+  const classesList = activeTurns.map((t) => ({
+    startTime: t.startTime || '',
+    occupied: Number(t.cuposOcupados) || 0,
+    capacity: Number(t.capacidad) || 4,
+    instructorName: t.instructorName || '',
+  }));
+
+  await Promise.all(
+    admins.map((admin) =>
+      sendAdminDailySummaryEmail({
+        to: admin.email,
+        adminName: admin.nombre,
+        dateKey: todayKey,
+        totalTurns,
+        totalReserved,
+        totalCapacity,
+        emptyTurns,
+        pendingPaymentsCount: pendingPaymentsSnap.size,
+        classesList,
+      })
+    )
+  );
+}
+
+/**
+ * Cron diario a las 08:00 hs: envía resumen de la jornada a las administradoras activas.
+ */
+export const sendAdminDailySummary = onSchedule(
+  {
+    schedule: '0 8 * * *',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  },
+  async () => {
+    const todayKey = getArgentinaDateKey(0);
+    await Promise.all(
+      TARGET_DATABASES.map((databaseId) =>
+        processDailyAdminSummaryForDatabase(databaseId, todayKey)
+      )
+    );
+  }
 );
 
 /**
