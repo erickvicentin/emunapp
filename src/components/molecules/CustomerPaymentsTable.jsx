@@ -1,12 +1,23 @@
 import React from 'react';
+import Button from '../atoms/Button';
+import Icon from '../atoms/Icon';
 import { formatArsPrice } from '../../services/packageService';
-import { formatPaymentDateTime, PAYMENT_STATUS_META } from '../../services/paymentService';
+import {
+  buildPaymentWhatsappNoticeUrl,
+  formatPaymentDateTime,
+  PAYMENT_STATUS_META,
+} from '../../services/paymentService';
 
 /**
  * CustomerPaymentsTable Molecule
  * Desktop table view for the student's payment history.
  */
-export default function CustomerPaymentsTable({ payments }) {
+export default function CustomerPaymentsTable({
+  payments,
+  studentName = '',
+  isMutating = false,
+  onInformPayment,
+}) {
   return (
     <div
       tabIndex={0}
@@ -17,7 +28,7 @@ export default function CustomerPaymentsTable({ payments }) {
     >
       <table
         data-testid="customer-payments-table"
-        className="w-full text-left border-collapse min-w-[700px]"
+        className="w-full text-left border-collapse min-w-[780px]"
       >
         <caption id="customer-payments-table-caption" className="sr-only">
           Historial de pagos de la alumna
@@ -28,6 +39,7 @@ export default function CustomerPaymentsTable({ payments }) {
             <th scope="col" className="py-3 px-4 font-semibold">Paquete / Ítem</th>
             <th scope="col" className="py-3 px-4 font-semibold">Importe</th>
             <th scope="col" className="py-3 px-4 font-semibold">Estado</th>
+            <th scope="col" className="py-3 px-4 font-semibold text-right">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-surface-container">
@@ -36,6 +48,8 @@ export default function CustomerPaymentsTable({ payments }) {
               PAYMENT_STATUS_META[pay.estado] || PAYMENT_STATUS_META.pendiente_conciliacion;
             const methodLabel =
               pay.metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia';
+            const canInform = pay.estado === 'pendiente_informar';
+            const isPendingConfirmation = pay.estado === 'pendiente_conciliacion';
 
             return (
               <tr
@@ -88,6 +102,34 @@ export default function CustomerPaymentsTable({ payments }) {
                   >
                     {badge.label}
                   </span>
+                </td>
+                <td className="py-3.5 px-4 whitespace-nowrap text-right">
+                  {canInform ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      disabled={isMutating}
+                      data-testid={`customer-inform-payment-btn-${pay.id}`}
+                      onClick={() => onInformPayment?.(pay)}
+                    >
+                      <span>Informar pago</span>
+                    </Button>
+                  ) : isPendingConfirmation ? (
+                    <Button
+                      href={buildPaymentWhatsappNoticeUrl(pay, studentName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="outline"
+                      size="sm"
+                      data-testid={`customer-whatsapp-notice-btn-${pay.id}`}
+                    >
+                      <Icon name="chat" className="text-[16px] mr-1.5" />
+                      <span>Dar aviso por Whatsapp</span>
+                    </Button>
+                  ) : (
+                    <span className="text-body-sm text-on-surface-variant">—</span>
+                  )}
                 </td>
               </tr>
             );

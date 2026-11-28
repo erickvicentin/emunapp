@@ -8,6 +8,7 @@ import CustomerPaymentsTable from '../molecules/CustomerPaymentsTable';
 import PaginationBar from '../molecules/PaginationBar';
 import TransferDetailsCard from '../molecules/TransferDetailsCard';
 import { DEFAULT_PAGE_SIZE, usePagination } from '../../hooks/usePagination';
+import { useAuth } from '../../hooks/useAuth';
 
 const EMPTY_LIST = [];
 
@@ -29,6 +30,10 @@ export default function CustomerPaymentsSection({
   onClearRejected,
 }) {
   const navigate = useNavigate();
+  const { user, userProfile } = useAuth();
+  const studentName = userProfile?.nombre
+    ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
+    : user?.displayName || '';
   const reportDialogRef = useRef(null);
   const [paymentToInform, setPaymentToInform] = useState(null);
 
@@ -157,6 +162,7 @@ export default function CustomerPaymentsSection({
               <CustomerPaymentMobileCard
                 key={pay.id}
                 payment={pay}
+                studentName={studentName}
                 isMutating={isMutating}
                 onInformPayment={handleOpenInformModal}
               />
@@ -164,7 +170,12 @@ export default function CustomerPaymentsSection({
           </div>
 
           {/* Desktop table (>= md) */}
-          <CustomerPaymentsTable payments={pagination.paginatedItems} />
+          <CustomerPaymentsTable
+            payments={pagination.paginatedItems}
+            studentName={studentName}
+            isMutating={isMutating}
+            onInformPayment={handleOpenInformModal}
+          />
 
           <PaginationBar
             currentPage={pagination.currentPage}
