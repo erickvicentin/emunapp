@@ -654,20 +654,19 @@ export async function fetchWeekReservations(dateKeys = []) {
 }
 
 export async function assignStudentToTurn({ turnoId, student }) {
-  const existingQ = query(
+  const userReservationsQ = query(
     collection(db, RESERVATIONS_COLLECTION),
-    where('turnoId', '==', turnoId),
     where('usuarioId', '==', student.id)
   );
-  const existingSnap = await getDocs(existingQ);
-  const alreadyConfirmed = existingSnap.docs.some(
-    (d) => d.data()?.estado === 'confirmada'
+  const userReservationsSnap = await getDocs(userReservationsQ);
+  const alreadyConfirmedInTurn = userReservationsSnap.docs.some(
+    (d) => d.data()?.turnoId === turnoId && d.data()?.estado === 'confirmada'
   );
-  if (alreadyConfirmed) {
+  if (alreadyConfirmedInTurn) {
     throw new Error(`${student.nombreApellido} ya está inscripto/a en este turno.`);
   }
 
-  const membership = await findEarliestActiveMembership(student.id);
+  const todayKey = formatDateKey(new Date());
   const reservationId = `${turnoId}_${student.id}_${Date.now()}`;
 
   await runTransaction(db, async (tx) => {
@@ -682,29 +681,46 @@ export async function assignStudentToTurn({ turnoId, student }) {
       throw new Error('No se pueden asignar alumnos a un turno cancelado.');
     }
 
+    const hasActiveSameDay = userReservationsSnap.docs.some(
+      (d) =>
+        d.data()?.dateKey === turnData.dateKey &&
+        ['confirmada', 'esperando_comprobante', 'pendiente_confirmacion'].includes(
+          d.data()?.estado
+        )
+    );
+    if (hasActiveSameDay) {
+      throw new Error(
+        `${student.nombreApellido} ya tiene una sesión asignada en este mismo día.`
+      );
+    }
+
     const occupied = Number(turnData.cuposOcupados) || 0;
     const capacity = Number(turnData.maxCapacity) || DEFAULT_MAX_CAPACITY;
     if (occupied >= capacity) {
       throw new Error('Este turno ya alcanzó los 4 cupos máximos.');
     }
 
+    const isPastDay = String(turnData.dateKey || '') < todayKey;
     let creditoConsumido = false;
     let membresiaId = null;
-    let origen = 'admin_sin_cupo';
+    let origen = isPastDay ? 'admin_historico' : 'admin_sin_cupo';
 
-    if (membership) {
-      const memRef = doc(db, MEMBERSHIPS_COLLECTION, membership.id);
-      const memSnap = await tx.get(memRef);
-      if (memSnap.exists() && (Number(memSnap.data().creditosRestantes) || 0) > 0) {
-        const nextCredits = Number(memSnap.data().creditosRestantes) - 1;
-        tx.update(memRef, {
-          creditosRestantes: nextCredits,
-          estado: nextCredits === 0 ? 'agotada' : 'activa',
-          actualizadoEn: serverTimestamp(),
-        });
-        creditoConsumido = true;
-        membresiaId = membership.id;
-        origen = 'admin_credito';
+    if (!isPastDay) {
+      const membership = await findEarliestActiveMembership(student.id);
+      if (membership) {
+        const memRef = doc(db, MEMBERSHIPS_COLLECTION, membership.id);
+        const memSnap = await tx.get(memRef);
+        if (memSnap.exists() && (Number(memSnap.data().creditosRestantes) || 0) > 0) {
+          const nextCredits = Number(memSnap.data().creditosRestantes) - 1;
+          tx.update(memRef, {
+            creditosRestantes: nextCredits,
+            estado: nextCredits === 0 ? 'agotada' : 'activa',
+            actualizadoEn: serverTimestamp(),
+          });
+          creditoConsumido = true;
+          membresiaId = membership.id;
+          origen = 'admin_credito';
+        }
       }
     }
 
@@ -765,7 +781,11 @@ export async function removeReservationByAdmin(reserva) {
         estado: 'activa',
         actualizadoEn: serverTimestamp(),
       });
-    } else if (resData.estado === 'confirmada' && resData.usuarioId) {
+    } else if (
+      resData.creditoConsumido !== false &&
+      resData.estado === 'confirmada' &&
+      resData.usuarioId
+    ) {
       createIndividualRefundMembershipInTx(tx, {
         usuarioId: resData.usuarioId,
         reservaId: reserva.id,
