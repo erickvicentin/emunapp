@@ -15,6 +15,7 @@ import CalendarSection from '../components/organisms/CalendarSection';
 import CobrosSection from '../components/organisms/CobrosSection';
 import AdminConfigSection from '../components/organisms/AdminConfigSection';
 import AdminDashboardOverview from '../components/organisms/AdminDashboardOverview';
+import AdminProfileSection from '../components/organisms/AdminProfileSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
@@ -193,6 +194,7 @@ function AdminSectionContent({
   renderCalendar,
   renderCobros,
   renderConfig,
+  renderProfile,
   renderDashboard,
 }) {
   if (activeNavItem.id === 'alumnos') {
@@ -237,6 +239,9 @@ function AdminSectionContent({
   }
   if (activeNavItem.id === 'configuracion') {
     return renderConfig();
+  }
+  if (activeNavItem.id === 'perfil') {
+    return renderProfile();
   }
   if (activeNavItem.id !== 'dashboard') {
     return <AdminPlaceholderSection activeNavItem={activeNavItem} />;
@@ -380,6 +385,9 @@ export default function AdministratorPage() {
               )
             }
           />
+        )}
+        renderProfile={() => (
+          <AdminProfileSection showSnackbar={showSnackbar} />
         )}
         renderDashboard={() => (
           <AdminDashboardOverview

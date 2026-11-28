@@ -54,4 +54,11 @@ export const ADMIN_NAV_ITEMS = [
     description: 'Cuenta destino, ventana de cancelación, profesora y avisos generales.',
     adminOnly: true,
   },
+  {
+    id: 'perfil',
+    path: '/administrador/perfil',
+    label: 'Mi perfil',
+    icon: 'account_circle',
+    description: 'Visualizá y actualizá tus datos personales, correo, Google y contraseña.',
+  },
 ];

@@ -11,6 +11,7 @@ export default function CustomerAccountSecurityCards({
   hasGoogleLinked,
   hasPasswordProvider,
   isGoogleMutating,
+  emailDescription = 'Usamos tu correo para enviarte confirmaciones de turnos, pagos y códigos de seguridad.',
   onOpenEmailModal,
   onToggleGoogle,
   onOpenPasswordModal,
@@ -28,9 +29,12 @@ export default function CustomerAccountSecurityCards({
               <span>Correo electrónico</span>
             </h2>
             <p className="font-body-sm text-body-sm text-on-surface-variant">
-              Usamos tu correo para enviarte confirmaciones de turnos, pagos y códigos de seguridad.
+              {emailDescription}
             </p>
-            <div className="pt-1 flex justify-center sm:justify-start w-full">
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-3 pt-1">
+            <div className="flex justify-center sm:justify-start min-w-0 max-w-full">
               {visibleEmail ? (
                 <div
                   data-testid="customer-profile-current-email"
@@ -49,16 +53,14 @@ export default function CustomerAccountSecurityCards({
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="flex justify-center sm:justify-end">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onOpenEmailModal}
               data-testid="customer-profile-email-btn"
-              className="bg-surface-container-lowest"
+              className="bg-surface-container-lowest shrink-0"
             >
               <Icon name="edit" className="text-[16px] mr-1.5" />
               <span>{visibleEmail ? 'Cambiar correo' : 'Agregar correo'}</span>
@@ -78,25 +80,24 @@ export default function CustomerAccountSecurityCards({
             <p className="font-body-sm text-body-sm text-on-surface-variant">
               Vinculá tu cuenta de Google para ingresar con un clic sin escribir tu contraseña.
             </p>
-            <div className="pt-1 flex justify-center sm:justify-start w-full">
-              <span
-                data-testid="customer-profile-google-status"
-                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-body-sm font-medium border ${
-                  hasGoogleLinked
-                    ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800'
-                    : 'bg-surface-container-lowest border-outline-variant/60 text-on-surface-variant'
-                }`}
-              >
-                <Icon
-                  name={hasGoogleLinked ? 'check_circle' : 'link_off'}
-                  className="text-[16px]"
-                />
-                <span>{hasGoogleLinked ? 'Google vinculado' : 'Google no vinculado'}</span>
-              </span>
-            </div>
           </div>
 
-          <div className="flex justify-center sm:justify-end">
+          <div className="flex flex-col sm:flex-row items-center sm:justify-between gap-3 pt-1">
+            <span
+              data-testid="customer-profile-google-status"
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-body-sm font-medium border ${
+                hasGoogleLinked
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-800'
+                  : 'bg-surface-container-lowest border-outline-variant/60 text-on-surface-variant'
+              }`}
+            >
+              <Icon
+                name={hasGoogleLinked ? 'check_circle' : 'link_off'}
+                className="text-[16px]"
+              />
+              <span>{hasGoogleLinked ? 'Google vinculado' : 'Google no vinculado'}</span>
+            </span>
+
             <Button
               type="button"
               variant={hasGoogleLinked ? 'outline' : 'primary'}
@@ -104,6 +105,7 @@ export default function CustomerAccountSecurityCards({
               disabled={isGoogleMutating}
               onClick={onToggleGoogle}
               data-testid="customer-profile-google-btn"
+              className="shrink-0"
             >
               <Icon name={hasGoogleLinked ? 'link_off' : 'add_link'} className="text-[16px] mr-1.5" />
               <span>
