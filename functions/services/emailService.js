@@ -347,3 +347,32 @@ export async function sendClassReminderEmail({
     }),
   });
 }
+
+export async function sendEmailChangeVerificationCodeEmail({
+  to,
+  nombre,
+  code,
+  expiresInMinutes = 10,
+}) {
+  const firstName = String(nombre || '').trim() || 'alumne';
+  const safeCode = escapeHtml(code);
+
+  return sendEmail({
+    to,
+    subject: `Tu código de verificación (${code}) - Emuná Pilates`,
+    text: `Hola ${firstName}, tu código para confirmar el correo electrónico en Emuná Pilates es: ${code}. Vence en ${expiresInMinutes} minutos.`,
+    html: buildEmailLayout({
+      title: 'Confirmá tu correo electrónico',
+      greeting: `Hola ${firstName},`,
+      bodyHtml: `
+        <p style="margin:0 0 12px;">Recibimos una solicitud para vincular o actualizar tu correo electrónico en <strong>Emuná Pilates</strong>.</p>
+        <p style="margin:0 0 10px;">Ingresá este código de 6 dígitos en la aplicación para confirmar el cambio:</p>
+        <div style="background:#f5eddf;border-radius:12px;padding:16px;margin:0 0 14px;text-align:center;">
+          <span style="font-size:28px;font-weight:700;letter-spacing:6px;color:#3d2b1f;font-family:monospace;">${safeCode}</span>
+        </div>
+        <p style="margin:0;font-size:13px;color:#6c6660;">Este código vence en ${expiresInMinutes} minutos. Si no solicitaste este cambio, podés ignorar este mensaje.</p>
+      `,
+      ctaLabel: 'Ir a Mi perfil',
+    }),
+  });
+}

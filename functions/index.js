@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
@@ -8,6 +8,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import {
   isValidRecipientEmail,
   sendClassReminderEmail,
+  sendEmailChangeVerificationCodeEmail,
   sendPaymentStatusEmail,
   sendReservationCancelledEmail,
   sendReservationConfirmedEmail,
@@ -801,3 +802,152 @@ export const sendUpcomingClassReminders = onSchedule(
     );
   }
 );
+
+const EMAIL_VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const EMAIL_VERIFICATION_MAX_ATTEMPTS = 5;
+
+function hashVerificationCode(uid, email, code) {
+  return createHash('sha256')
+    .update(`${uid}:${email}:${code}`)
+    .digest('hex');
+}
+
+function normalizeCandidateEmail(rawEmail) {
+  return String(rawEmail || '').trim().toLowerCase();
+}
+
+/**
+ * Genera y envía un código de 6 dígitos al nuevo correo electrónico de la alumna
+ * para confirmar el cambio o alta de email en su perfil.
+ */
+export const requestEmailChangeCode = onCall({ cors: true }, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Debes iniciar sesión para realizar esta operación.');
+  }
+
+  const uid = request.auth.uid;
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const newEmail = normalizeCandidateEmail(request.data?.newEmail);
+
+  if (!isValidRecipientEmail(newEmail)) {
+    throw new HttpsError('invalid-argument', 'Ingresá un correo electrónico válido.');
+  }
+
+  const authInstance = getAuth();
+  try {
+    const existing = await authInstance.getUserByEmail(newEmail);
+    if (existing && existing.uid !== uid) {
+      throw new HttpsError(
+        'already-exists',
+        'Ese correo electrónico ya está asociado a otra cuenta.'
+      );
+    }
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    if (err?.code !== 'auth/user-not-found') {
+      throw new HttpsError('internal', 'No se pudo validar la disponibilidad del correo.');
+    }
+  }
+
+  const db = getFirestore(databaseId);
+  const userSnap = await db.collection('usuarios').doc(uid).get();
+  const userData = userSnap.exists ? userSnap.data() || {} : {};
+  const code = String(randomInt(100000, 1000000));
+  const codeHash = hashVerificationCode(uid, newEmail, code);
+
+  await db.collection('email_verification_codes').doc(uid).set({
+    uid,
+    newEmail,
+    codeHash,
+    attempts: 0,
+    expiresAtMs: Date.now() + EMAIL_VERIFICATION_TTL_MS,
+    creadoEn: FieldValue.serverTimestamp(),
+  });
+
+  const emailResult = await sendEmailChangeVerificationCodeEmail({
+    to: newEmail,
+    nombre: userData.nombre || '',
+    code,
+    expiresInMinutes: 10,
+  });
+
+  if (!emailResult?.sent) {
+    throw new HttpsError(
+      'failed-precondition',
+      'No se pudo enviar el código porque el servicio SMTP no está configurado o falló.'
+    );
+  }
+
+  return { success: true, expiresInMinutes: 10 };
+});
+
+/**
+ * Verifica el código de 6 dígitos enviado por correo y actualiza el email
+ * tanto en Firebase Auth como en el perfil de Firestore.
+ */
+export const confirmEmailChangeCode = onCall({ cors: true }, async (request) => {
+  if (!request.auth?.uid) {
+    throw new HttpsError('unauthenticated', 'Debes iniciar sesión para realizar esta operación.');
+  }
+
+  const uid = request.auth.uid;
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const newEmail = normalizeCandidateEmail(request.data?.newEmail);
+  const code = String(request.data?.code || '').trim();
+
+  if (!isValidRecipientEmail(newEmail) || !/^\d{6}$/.test(code)) {
+    throw new HttpsError('invalid-argument', 'Ingresá un correo válido y un código de 6 dígitos.');
+  }
+
+  const db = getFirestore(databaseId);
+  const codeRef = db.collection('email_verification_codes').doc(uid);
+  const codeSnap = await codeRef.get();
+
+  if (!codeSnap.exists) {
+    throw new HttpsError('not-found', 'No hay un código pendiente. Solicitá uno nuevo.');
+  }
+
+  const record = codeSnap.data() || {};
+  if (record.newEmail !== newEmail) {
+    throw new HttpsError('invalid-argument', 'El correo no coincide con el código solicitado.');
+  }
+
+  if (Date.now() > Number(record.expiresAtMs || 0)) {
+    await codeRef.delete();
+    throw new HttpsError('deadline-exceeded', 'El código venció. Solicitá uno nuevo.');
+  }
+
+  const attempts = Number(record.attempts || 0);
+  if (attempts >= EMAIL_VERIFICATION_MAX_ATTEMPTS) {
+    await codeRef.delete();
+    throw new HttpsError('resource-exhausted', 'Demasiados intentos fallidos. Solicitá un nuevo código.');
+  }
+
+  const expectedHash = Buffer.from(String(record.codeHash || ''), 'hex');
+  const actualHash = Buffer.from(hashVerificationCode(uid, newEmail, code), 'hex');
+  const isMatch =
+    expectedHash.length === actualHash.length &&
+    timingSafeEqual(expectedHash, actualHash);
+
+  if (!isMatch) {
+    await codeRef.update({ attempts: attempts + 1 });
+    throw new HttpsError('invalid-argument', 'El código ingresado es incorrecto.');
+  }
+
+  await getAuth().updateUser(uid, {
+    email: newEmail,
+    emailVerified: true,
+  });
+
+  await db.collection('usuarios').doc(uid).set(
+    {
+      email: newEmail,
+      authEmail: newEmail,
+      actualizadoEn: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  await codeRef.delete();
+  return { success: true, email: newEmail };
+});
