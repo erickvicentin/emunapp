@@ -8,7 +8,11 @@ export const STUDIO_INFO = {
   tagline: 'Estudio Pilates Reformer',
   city: 'Resistencia, Chaco',
   address: 'Fray Luis Beltrán 245, H3500 Resistencia, Chaco',
-  addressReference: 'Frente a plazoleta arbolada • Fácil estacionamiento',
+  addressReference: 'Zona Residencial • Fácil estacionamiento',
+  mapEmbedUrl:
+    'https://maps.google.com/maps?q=Fray+Luis+Beltr%C3%A1n+245,+Resistencia,+Chaco,+Argentina&t=&z=16&ie=UTF8&iwloc=&output=embed',
+  mapUrl:
+    'https://www.google.com/maps/search/?api=1&query=Fray+Luis+Beltr%C3%A1n+245,+Resistencia,+Chaco,+Argentina',
   phone: '+54 (3704) 578354',
   whatsappUrl: 'https://wa.me/543704578354?text=Hola!%20Quisiera%20consultar%20por%20clases%20de%20Pilates%20Reformer%20en%20Emun%C3%A1',
   email: 'info@emunapilates.com',
