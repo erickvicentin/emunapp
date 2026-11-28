@@ -18,6 +18,12 @@ const CASH_NOTICE_DIALOG = '[data-testid="cash-notice-dialog"]';
 const ADMIN_CONFIG_SECTION = '[data-testid="admin-config-section"]';
 const STUDIO_CANCEL_INPUT = '[data-testid="studio-cancel-window-input"]';
 const STUDIO_PROFESSOR_INPUT = '[data-testid="studio-professor-name-input"]';
+const ADMIN_EMAIL_NOTIF_CARD = '[data-testid="admin-email-notif-card"]';
+const NOTIF_SWITCH_NEW_PAYMENT = '[data-testid="admin-notif-switch-nuevo-pago"]';
+const NOTIF_SWITCH_STUDENT_CANCEL = '[data-testid="admin-notif-switch-cancelacion-alumno"]';
+const NOTIF_SWITCH_LAST_MINUTE = '[data-testid="admin-notif-switch-reserva-ultimo-momento"]';
+const NOTIF_SWITCH_DAILY_SUMMARY = '[data-testid="admin-notif-switch-resumen-diario"]';
+const NOTIF_SAVE_BTN = '[data-testid="admin-email-notif-save-btn"]';
 const BULK_EMAIL_BTN = '[data-testid="admin-config-bulk-email-btn"]';
 
 class CobrosPage extends BasePage {
@@ -70,7 +76,19 @@ class CobrosPage extends BasePage {
       this.isElementDisplayed(COBROS_CONFIG_CARD),
       this.isElementDisplayed(STUDIO_CANCEL_INPUT),
       this.isElementDisplayed(STUDIO_PROFESSOR_INPUT),
+      this.isElementDisplayed(ADMIN_EMAIL_NOTIF_CARD),
       this.isElementDisplayed(BULK_EMAIL_BTN),
+    ]);
+    return checks.every(Boolean);
+  }
+
+  async areAdminEmailNotificationTogglesDisplayed() {
+    const checks = await Promise.all([
+      this.isElementDisplayed(NOTIF_SWITCH_NEW_PAYMENT),
+      this.isElementDisplayed(NOTIF_SWITCH_STUDENT_CANCEL),
+      this.isElementDisplayed(NOTIF_SWITCH_LAST_MINUTE),
+      this.isElementDisplayed(NOTIF_SWITCH_DAILY_SUMMARY),
+      this.isElementDisplayed(NOTIF_SAVE_BTN),
     ]);
     return checks.every(Boolean);
   }
