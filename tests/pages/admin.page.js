@@ -11,6 +11,7 @@ const NAV_ITEM_BY_SECTION = {
   cobros: '[data-testid="admin-nav-cobros"]',
   precios: '[data-testid="admin-nav-precios"]',
   usuarios: '[data-testid="admin-nav-usuarios"]',
+  configuracion: '[data-testid="admin-nav-configuracion"]',
 };
 
 const getBedCardSelector = (bedId) => `[data-testid="admin-bed-card-${bedId}"]`;

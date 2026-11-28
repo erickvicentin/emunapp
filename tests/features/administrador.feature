@@ -1,3 +1,4 @@
+@sanity-administrator
 Feature: Administrator Panel
   As an Emuná Pilates administrator
   I want to access the administration panel and navigate through its sections
@@ -23,8 +24,9 @@ Feature: Administrator Panel
       | calendario | /administrador/calendario |
       | alumnos    | /administrador/alumnos    |
       | cobros     | /administrador/cobros     |
-      | precios    | /administrador/precios    |
-      | usuarios   | /administrador/usuarios   |
+      | precios       | /administrador/precios       |
+      | usuarios      | /administrador/usuarios      |
+      | configuracion | /administrador/configuracion |
 
   @EMUNA-003
   Scenario: Toggle bed check-in status on the dashboard

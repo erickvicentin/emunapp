@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import Input from '../atoms/Input';
 import Icon from '../atoms/Icon';
+import PasswordRequirementsChecklist from './PasswordRequirementsChecklist';
 
 /**
  * AccountCredentialsFields Molecule
- * Handles Email, Password, and Confirm Password fields for manual registration
+ * Handles Email (or DNI-only opt-out), Password, and Confirm Password fields for manual registration
  */
 export default function AccountCredentialsFields({
   email,
+  noEmail = false,
+  onToggleNoEmail,
   password,
   confirmPassword,
   onChange,
@@ -17,19 +20,41 @@ export default function AccountCredentialsFields({
 
   return (
     <>
-      <Input
-        id="register-email"
-        name="email"
-        type="email"
-        label="Correo Electrónico"
-        value={email}
-        onChange={onChange}
-        placeholder="tu@email.com"
-        icon="alternate_email"
-        required
-        error={errors.email}
-        autoComplete="email"
-      />
+      <div className="space-y-2">
+        <label className="inline-flex items-center gap-2 text-body-sm text-on-surface cursor-pointer select-none">
+          <input
+            type="checkbox"
+            data-testid="register-no-email-checkbox"
+            checked={noEmail}
+            onChange={(e) => onToggleNoEmail?.(e.target.checked)}
+            className="w-4 h-4 rounded border-outline-variant accent-primary cursor-pointer"
+          />
+          <span>No tengo email (registrarme solo con mi DNI)</span>
+        </label>
+
+        {noEmail ? (
+          <p
+            data-testid="register-no-email-hint"
+            className="p-3 rounded-xl bg-surface-container-low border border-surface-container-high text-body-sm text-on-surface-variant"
+          >
+            Vas a poder iniciar sesión ingresando directamente tu <strong>DNI</strong> y tu contraseña.
+          </p>
+        ) : (
+          <Input
+            id="register-email"
+            name="email"
+            type="email"
+            label="Correo Electrónico"
+            value={email}
+            onChange={onChange}
+            placeholder="tu@email.com"
+            icon="alternate_email"
+            required
+            error={errors.email}
+            autoComplete="email"
+          />
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
         <Input
@@ -73,6 +98,11 @@ export default function AccountCredentialsFields({
           autoComplete="new-password"
         />
       </div>
+
+      <PasswordRequirementsChecklist
+        password={password}
+        testIdPrefix="register-password-rule"
+      />
     </>
   );
 }

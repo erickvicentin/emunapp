@@ -131,3 +131,126 @@
 - Se adoptaron rutas `/administrador/alumnos/detail?studentId=...` y `/administrador/alumnos/edit?studentId=...` para mantener consistencia directa con el patrón existente `/administrador/:section/:action` (`/administrador/alumnos/nuevo`).
 - **Pros:** Reutiliza la estructura de rutas `/administrador/:section/:action` sin agregar más niveles de rutas anidadas y permite manejar fácilmente IDs ausentes o inválidos.
 - **Contras:** En REST/SPA convencionales, los path params (`/alumnos/:studentId` y `/alumnos/:studentId/editar`) suelen ser más semánticos para identificar un recurso específico, reservando los query params para filtros o paginación. Si en el futuro se migra a path params, solo requiere ajustar `App.jsx` y `resolveAdminRoute`.
+
+
+---
+
+## ADR-007: Sección Usuarios (Staff) Exclusiva para Administradora (`/administrador/usuarios`) e Integración Firebase
+
+- **Fecha:** 2026-11-15
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se agregó el helper `isAdmin()` (`rol == 'administradora'`) y se restringió el alta, edición y eliminación de documentos con `rol == 'staff'` exclusivamente a `isAdmin()`, mientras `isStaff()` continúa limitado a gestionar cuentas `customer`.
+- **Cloud Functions (`functions/index.js`):** Se refactorizó la lógica compartida (`hasAdminClaim`, `assertAdminCaller`, `createManagedAccount`, `deleteManagedAccount`) y se exportaron `createStaffAccount` (asigna custom claim `{ rol: 'staff' }`) y `deleteStaffAccount`, restringidas a callers con rol `administradora`.
+- **Servicios y Hook:** Se exportó `mapCallableError` en `src/services/studentService.js`, se creó `src/services/staffService.js` (`fetchStaffUsers`, `createStaffViaAdmin`, `deleteStaffViaAdmin`, `updateStaffProfile`, `updateStaffActiveStatus`) y `src/hooks/useStaffManager.js` (con estado inicial `[]` y skeleton activo mientras `isAdmin` carga).
+- **UI y Reutilización Atómica:** Se generalizaron `StudentsHeader` y `StudentsTable` (incluyendo skeleton de carga y switch `active`), se extrajo la molécula `DetailField` (compartida entre `StudentDetailSection` y `StaffDetailSection`), y se crearon `StaffSection`, `StaffCreateSection`, `StaffEditSection` y `StaffDetailSection`.
+- **Aislamiento de Navegación y Rutas:** Se marcó `usuarios` con `adminOnly: true` en `src/data/adminNavItems.js`, se filtró en `AdminSidebar` según `userRole`, y se protegió `/administrador/usuarios` (+ `nuevo`, `edit`, `detail`) en `resolveAdminRoute` de `AdministratorPage.jsx`.
+
+### Qué se quitó
+- Se reemplazó el placeholder `"Próximamente"` de la sección `usuarios` en `AdministratorPage.jsx`.
+- Se eliminó la duplicación del bloque de campo de detalle entre `StudentDetailSection` y `StaffDetailSection` mediante `DetailField`.
+
+### Por qué
+- El personal con rol `staff` no debe poder visualizar, crear, modificar, activar/desactivar ni eliminar otros usuarios `staff`; esa responsabilidad corresponde únicamente a `administradora` tanto en UI como en backend (`firestore.rules` + Cloud Functions).
+- Generalizar `StudentsHeader`, `StudentsTable` y extraer `DetailField` mantiene consistencia visual, reutiliza el skeleton de carga y evita duplicación en `src/`.
+
+### Pros y Contras
+- **Pros:** Defensa en profundidad (UI + Firestore Rules + Cloud Functions Admin SDK); alta reutilización de moléculas existentes; sin flash de datos mockeados durante la carga.
+- **Contras:** Requiere desplegar las reglas actualizadas de Firestore y las nuevas Cloud Functions (`createStaffAccount`, `deleteStaffAccount`) en Firebase para operar en producción/testing.
+
+
+---
+
+## ADR-008: Módulo de Cobros con Créditos Provisionales (24h), Parser Híbrido de Comprobantes y Conciliación Manual
+
+- **Fecha:** 2026-11-15 (actualizado 2026-11-26)
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se agregó `match /configuracion/{configId}` (lectura para usuarios activos/staff y escritura exclusiva para `administradora`), se habilitó la creación de avisos de pago en `/pagos` con estado `pendiente_conciliacion` (alumno titular o `staff`/`administradora`) y se habilitó la creación de membresías provisionales en `/membresias_usuario` con validación de campos obligatorios e inmutables, reservando aprobación/rechazo definitivo a `administradora`.
+- **Cloud Functions (`functions/index.js`):** Se agregó `expireProvisionalPayments` para vencer avisos provisionales expirados (por defecto tras 24h sin confirmación) y cancelar las reservas asociadas liberando cupos.
+- **Parser Híbrido de Comprobantes (`src/utils/receiptParser.js`):** Extracción local de número de operación, monto y fecha desde PDFs/texto/archivos + compresión de imagen en JPEG (`dataUrl`) editable antes de enviar.
+- **Servicio y Hook (`src/services/paymentService.js`, `src/hooks/usePaymentsManager.js`):** Gestión de configuración de cuenta destino (**Alias**, **CVU**, **Titular**, **CUIL/CUIT**) y plazo de vencimiento provisorio (24h por defecto), aviso de pago con límite de **1 aviso pendiente simultáneo** por alumno, acreditación provisional inmediata (`provisional: true`) y aprobación/rechazo manual por administradora (con anulación automática de reservas vinculadas si se rechaza o vence).
+- **UI Admin/Staff y Alumno (`CobrosSection`, `CobrosConfigCard`, `ReceiptPreviewModal`, `CashNoticeModal`, `ReportPaymentModal`, `CustomerPage`, `AdministratorPage`):** Flujo completo para que el alumno vea los datos de la cuenta destino, reporte transferencias/efectivo y reserve de inmediato, y para que `administradora` (o `staff` en modo lectura + registro de aviso en efectivo) gestione las conciliaciones manuales.
+- **Reservas (`src/services/scheduleService.js`):** Se actualizó `findEarliestActiveMembership` para excluir membresías canceladas o provisionales vencidas.
+
+### Qué se quitó
+- Se reemplazaron los datos mockeados de cobros pendientes (`INITIAL_PENDING_PAYMENTS`) en `AdministratorPage.jsx` y el placeholder estático de créditos/pagos en `CustomerPage.jsx` por datos en vivo de Firestore.
+- Por definición del cliente, se descartó la integración automática con la API de MercadoPago, priorizando la conciliación manual dentro de la ventana de 24 horas.
+
+### Por qué
+- Permitir que el alumno reserve clases inmediatamente al avisar un pago sin esperar conciliación manual reduce fricción operativa, mientras el límite de 1 aviso pendiente y la expiración automática a las 24h acotan el riesgo de abuso.
+- Mostrar explícitamente Alias, CVU, Titular y CUIL/CUIT configurables evita errores de transferencia del alumno y mantiene el control 100% en manos de la administración.
+
+### Pros y Contras
+- **Pros:** Reserva inmediata para el alumno; sin dependencia ni mantenimiento de credenciales/APIs externas de MercadoPago; menor carga manual con reconocimiento híbrido de comprobantes; trazabilidad completa en Firestore.
+- **Contras:** Requiere desplegar `firestore.rules` y `functions` (`expireProvisionalPayments`) en Firebase para ejecutar la limpieza automática en la nube.
+
+---
+
+## ADR-009: Sidebar Reutilizable (`DashboardSidebar`) y Enrutamiento del Panel de Alumno (`/customer/:section`)
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Organismo reutilizable (`src/components/organisms/DashboardSidebar.jsx`):** Se extrajo la lógica de navegación responsiva (barra lateral persistente en desktop `>= 1024px` con colapso y drawer deslizable con `popover="manual"`, `IntersectionObserver` y soporte de teclado/swipe en mobile) desde `AdminSidebar.jsx` a `DashboardSidebar.jsx`, manteniendo `AdminSidebar.jsx` como wrapper liviano con filtrado `adminOnly`.
+- **Navegación del Alumno (`src/data/customerNavItems.js`):** Se definieron las 4 secciones iniciales del panel de alumno: `Turnos` (`/customer/turnos`), `Pagos` (`/customer/pagos`), `Historial de Clases` (`/customer/historial`) y `Configuración` (`/customer/configuracion`).
+- **Enrutamiento (`src/App.jsx`, `src/layouts/DashboardLayout.jsx`, `src/pages/CustomerPage.jsx`):** Se configuró `/customer` con redirección a `/customer/turnos` y `/customer/:section` renderizando `CustomerPage` con `DashboardSidebar` (`sidebarId="customer-drawer"`) y vistas placeholder con el mensaje `"Próximo a implementar"`.
+- **Cobertura E2E (`tests/features/customerPanel.feature`, `tests/pages/customer.page.js`, `tests/steps/customerPanel.steps.js`):** Se agregaron los escenarios `@EMUNA-101` y `@EMUNA-102` y el método `loginAsCustomer` en `tests/pages/login.page.js`.
+
+### Qué se quitó
+- Se reemplazó el contenido previo de `CustomerPage.jsx` por el esqueleto de secciones con sidebar y placeholders `"Próximo a implementar"`, mientras se implementan iterativamente cada módulo de alumno.
+
+### Por qué
+- Evitar duplicar la lógica compleja del drawer/sidebar entre administración y alumno siguiendo Atomic Design y el principio DRY.
+- Establecer una estructura de rutas predecible (`/customer/:section`) equivalente a `/administrador/:section` antes de construir las pantallas individuales de Turnos, Pagos, Historial de Clases y Configuración.
+
+### Pros y Contras
+- **Pros:** Cero duplicación entre `AdminSidebar` y el sidebar de alumno; navegación directa por URL; base limpia para implementar cada sección por separado.
+- **Contras:** Las funcionalidades previas de `CustomerPage` (saldo y reporte de pago) quedan temporalmente reemplazadas por el placeholder de `Pagos` hasta migrarlas a su sección dedicada.
+
+---
+
+## ADR-010: Calendario Semanal de Solo Lectura y Banner de Créditos en la Sección Turnos del Alumno
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Utilidades (`src/utils/scheduleUtils.js`):** Se agregó `STUDENT_BOOK_MIN_MINUTES = 10`, `isTurnBookingOpen` (valida que falten al menos 10 minutos para el inicio del turno) y `buildCustomerWeekTurns` (combina turnos persistidos en `turnos_clase` con turnos virtuales de `horarios_base` para hoy y días futuros sin escribir en Firestore).
+- **Hook (`src/hooks/useCustomerCalendar.js`):** Carga en modo solo lectura `horarios_base`, `dias_cerrados`, `turnos_clase` y `membresias_usuario` del alumno autenticado, calculando los créditos vigentes disponibles (`totalCredits`).
+- **Componentes reutilizables (`src/components/organisms/WeeklyCalendarGrid.jsx`, `src/components/molecules/CalendarDayColumn.jsx`, `src/components/organisms/CalendarSection.jsx`):** Se extrajo la grilla semanal a `WeeklyCalendarGrid` y se extendió `CalendarDayColumn` con `mode="customer"` para deshabilitar días pasados (ocultando la ocupación histórica), turnos dentro de la ventana de 10 minutos previos al inicio, turnos cancelados y turnos con cupo lleno (`Cupo lleno`).
+- **Sección Turnos (`src/components/organisms/CustomerTurnsSection.jsx`, `src/pages/CustomerPage.jsx`):** Muestra el banner **"Mis créditos"** arriba del calendario cuando `totalCredits > 0`, seguido de la grilla semanal de turnos.
+
+### Qué se quitó
+- Se reemplazó el placeholder `"Próximo a implementar"` de la sección `/customer/turnos` por `CustomerTurnsSection`.
+
+### Por qué
+- Las reglas de Firestore (`firestore.rules`) restringen la escritura en `turnos_clase` a `staff` y la lectura global de `reservas` a `staff`/titular; por ello el calendario del alumno opera en modo solo lectura sobre `turnos_clase` + `horarios_base` + `dias_cerrados` sin intentar materializar documentos ni consultar reservas ajenas.
+- Ocultar el indicador de ocupación en días pasados evita exponer si hubo cupo lleno en fechas anteriores, mostrándolos simplemente deshabilitados.
+
+### Pros y Contras
+- **Pros:** Cumple estrictamente las reglas de seguridad de Firestore; reutiliza el mismo calendario semanal que administración; respeta la regla de corte de 10 minutos antes del inicio.
+- **Contras:** La acción de reserva al hacer clic en un turno disponible se implementará en la siguiente iteración.
+
+---
+
+## ADR-011: Flujo de Reserva de Turnos del Alumno (Con/Sin Créditos) y Sección "Próximos turnos..."
+
+- **Fecha:** 2026-11-26
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Reglas de Seguridad (`firestore.rules`):** Se amplió `isValidReservation` con los estados `'esperando_comprobante'` y `'comprobante_rechazado'`, y se habilitó a usuarios activos (`isActiveUser()`) a crear turnos virtuales iniciales o actualizar exclusivamente `cuposOcupados` y `actualizadoEn` en `turnos_clase`.
+- **Servicio de Reservas (`src/services/scheduleService.js`):** Se actualizó `bookTurnAsStudent` para validar el corte de 10 minutos (`isTurnBookingOpen`), materializar turnos virtuales si no existen en `turnos_clase`, descontar 1 crédito (`confirmada`) cuando el alumno posee saldo o registrar la reserva como `esperando_comprobante` cuando no tiene créditos; además se agregó `fetchUserReservations`.
+- **Modal de Confirmación (`src/components/molecules/CustomerBookTurnModal.jsx`):** Al seleccionar un turno disponible se muestra el detalle completo del horario y se informa la deducción de 1 crédito + cancelación hasta 4h antes (si tiene saldo), o los datos bancarios (`cobrosConfig`) + importe de clase individual + aviso de aprobación pendiente (si tiene 0 créditos).
+- **Próximos Turnos y Snackbar (`src/components/molecules/CustomerUpcomingTurns.jsx`, `src/components/molecules/Snackbar.jsx`, `src/pages/CustomerPage.jsx`):** Se agregó la lista `"Próximos turnos..."` debajo del calendario con los estados `"Esperando comprobante"`, `"Turno confirmado"`, `"Comprobante rechazado"` y `"Turno cancelado"`, botón `"Informar pago"` para turnos en espera de comprobante, botón de acciones a la derecha de cada fila y `Snackbar` en posición `bottom-left`.
+
+### Por qué
+- Permitir que tanto alumnas con paquete activo como alumnas sin créditos puedan reservar un lugar en la cama reformer sin fricción, manteniendo trazabilidad del estado de pago y cupos en tiempo real.
+
+### Pros y Contras
+- **Pros:** Flujo completo con y sin créditos; reutilización de `ReportPaymentModal` y `cobrosConfig`; feedback inmediato en esquina inferior izquierda.
+- **Contras:** El menú de acciones a la derecha de cada fila en `"Próximos turnos..."` queda como disparador visual hasta implementar la cancelación/reprogramación del alumno.

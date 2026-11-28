@@ -1,24 +1,76 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
+import DashboardSidebar from '../components/organisms/DashboardSidebar';
+import CustomerTurnsSection from '../components/organisms/CustomerTurnsSection';
+import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
-import Button from '../components/atoms/Button';
 import { useAuth } from '../hooks/useAuth';
+import { useCustomerCalendar } from '../hooks/useCustomerCalendar';
+import { CUSTOMER_NAV_ITEMS } from '../data/customerNavItems';
+
+function CustomerPlaceholderSection({ activeNavItem }) {
+  return (
+    <section
+      data-testid="customer-placeholder-section"
+      className="p-8 sm:p-12 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs flex flex-col items-center justify-center text-center min-h-[360px]"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-secondary-container/70 text-on-secondary-container flex items-center justify-center mb-4">
+        <Icon name={activeNavItem.icon} className="text-[28px]" />
+      </div>
+      <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
+        Espacio Alumna • Emuná Pilates
+      </span>
+      <h1
+        data-testid="customer-placeholder-title"
+        className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1"
+      >
+        {activeNavItem.label}
+      </h1>
+      <p className="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md">
+        {activeNavItem.description}
+      </p>
+      <span
+        data-testid="customer-placeholder-status"
+        className="mt-6 px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant font-label-md text-label-md"
+      >
+        Próximo a implementar
+      </span>
+    </section>
+  );
+}
 
 /**
  * CustomerPage View
- * Path: /customer
+ * Path: /customer/:section
  * Workspace for users with role="customer" (alumnas)
  */
-
 export default function CustomerPage() {
   const { user, userProfile } = useAuth();
+  const { section } = useParams();
+  const [snackbar, setSnackbar] = useState({ open: false, variant: 'success', message: '' });
+
+  const showSnackbar = useCallback((variant, message) => {
+    setSnackbar({ open: true, variant, message });
+  }, []);
 
   const fullName = userProfile?.nombre
     ? `${userProfile.nombre} ${userProfile.apellido || ''}`.trim()
     : user?.displayName || 'Alumna';
-
-  const firstName = userProfile?.nombre || user?.displayName?.split(' ')[0] || 'Alumna';
   const email = userProfile?.email || user?.email || '';
+
+  const activeNavItem = CUSTOMER_NAV_ITEMS.find((item) => item.id === section);
+  const calendar = useCustomerCalendar({
+    uid: user?.uid,
+    userName: fullName,
+    userEmail: email,
+    isEnabled: activeNavItem?.id === 'turnos',
+    showSnackbar,
+  });
+
+  if (!activeNavItem) {
+    return <Navigate to="/customer/turnos" replace />;
+  }
 
   return (
     <DashboardLayout
@@ -26,115 +78,34 @@ export default function CustomerPage() {
       roleBadge="customer"
       userName={fullName}
       userEmail={email}
+      badgeLabel={`Créditos: ${calendar.totalCredits}`}
+      badgeIcon="confirmation_number"
+      sidebarId="customer-drawer"
+      renderSidebar={(sidebarProps) => (
+        <DashboardSidebar
+          {...sidebarProps}
+          navItems={CUSTOMER_NAV_ITEMS}
+          drawerId="customer-drawer"
+          testIdPrefix="customer"
+          ariaLabel="Menú de alumna"
+          navAriaLabel="Navegación de alumna"
+          mobileHeaderSubtitle="Espacio Alumna"
+        />
+      )}
     >
-      <div className="space-y-6">
-        {/* Welcome Banner */}
-        <section className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
-          <div>
-            <span className="font-label-sm text-label-sm uppercase tracking-widest text-secondary font-semibold">
-              Espacio Alumna • Emuná Pilates
-            </span>
-            <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight mt-1">
-              ¡Hola, {firstName}!
-            </h1>
-            <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-              Tenés turnos disponibles para reservar en las 4 camas reformer.
-            </p>
-          </div>
+      {activeNavItem.id === 'turnos' ? (
+        <CustomerTurnsSection calendar={calendar} />
+      ) : (
+        <CustomerPlaceholderSection activeNavItem={activeNavItem} />
+      )}
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => alert('Próximamente: Selección de turno en el calendario interactivo.')}
-              className="cursor-pointer"
-            >
-              <Icon name="add_circle" className="text-[18px] mr-2" />
-              <span>Reservar Turno</span>
-            </Button>
-          </div>
-        </section>
-
-        {/* Metrics Grid */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Card 1: Saldo de Clases */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant">
-                Saldo de Clases
-              </span>
-              <div className="w-8 h-8 rounded-full bg-secondary-container/60 text-secondary flex items-center justify-center">
-                <Icon name="confirmation_number" className="text-[18px]" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-3xl font-bold text-primary">6 / 8</p>
-              <p className="font-body-sm text-[12px] text-on-surface-variant mt-0.5">
-                Créditos disponibles en tu paquete móvil.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-surface-container-high/60 flex items-center justify-between text-xs text-on-surface-variant">
-              <span>Vencimiento: 28 Oct 2026</span>
-              <span className="text-secondary font-semibold">Activo</span>
-            </div>
-          </div>
-
-          {/* Card 2: Próximo Turno */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant">
-                Próxima Clase Confirmada
-              </span>
-              <div className="w-8 h-8 rounded-full bg-surface-container text-primary flex items-center justify-center">
-                <Icon name="calendar_month" className="text-[18px]" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-xl font-bold text-primary">Miércoles • 18:00 hs</p>
-              <p className="font-body-sm text-[12px] text-on-surface-variant mt-0.5">
-                Cama 2 • Instructora Carolina
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-surface-container-high/60 flex items-center justify-between text-xs">
-              <span className="text-secondary font-medium flex items-center gap-1">
-                <Icon name="schedule" className="text-[14px]" />
-                Cancela con 2h de anticipación
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Asistencias del Mes */}
-          <div className="p-5 rounded-2xl bg-surface-container-lowest border border-surface-container-high shadow-xs flex flex-col justify-between sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant">
-                Asistencias este Mes
-              </span>
-              <div className="w-8 h-8 rounded-full bg-surface-container text-secondary flex items-center justify-center">
-                <Icon name="self_improvement" className="text-[18px]" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-3xl font-bold text-primary">4 asistencias</p>
-              <p className="font-body-sm text-[12px] text-on-surface-variant mt-0.5">
-                Constancia postural y bienestar integral.
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-surface-container-high/60 flex items-center justify-between text-xs text-on-surface-variant">
-              <span>0 clases perdidas</span>
-              <span className="text-primary font-semibold">100% Presente</span>
-            </div>
-          </div>
-        </section>
-
-        {/* Studio Policy Reminder */}
-        <section className="p-4 rounded-xl bg-surface-container border border-surface-container-highest flex items-start gap-3">
-          <Icon name="info" className="text-secondary text-[20px] shrink-0 mt-0.5" />
-          <div className="text-body-sm text-on-surface-variant leading-relaxed">
-            <strong className="text-on-surface font-semibold">Política de cupos y cancelación:</strong>{' '}
-            Las clases tienen cupo estricto de 4 camas para garantizar corrección personalizada. Podés cancelar o reprogramar con hasta 2 horas de anticipación sin perder el crédito de tu paquete.
-          </div>
-        </section>
-      </div>
+      <Snackbar
+        open={snackbar.open}
+        variant={snackbar.variant}
+        message={snackbar.message}
+        position="bottom-left"
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+      />
     </DashboardLayout>
   );
 }

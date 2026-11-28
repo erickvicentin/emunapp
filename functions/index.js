@@ -2,13 +2,39 @@ import { randomBytes } from 'node:crypto';
 import { initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import {
+  isValidRecipientEmail,
+  sendClassReminderEmail,
+  sendPaymentStatusEmail,
+  sendReservationCancelledEmail,
+  sendReservationConfirmedEmail,
+  sendWelcomeEmail,
+} from './services/emailService.js';
 
 initializeApp();
+
+const TARGET_DATABASES = process.env.FIREBASE_DATABASE_ID
+  ? [process.env.FIREBASE_DATABASE_ID]
+  : ['emuna-testing', 'emuna-prod'];
+const CANCELLATION_NOTIFY_STATES = new Set([
+  'cancelada',
+  'cancelada_a_tiempo',
+  'cancelado_tarde',
+  'cancelado_estudio',
+]);
+const PAYMENT_NOTIFY_STATES = new Set(['aprobado', 'rechazado', 'vencido']);
 
 const ALLOWED_DATABASES = new Set(['emuna-testing', 'emuna-prod']);
 const STAFF_ROLES = new Set(['staff', 'administradora']);
 const RELATED_COLLECTIONS = ['reservas', 'membresias_usuario', 'pagos'];
+const DNI_AUTH_DOMAIN = 'dni.emuna.local';
+
+function buildDniAuthEmail(dniDigits) {
+  return `${dniDigits}@${DNI_AUTH_DOMAIN}`;
+}
 
 function resolveDatabaseId(requestedDatabaseId) {
   const configuredDb = process.env.FIREBASE_DATABASE_ID;
@@ -37,6 +63,10 @@ function hasStaffClaim(claims = {}) {
   );
 }
 
+function hasAdminClaim(claims = {}) {
+  return claims.rol === 'administradora' || claims.admin === true;
+}
+
 function assertStaffCaller(request) {
   if (!request.auth?.uid) {
     throw new HttpsError(
@@ -53,12 +83,28 @@ function assertStaffCaller(request) {
   }
 }
 
+function assertAdminCaller(request) {
+  if (!request.auth?.uid) {
+    throw new HttpsError(
+      'unauthenticated',
+      'Debes iniciar sesión para realizar esta operación.'
+    );
+  }
+
+  if (!hasAdminClaim(request.auth.token)) {
+    throw new HttpsError(
+      'permission-denied',
+      'Solo una cuenta con rol administradora puede gestionar usuarios de staff.'
+    );
+  }
+}
+
 function formatDni(rawDni) {
   const digits = String(rawDni || '').replace(/\D/g, '');
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-function validateStudentPayload(data) {
+function validateStudentPayload(data, { requireEmail = true } = {}) {
   const nombre = String(data?.nombre || '').trim();
   const apellido = String(data?.apellido || '').trim();
   const telefono = String(data?.telefono || '').trim();
@@ -67,7 +113,7 @@ function validateStudentPayload(data) {
   const email = String(data?.email || '').trim().toLowerCase();
   const dniDigits = String(data?.dni || '').replace(/\D/g, '');
 
-  if (!nombre || !apellido || !telefono || !fechaNacimiento || !email) {
+  if (!nombre || !apellido || !telefono || !fechaNacimiento || (requireEmail && !email)) {
     throw new HttpsError(
       'invalid-argument',
       'Faltan campos obligatorios para registrar al alumno.'
@@ -81,6 +127,8 @@ function validateStudentPayload(data) {
     );
   }
 
+  const authEmail = email || buildDniAuthEmail(dniDigits);
+
   return {
     nombre,
     apellido,
@@ -88,6 +136,7 @@ function validateStudentPayload(data) {
     fechaNacimiento,
     genero,
     email,
+    authEmail,
     dniDigits,
     dniFormatted: formatDni(dniDigits),
   };
@@ -109,27 +158,31 @@ async function deleteCollectionByUserId(db, collectionName, uid) {
   return snapshot.size;
 }
 
-/**
- * Crea un alumno en Firebase Auth y en la colección `usuarios` de Firestore
- * con rol `customer` utilizando Firebase Admin SDK.
- */
-export const createStudentAccount = onCall(async (request) => {
-  assertStaffCaller(request);
+async function createManagedAccount(request, { targetRole, requireAdminCaller = false }) {
+  if (requireAdminCaller) {
+    assertAdminCaller(request);
+  } else {
+    assertStaffCaller(request);
+  }
+
   const databaseId = resolveDatabaseId(request.data?.databaseId);
   const db = getFirestore(databaseId);
-  const payload = validateStudentPayload(request.data);
+  const isCustomer = targetRole === 'customer';
+  const payload = validateStudentPayload(request.data, { requireEmail: !isCustomer });
   const auth = getAuth();
-  const initialRandomPassword = randomBytes(24).toString('base64url');
+  const initialPassword = isCustomer
+    ? payload.dniDigits
+    : randomBytes(24).toString('base64url');
 
   let userRecord;
   try {
     userRecord = await auth.createUser({
-      email: payload.email,
-      password: initialRandomPassword,
+      email: payload.authEmail,
+      password: initialPassword,
       displayName: `${payload.nombre} ${payload.apellido}`.trim(),
       emailVerified: false,
     });
-    await auth.setCustomUserClaims(userRecord.uid, { rol: 'customer' });
+    await auth.setCustomUserClaims(userRecord.uid, { rol: targetRole });
   } catch (error) {
     if (userRecord?.uid) {
       await auth.deleteUser(userRecord.uid).catch(() => {});
@@ -137,7 +190,7 @@ export const createStudentAccount = onCall(async (request) => {
     if (error?.code === 'auth/email-already-exists') {
       throw new HttpsError(
         'already-exists',
-        'Ya existe una cuenta registrada con ese correo electrónico.'
+        'Ya existe una cuenta registrada con ese correo electrónico o DNI.'
       );
     }
     throw new HttpsError(
@@ -146,9 +199,10 @@ export const createStudentAccount = onCall(async (request) => {
     );
   }
 
-  const studentProfile = {
+  const userProfile = {
     uid: userRecord.uid,
     email: payload.email,
+    authEmail: payload.authEmail,
     nombre: payload.nombre,
     apellido: payload.apellido,
     telefono: payload.telefono,
@@ -156,7 +210,7 @@ export const createStudentAccount = onCall(async (request) => {
     genero: payload.genero,
     dni: payload.dniFormatted,
     photoURL: '',
-    rol: 'customer',
+    rol: targetRole,
     active: true,
     estado: 'activo',
     registroCompleto: true,
@@ -171,59 +225,76 @@ export const createStudentAccount = onCall(async (request) => {
       .collection('usuarios')
       .doc(userRecord.uid)
       .set({
-        ...studentProfile,
+        ...userProfile,
         creadoEn: FieldValue.serverTimestamp(),
       });
   } catch (error) {
     await auth.deleteUser(userRecord.uid).catch(() => {});
     throw new HttpsError(
       'internal',
-      error?.message || 'No se pudo guardar el perfil del alumno en Firestore.'
+      error?.message || 'No se pudo guardar el perfil del usuario en Firestore.'
     );
   }
 
   let activationLinkGenerated = false;
-  try {
-    await auth.generatePasswordResetLink(payload.email);
-    activationLinkGenerated = true;
-  } catch {
-    activationLinkGenerated = false;
+  if (!isCustomer && payload.email) {
+    try {
+      await auth.generatePasswordResetLink(payload.email);
+      activationLinkGenerated = true;
+    } catch {
+      activationLinkGenerated = false;
+    }
+  }
+
+  if (isCustomer && isValidRecipientEmail(payload.email)) {
+    await sendWelcomeEmail({
+      to: payload.email,
+      nombre: payload.nombre,
+    }).catch(() => {});
   }
 
   return {
-    student: studentProfile,
+    userProfile,
     activationLinkGenerated,
   };
-});
+}
 
-/**
- * Elimina un usuario con rol `customer` de Firestore (perfil y colecciones relacionadas)
- * y de Firebase Authentication utilizando Firebase Admin SDK.
- */
-export const deleteStudentAccount = onCall(async (request) => {
-  assertStaffCaller(request);
+async function deleteManagedAccount(
+  request,
+  { expectedRole, requireAdminCaller = false, blockAdminTargets = true }
+) {
+  if (requireAdminCaller) {
+    assertAdminCaller(request);
+  } else {
+    assertStaffCaller(request);
+  }
+
   const databaseId = resolveDatabaseId(request.data?.databaseId);
   const db = getFirestore(databaseId);
   const auth = getAuth();
   const uid = String(request.data?.uid || '').trim();
 
   if (!uid) {
-    throw new HttpsError('invalid-argument', 'El identificador del alumno es obligatorio.');
+    throw new HttpsError('invalid-argument', 'El identificador del usuario es obligatorio.');
   }
 
   if (uid === request.auth.uid) {
     throw new HttpsError(
       'failed-precondition',
-      'No podés eliminar tu propia cuenta de administrador.'
+      'No podés eliminar tu propia cuenta.'
     );
   }
 
   try {
     const targetAuthUser = await auth.getUser(uid);
-    if (hasStaffClaim(targetAuthUser.customClaims)) {
+    const targetClaims = targetAuthUser.customClaims || {};
+    if (
+      (blockAdminTargets && hasAdminClaim(targetClaims)) ||
+      (expectedRole === 'customer' && hasStaffClaim(targetClaims))
+    ) {
       throw new HttpsError(
         'permission-denied',
-        'No podés eliminar cuentas de personal o administración.'
+        'No podés eliminar cuentas con mayor o igual privilegio administrativo.'
       );
     }
   } catch (error) {
@@ -239,13 +310,13 @@ export const deleteStudentAccount = onCall(async (request) => {
   const targetUserRef = db.collection('usuarios').doc(uid);
   const targetUserSnap = await targetUserRef.get();
   if (!targetUserSnap.exists) {
-    throw new HttpsError('not-found', 'El perfil del alumno no existe en Firestore.');
+    throw new HttpsError('not-found', 'El perfil del usuario no existe en Firestore.');
   }
 
-  if (targetUserSnap.data()?.rol !== 'customer') {
+  if (targetUserSnap.data()?.rol !== expectedRole) {
     throw new HttpsError(
       'permission-denied',
-      'Solo se permite eliminar cuentas con rol customer.'
+      `Solo se permite eliminar cuentas con rol ${expectedRole}.`
     );
   }
 
@@ -267,4 +338,466 @@ export const deleteStudentAccount = onCall(async (request) => {
   }
 
   return { success: true, uid };
+}
+
+/**
+ * Crea un alumno en Firebase Auth y en la colección `usuarios` de Firestore
+ * con rol `customer` utilizando Firebase Admin SDK.
+ */
+export const createStudentAccount = onCall(async (request) => {
+  const { userProfile, activationLinkGenerated } = await createManagedAccount(
+    request,
+    { targetRole: 'customer' }
+  );
+  return { student: userProfile, activationLinkGenerated };
 });
+
+/**
+ * Elimina un usuario con rol `customer` de Firestore (perfil y colecciones relacionadas)
+ * y de Firebase Authentication utilizando Firebase Admin SDK.
+ */
+export const deleteStudentAccount = onCall(async (request) =>
+  deleteManagedAccount(request, { expectedRole: 'customer' })
+);
+
+/**
+ * Restablece la contraseña de un alumno a su DNI (solo dígitos) y marca
+ * `requiereCambioPassword: true` para forzar el cambio en su próximo ingreso.
+ */
+export const resetStudentPasswordToDni = onCall(async (request) => {
+  assertAdminCaller(request);
+
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const auth = getAuth();
+  const uid = String(request.data?.uid || '').trim();
+
+  if (!uid) {
+    throw new HttpsError('invalid-argument', 'El identificador del alumno es obligatorio.');
+  }
+
+  const userRef = db.collection('usuarios').doc(uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    throw new HttpsError('not-found', 'El perfil del alumno no existe en Firestore.');
+  }
+
+  const userData = userSnap.data() || {};
+  if (userData.rol !== 'customer') {
+    throw new HttpsError('permission-denied', 'Solo se puede restablecer la clave de alumnos.');
+  }
+
+  const dniDigits = String(userData.dni || '').replace(/\D/g, '');
+  if (dniDigits.length < 6) {
+    throw new HttpsError(
+      'failed-precondition',
+      'El alumno no tiene un DNI válido registrado para usar como contraseña.'
+    );
+  }
+
+  await auth.updateUser(uid, { password: dniDigits });
+  await userRef.update({
+    requiereCambioPassword: true,
+    actualizadoEn: FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, uid };
+});
+
+/**
+ * Resuelve el `authEmail` asociado a un DNI para permitir login con DNI incluso
+ * cuando la cuenta fue registrada con un correo electrónico real.
+ */
+export const resolveAuthEmailByDni = onCall({ cors: true }, async (request) => {
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const dniDigits = String(request.data?.dni || '').replace(/\D/g, '');
+
+  if (dniDigits.length < 6) {
+    throw new HttpsError('invalid-argument', 'Ingresá un DNI válido.');
+  }
+
+  const formattedDni = formatDni(dniDigits);
+  const snap = await db
+    .collection('usuarios')
+    .where('dni', '==', formattedDni)
+    .limit(1)
+    .get();
+
+  if (snap.empty) {
+    return { authEmail: buildDniAuthEmail(dniDigits) };
+  }
+
+  const data = snap.docs[0].data() || {};
+  return {
+    authEmail: data.authEmail || data.email || buildDniAuthEmail(dniDigits),
+  };
+});
+
+/**
+ * Crea un usuario con rol `staff` en Firebase Auth (con custom claim `rol: 'staff'`)
+ * y en Firestore. Exclusivo para cuentas con rol `administradora`.
+ */
+export const createStaffAccount = onCall(async (request) => {
+  const { userProfile, activationLinkGenerated } = await createManagedAccount(
+    request,
+    { targetRole: 'staff', requireAdminCaller: true }
+  );
+  return { staff: userProfile, activationLinkGenerated };
+});
+
+/**
+ * Elimina un usuario con rol `staff` de Firestore y Firebase Authentication.
+ * Exclusivo para cuentas con rol `administradora`.
+ */
+export const deleteStaffAccount = onCall(async (request) =>
+  deleteManagedAccount(request, {
+    expectedRole: 'staff',
+    requireAdminCaller: true,
+    blockAdminTargets: true,
+  })
+);
+
+/**
+ * Devuelve los paquetes activos del catálogo público para la Landing Page
+ * sin exponer lectura pública directa en Firestore Rules.
+ */
+export const getPublicPackages = onCall(async (request) => {
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const snapshot = await db.collection('paquetes_catalogo').get();
+  const packages = snapshot.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .filter((pkg) => pkg.active !== false)
+    .sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+
+  return { packages };
+});
+
+async function revokeProvisionalPaymentAndBookings(db, pagoSnap, reason) {
+  const pago = pagoSnap.data() || {};
+  await pagoSnap.ref.update({
+    estado: reason === 'expired' ? 'vencido' : 'rechazado',
+    actualizadoEn: FieldValue.serverTimestamp(),
+  });
+
+  if (!pago.membresiaId) return 0;
+
+  await db.collection('membresias_usuario').doc(pago.membresiaId).set(
+    {
+      estado: 'cancelada',
+      creditosRestantes: 0,
+      provisional: false,
+      actualizadoEn: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  const resSnap = await db
+    .collection('reservas')
+    .where('membresiaId', '==', pago.membresiaId)
+    .where('estado', '==', 'confirmada')
+    .get();
+
+  const cancelResults = await Promise.all(
+    resSnap.docs.map(async (resDoc) => {
+      const resData = resDoc.data();
+      await resDoc.ref.update({
+        estado: 'cancelado_estudio',
+        motivoCancelacion:
+          reason === 'expired'
+            ? 'Pago provisorio vencido sin confirmación'
+            : 'Pago rechazado por administración',
+        actualizadoEn: FieldValue.serverTimestamp(),
+      });
+      if (resData.turnoId) {
+        await db.runTransaction(async (tx) => {
+          const turnRef = db.collection('turnos_clase').doc(resData.turnoId);
+          const turnSnap = await tx.get(turnRef);
+          if (!turnSnap.exists) return;
+          const current = Number(turnSnap.data()?.cuposOcupados) || 0;
+          tx.update(turnRef, {
+            cuposOcupados: Math.max(0, current - 1),
+            actualizadoEn: FieldValue.serverTimestamp(),
+          });
+        });
+      }
+      return 1;
+    })
+  );
+  return cancelResults.reduce((acc, count) => acc + count, 0);
+}
+
+/**
+ * Limpia pagos provisorios vencidos sin confirmación y cancela sus reservas asociadas.
+ */
+export const expireProvisionalPayments = onCall(async (request) => {
+  assertStaffCaller(request);
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+  const nowIso = new Date().toISOString();
+
+  const pendingSnap = await db
+    .collection('pagos')
+    .where('estado', '==', 'pendiente_conciliacion')
+    .get();
+
+  const expiredDocs = pendingSnap.docs.filter((pagoSnap) => {
+    const data = pagoSnap.data();
+    return Boolean(data.expiresAt && String(data.expiresAt) <= nowIso);
+  });
+
+  const cancelCounts = await Promise.all(
+    expiredDocs.map((pagoSnap) => revokeProvisionalPaymentAndBookings(db, pagoSnap, 'expired'))
+  );
+
+  return {
+    expiredPayments: expiredDocs.length,
+    cancelledBookings: cancelCounts.reduce((acc, count) => acc + count, 0),
+  };
+});
+
+async function resolveStudentRecipient(db, usuarioId, fallbackEmail, fallbackName) {
+  if (!usuarioId) {
+    return { email: fallbackEmail || '', nombre: fallbackName || 'alumne' };
+  }
+
+  const userSnap = await db.collection('usuarios').doc(usuarioId).get();
+  if (!userSnap.exists) {
+    return { email: '', nombre: fallbackName || 'alumne' };
+  }
+
+  const userData = userSnap.data() || {};
+  const isDeactivated =
+    userData.active === false ||
+    userData.estado === 'inactivo' ||
+    userData.estado === 'desactivado';
+
+  if (isDeactivated) {
+    return { email: '', nombre: fallbackName || userData.nombre || 'alumne' };
+  }
+
+  const resolvedEmail = isValidRecipientEmail(userData.email)
+    ? userData.email
+    : fallbackEmail || '';
+
+  return {
+    email: resolvedEmail,
+    nombre: fallbackName || userData.nombre || 'alumne',
+  };
+}
+
+function parseArgentinaClassDate(dateKey, startTime) {
+  if (!dateKey || !startTime) return null;
+  const iso = `${String(dateKey).trim()}T${String(startTime).trim()}:00-03:00`;
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+const ARGENTINA_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Argentina/Buenos_Aires',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function getArgentinaDateKey(offsetDays = 0) {
+  const target = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = ARGENTINA_DATE_FORMATTER.formatToParts(target);
+
+  const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+async function handleReservationCreated(databaseId, event) {
+  const data = event.data?.data();
+  if (!data || data.estado !== 'confirmada') return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    data.usuarioId,
+    data.alumnoEmail,
+    data.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  await sendReservationConfirmedEmail({
+    to: recipient.email,
+    nombre: recipient.nombre,
+    dateKey: data.dateKey,
+    startTime: data.startTime,
+    instructorName: data.instructorName,
+  });
+}
+
+async function handleReservationUpdated(databaseId, event) {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.estado === after.estado) return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    after.usuarioId,
+    after.alumnoEmail,
+    after.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  if (after.estado === 'confirmada') {
+    await sendReservationConfirmedEmail({
+      to: recipient.email,
+      nombre: recipient.nombre,
+      dateKey: after.dateKey,
+      startTime: after.startTime,
+      instructorName: after.instructorName,
+    });
+    return;
+  }
+
+  if (CANCELLATION_NOTIFY_STATES.has(after.estado)) {
+    await sendReservationCancelledEmail({
+      to: recipient.email,
+      nombre: recipient.nombre,
+      dateKey: after.dateKey,
+      startTime: after.startTime,
+      status: after.estado,
+      reason: after.motivoCancelacion,
+    });
+  }
+}
+
+async function handlePaymentUpdated(databaseId, event) {
+  const before = event.data?.before?.data();
+  const after = event.data?.after?.data();
+  if (!before || !after || before.estado === after.estado) return;
+  if (!PAYMENT_NOTIFY_STATES.has(after.estado)) return;
+
+  const db = getFirestore(databaseId);
+  const recipient = await resolveStudentRecipient(
+    db,
+    after.usuarioId,
+    after.alumnoEmail,
+    after.alumnoNombre
+  );
+  if (!isValidRecipientEmail(recipient.email)) return;
+
+  await sendPaymentStatusEmail({
+    to: recipient.email,
+    nombre: recipient.nombre,
+    paqueteNombre: after.paqueteNombre,
+    monto: after.monto,
+    estado: after.estado,
+    motivoRechazo: after.motivoRechazo,
+  });
+}
+
+async function processClassRemindersForDatabase(databaseId, candidateDates, nowMs) {
+  const db = getFirestore(databaseId);
+  const snap = await db
+    .collection('reservas')
+    .where('estado', '==', 'confirmada')
+    .where('dateKey', 'in', candidateDates)
+    .get();
+
+  await Promise.all(
+    snap.docs.map(async (docSnap) => {
+      const data = docSnap.data() || {};
+      if (data.recordatorioEnviado === true) return;
+
+      const classDate = parseArgentinaClassDate(data.dateKey, data.startTime);
+      if (!classDate) return;
+
+      const diffHours = (classDate.getTime() - nowMs) / (1000 * 60 * 60);
+      if (diffHours < 18 || diffHours > 26) return;
+
+      const recipient = await resolveStudentRecipient(
+        db,
+        data.usuarioId,
+        data.alumnoEmail,
+        data.alumnoNombre
+      );
+
+      if (!isValidRecipientEmail(recipient.email)) return;
+
+      const result = await sendClassReminderEmail({
+        to: recipient.email,
+        nombre: recipient.nombre,
+        dateKey: data.dateKey,
+        startTime: data.startTime,
+        instructorName: data.instructorName,
+      });
+
+      if (result.sent) {
+        await docSnap.ref.update({
+          recordatorioEnviado: true,
+          recordatorioEnviadoEn: FieldValue.serverTimestamp(),
+        });
+      }
+    })
+  );
+}
+
+/**
+ * Envían confirmación por email cuando se crea una reserva ya confirmada (testing y prod).
+ */
+export const onReservationCreatedTesting = onDocumentCreated(
+  { document: 'reservas/{reservaId}', database: 'emuna-testing' },
+  (event) => handleReservationCreated('emuna-testing', event)
+);
+
+export const onReservationCreatedProd = onDocumentCreated(
+  { document: 'reservas/{reservaId}', database: 'emuna-prod' },
+  (event) => handleReservationCreated('emuna-prod', event)
+);
+
+/**
+ * Envían avisos por email cuando una reserva pasa a confirmada o se cancela (testing y prod).
+ */
+export const onReservationUpdatedTesting = onDocumentUpdated(
+  { document: 'reservas/{reservaId}', database: 'emuna-testing' },
+  (event) => handleReservationUpdated('emuna-testing', event)
+);
+
+export const onReservationUpdatedProd = onDocumentUpdated(
+  { document: 'reservas/{reservaId}', database: 'emuna-prod' },
+  (event) => handleReservationUpdated('emuna-prod', event)
+);
+
+/**
+ * Notifican por email cuando la administración aprueba, rechaza o vence un pago (testing y prod).
+ */
+export const onPaymentUpdatedTesting = onDocumentUpdated(
+  { document: 'pagos/{pagoId}', database: 'emuna-testing' },
+  (event) => handlePaymentUpdated('emuna-testing', event)
+);
+
+export const onPaymentUpdatedProd = onDocumentUpdated(
+  { document: 'pagos/{pagoId}', database: 'emuna-prod' },
+  (event) => handlePaymentUpdated('emuna-prod', event)
+);
+
+/**
+ * Cron cada hora: envía recordatorio ~24 hs antes de cada clase confirmada.
+ */
+export const sendUpcomingClassReminders = onSchedule(
+  {
+    schedule: '0 * * * *',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  },
+  async () => {
+    const candidateDates = [
+      getArgentinaDateKey(0),
+      getArgentinaDateKey(1),
+      getArgentinaDateKey(2),
+    ];
+    const nowMs = Date.now();
+
+    await Promise.all(
+      TARGET_DATABASES.map((databaseId) =>
+        processClassRemindersForDatabase(databaseId, candidateDates, nowMs)
+      )
+    );
+  }
+);

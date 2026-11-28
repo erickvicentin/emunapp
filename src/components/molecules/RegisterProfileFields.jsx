@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Input from '../atoms/Input';
 import GenderSelector from './GenderSelector';
 import PhoneInput from './PhoneInput';
+import { getMaxBirthdateForMinAge, MIN_BIRTHDATE } from '../../utils/dateUtils';
 
 /**
  * RegisterProfileFields Molecule
@@ -13,6 +14,24 @@ export default function RegisterProfileFields({
   errors,
   birthdateHelper,
 }) {
+  const [maxBirthdate] = useState(() => getMaxBirthdateForMinAge(14));
+
+  const handleDateChange = (e) => {
+    const val = e.target.value;
+    if (val) {
+      const parts = val.split('-');
+      if (parts[0] && parts[0].length > 4) {
+        onChange({
+          target: {
+            name: 'fechaNacimiento',
+            value: [parts[0].slice(0, 4), ...parts.slice(1)].join('-'),
+          },
+        });
+        return;
+      }
+    }
+    onChange(e);
+  };
   return (
     <>
       {/* Nombre & Apellido */}
@@ -64,9 +83,11 @@ export default function RegisterProfileFields({
           data-testid="register-fecha-nacimiento-input"
           name="fechaNacimiento"
           type="date"
+          min={MIN_BIRTHDATE}
+          max={maxBirthdate}
           label="Fecha de Nacimiento"
           value={formData.fechaNacimiento}
-          onChange={onChange}
+          onChange={handleDateChange}
           required
           error={errors.fechaNacimiento}
           helperText={birthdateHelper}

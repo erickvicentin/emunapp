@@ -32,6 +32,8 @@ export default function StudentFormFields({
           id="student-dni"
           name="dni"
           label="DNI"
+          inputMode="numeric"
+          maxLength={10}
           placeholder="38.412.905"
           value={formData.dni}
           onChange={onChange}
@@ -43,7 +45,7 @@ export default function StudentFormFields({
           id="student-email"
           name="email"
           type="email"
-          label="Correo electrónico"
+          label="Correo electrónico (opcional)"
           placeholder="alumna@emuna.com"
           value={formData.email}
           onChange={onChange}
@@ -52,10 +54,9 @@ export default function StudentFormFields({
           helperText={
             emailReadOnly
               ? 'El correo de acceso no se modifica desde este formulario.'
-              : undefined
+              : 'Opcional: si no tiene email, ingresará con su DNI.'
           }
           data-testid="student-form-email-input"
-          required
         />
       </div>
     </>

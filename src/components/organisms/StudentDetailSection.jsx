@@ -4,6 +4,7 @@ import Avatar from '../atoms/Avatar';
 import Badge from '../atoms/Badge';
 import Button from '../atoms/Button';
 import Icon from '../atoms/Icon';
+import DetailField from '../molecules/DetailField';
 
 function getGenderIcon(genderOrSex) {
   const value = String(genderOrSex || '').toLowerCase();
@@ -12,33 +13,17 @@ function getGenderIcon(genderOrSex) {
   return 'person';
 }
 
-function DetailField({ icon, label, value, testId }) {
-  return (
-    <div className="p-4 rounded-xl bg-surface-container-low/70 border border-surface-container-high/50 flex items-start gap-3">
-      <div className="w-9 h-9 rounded-lg bg-surface-container-highest text-secondary flex items-center justify-center shrink-0">
-        <Icon name={icon} className="text-[18px]" />
-      </div>
-      <div className="min-w-0">
-        <p className="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">
-          {label}
-        </p>
-        <p
-          data-testid={testId}
-          className="font-body-md text-body-md font-semibold text-primary mt-0.5 break-words"
-        >
-          {value || 'No informado'}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 /**
  * StudentDetailSection Organism
  * Displays the student's profile photo (or gender-aware user icon fallback)
  * and personal/enrollment details.
  */
-export default function StudentDetailSection({ student }) {
+export default function StudentDetailSection({
+  student,
+  isAdmin = false,
+  isResettingPassword = false,
+  onResetPassword,
+}) {
   const navigate = useNavigate();
 
   if (!student) {
@@ -98,6 +83,19 @@ export default function StudentDetailSection({ student }) {
             <Icon name="arrow_back" className="text-[18px]" />
             <span>Volver a Alumnos</span>
           </Button>
+          {isAdmin && onResetPassword && (
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="student-reset-password-btn"
+              disabled={isResettingPassword}
+              onClick={() => onResetPassword(student)}
+              className="gap-2 bg-surface-container-lowest cursor-pointer"
+            >
+              <Icon name="lock_reset" className="text-[18px]" />
+              <span>{isResettingPassword ? 'Restableciendo...' : 'Restablecer clave (DNI)'}</span>
+            </Button>
+          )}
           <Button
             variant="primary"
             size="sm"

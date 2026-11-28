@@ -237,7 +237,7 @@ Then("the student activation notice should be visible", async () => {
   const noticeText = await StudentCreatePage.getActivationNoticeText();
 
   expect(isDisplayed).toBe(true);
-  expect(noticeText).toContain("contraseña aleatoria");
+  expect(noticeText).toContain("DNI como usuario y contraseña");
 });
 
 When(

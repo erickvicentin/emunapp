@@ -34,6 +34,11 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/register" replace />;
   }
 
+  // Force password change on first login or after admin password reset
+  if (userProfile?.requiereCambioPassword && location.pathname !== '/cambiar-contrasena') {
+    return <Navigate to="/cambiar-contrasena" replace />;
+  }
+
   // Role authorization
   if (requiredRole) {
     const isStaffUser = userProfile?.rol === 'staff' || userProfile?.rol === 'administradora';

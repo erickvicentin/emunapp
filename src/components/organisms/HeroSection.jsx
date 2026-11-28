@@ -2,6 +2,8 @@ import React from 'react';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
 import Avatar from '../atoms/Avatar';
+import { useAuth } from '../../hooks/useAuth';
+import { resolveAuthenticatedCta } from '../../utils/authRouting';
 import salon from '../../assets/salon.png'
 
 /**
@@ -9,6 +11,11 @@ import salon from '../../assets/salon.png'
  * Main value proposition, high-impact studio visuals, social proof, and primary CTAs
  */
 export default function HeroSection() {
+  const { user, userProfile } = useAuth();
+  const { isAuthenticated, targetPath, firstName } = resolveAuthenticatedCta(
+    user,
+    userProfile
+  );
   return (
     <div id="inicio" className="relative w-full overflow-hidden">
       {/* Top Ambient Warm Glow */}
@@ -37,12 +44,17 @@ export default function HeroSection() {
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-3 pt-space-xs w-full sm:w-auto">
               <Button
-                to="/login"
+                to={targetPath}
                 variant="primary"
                 size="lg"
+                data-testid="hero-auth-cta"
                 className="w-full sm:w-auto"
               >
-                <span>Iniciar Sesión / Reservar Turno</span>
+                <span>
+                  {isAuthenticated
+                    ? `Hola, ${firstName || 'Usuario'} • Ir a mi cuenta`
+                    : 'Iniciar Sesión / Reservar Turno'}
+                </span>
                 <Icon name="calendar_today" className="text-[18px] ml-2" />
               </Button>
               <Button

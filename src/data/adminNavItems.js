@@ -36,6 +36,7 @@ export const ADMIN_NAV_ITEMS = [
     label: 'Precios y Paquetes',
     icon: 'sell',
     description: 'Configuración de membresías, valores y paquetes de clases.',
+    adminOnly: true,
   },
   {
     id: 'usuarios',
@@ -43,5 +44,14 @@ export const ADMIN_NAV_ITEMS = [
     label: 'Usuarios (staff)',
     icon: 'manage_accounts',
     description: 'Administración de instructoras, roles y permisos del equipo.',
+    adminOnly: true,
+  },
+  {
+    id: 'configuracion',
+    path: '/administrador/configuracion',
+    label: 'Configuración',
+    icon: 'settings',
+    description: 'Cuenta destino, ventana de cancelación, profesora y avisos generales.',
+    adminOnly: true,
   },
 ];

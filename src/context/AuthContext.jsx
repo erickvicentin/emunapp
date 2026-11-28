@@ -6,11 +6,14 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  updatePassword,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../config/firebase';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { auth, googleProvider, databaseId, db, functions } from '../config/firebase';
 import { AuthContext } from './authContextInstance';
 import { formatDni } from '../services/studentService';
+import { buildDniAuthEmail, isDniIdentifier } from '../utils/authIdentifier';
 
 const withTimeout = (promise, ms = 5000) => {
   return Promise.race([
@@ -171,15 +174,44 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const loginWithEmail = useCallback(async (email, password) => {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
+  const loginWithEmail = useCallback(async (identifier, password) => {
+    const trimmed = String(identifier || '').trim();
+    let cred;
+
+    if (isDniIdentifier(trimmed)) {
+      const syntheticEmail = buildDniAuthEmail(trimmed);
+      try {
+        cred = await signInWithEmailAndPassword(auth, syntheticEmail, password);
+      } catch (err) {
+        if (err?.code !== 'auth/invalid-credential' && err?.code !== 'auth/user-not-found') {
+          throw err;
+        }
+        let targetEmail = null;
+        try {
+          const resolveEmail = httpsCallable(functions, 'resolveAuthEmailByDni');
+          const resolved = await resolveEmail({ dni: trimmed, databaseId });
+          targetEmail = resolved?.data?.authEmail;
+        } catch {
+          throw err;
+        }
+        if (!targetEmail || targetEmail === syntheticEmail) {
+          throw err;
+        }
+        cred = await signInWithEmailAndPassword(auth, targetEmail, password);
+      }
+    } else {
+      cred = await signInWithEmailAndPassword(auth, trimmed, password);
+    }
+
     const profile = await fetchUserProfile(cred.user);
     await enforceActiveAccount(cred.user.uid, profile);
     return { user: cred.user, profile };
   }, [fetchUserProfile, enforceActiveAccount]);
 
   const registerWithEmail = useCallback(async (email, password, profileData) => {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const authEmail = cleanEmail || buildDniAuthEmail(profileData.dni);
+    const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
     const displayName = `${profileData.nombre} ${profileData.apellido}`.trim();
 
     if (displayName) {
@@ -192,7 +224,8 @@ export function AuthProvider({ children }) {
 
     const newProfile = {
       uid: cred.user.uid,
-      email: cred.user.email,
+      email: cleanEmail,
+      authEmail,
       nombre: profileData.nombre,
       apellido: profileData.apellido,
       dni: formatDni(profileData.dni),
@@ -204,6 +237,7 @@ export function AuthProvider({ children }) {
       active: true,
       estado: 'activo',
       registroCompleto: true,
+      requiereCambioPassword: false,
       creadoEn: new Date().toISOString(),
     };
 
@@ -263,6 +297,21 @@ export function AuthProvider({ children }) {
     return updatedProfile;
   }, []);
 
+  const completeRequiredPasswordChange = useCallback(async (newPassword) => {
+    if (!auth.currentUser) {
+      throw new Error('No hay una sesión activa.');
+    }
+    await updatePassword(auth.currentUser, newPassword);
+    const userDocRef = doc(db, 'usuarios', auth.currentUser.uid);
+    await updateDoc(userDocRef, {
+      requiereCambioPassword: false,
+      actualizadoEn: serverTimestamp(),
+    });
+    const next = { ...(userProfile || {}), requiereCambioPassword: false };
+    setLocalProfile(auth.currentUser.uid, next);
+    setUserProfile(next);
+  }, [userProfile]);
+
   const logout = useCallback(async () => {
     await signOut(auth);
     setUser(null);
@@ -279,6 +328,7 @@ export function AuthProvider({ children }) {
       registerWithEmail,
       loginWithGoogle,
       completeGoogleRegistration,
+      completeRequiredPasswordChange,
       logout,
     }),
     [
@@ -289,6 +339,7 @@ export function AuthProvider({ children }) {
       registerWithEmail,
       loginWithGoogle,
       completeGoogleRegistration,
+      completeRequiredPasswordChange,
       logout,
     ]
   );

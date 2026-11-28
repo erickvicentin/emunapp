@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../atoms/Icon';
 import Button from '../atoms/Button';
 import StudentFormFields from '../molecules/StudentFormFields';
-import { validateStudentCreate } from '../../utils/registrationValidator';
+import { formatDniInput, validateStudentCreate } from '../../utils/registrationValidator';
 
 function mapStudentToForm(student) {
   if (!student) {
@@ -74,7 +74,8 @@ export default function StudentEditSection({ student, onUpdateStudent }) {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const nextValue = name === 'dni' ? formatDniInput(value) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
