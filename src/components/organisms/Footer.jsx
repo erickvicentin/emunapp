@@ -45,13 +45,6 @@ export default function Footer() {
             </a>
             <a
               className="font-body-md text-body-md hover:text-primary transition-colors flex items-center gap-space-xs mt-1"
-              href={`mailto:${STUDIO_INFO.email}`}
-            >
-              <Icon name="mail" className="text-[18px] text-secondary shrink-0" />
-              <span>{STUDIO_INFO.email}</span>
-            </a>
-            <a
-              className="font-body-md text-body-md hover:text-primary transition-colors flex items-center gap-space-xs mt-1"
               href="https://instagram.com"
               target="_blank"
               rel="noopener noreferrer"
@@ -73,7 +66,7 @@ export default function Footer() {
               Términos y Condiciones
             </a>
             <a href="#tarifas" className="hover:text-primary transition-colors">
-              Políticas de Cancelación (2 hs)
+              Políticas de Cancelación ({STUDIO_INFO.cancelationWindowHours} hs)
             </a>
             <a href="#inicio" className="hover:text-primary transition-colors">
               Privacidad

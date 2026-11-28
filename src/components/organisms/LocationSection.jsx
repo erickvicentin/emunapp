@@ -90,21 +90,22 @@ export default function LocationSection() {
           </div>
         </div>
 
-        {/* Right Column: Static Map integration card */}
+        {/* Right Column: Interactive Map integration card */}
         <div className="lg:col-span-7">
           <div className="relative w-full h-[360px] sm:h-[420px] rounded-2xl overflow-hidden shadow-sm bg-surface-container border border-surface-container-high">
-            <div
-              className="w-full h-full bg-cover bg-center"
-              role="img"
-              aria-label="Mapa de ubicación en Fray Luis Beltrán 245, Resistencia, Chaco"
-              style={{
-                backgroundImage:
-                  "url('https://lh3.googleusercontent.com/aida-public/AB6AXuDlSHzMNn9EalVl-iX8qiVZ4An5TyFj6HNLKaG1pKO-UM2sa0Fgjg0A7f8zjZMhgZHc0KQi-1fl5mnXauVrIzQbm0INRLpoylex-OMCjsErdibELV7N17suCzgnoCPaJwcOBx5TBoDLcqti96_BVAqmJQOTeCDYxaUnY3hV3g3fePcgE6IqCIOeMBmREmki7NzivNM8o3gp2lhTpEVVi5Xk0NOstvFluaQfjV1Kr9jTJggafwXJ0fHy')",
-              }}
+            <iframe
+              data-testid="location-map-iframe"
+              title="Mapa interactivo de Estudio Emuná en Fray Luis Beltrán 245, Resistencia, Chaco"
+              src={STUDIO_INFO.mapEmbedUrl}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+              allowFullScreen
+              className="w-full h-full border-0"
             />
 
             {/* Map Overlay Card */}
-            <div className="absolute bottom-4 left-4 right-4 sm:right-auto p-4 rounded-xl bg-surface/95 backdrop-blur-md shadow-md border border-white/60 sm:max-w-xs">
+            <div className="pointer-events-none absolute bottom-4 left-4 right-4 sm:right-auto p-4 rounded-xl bg-surface/95 backdrop-blur-md shadow-md border border-white/60 sm:max-w-xs">
               <span className="font-label-sm text-label-sm uppercase text-secondary font-bold block">
                 Estudio Emuná
               </span>
@@ -114,6 +115,16 @@ export default function LocationSection() {
               <span className="font-body-sm text-body-sm text-on-surface-variant block mt-0.5">
                 {STUDIO_INFO.addressReference}
               </span>
+              <a
+                data-testid="location-open-maps-link"
+                href={STUDIO_INFO.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pointer-events-auto inline-flex items-center gap-1 mt-2 font-label-sm text-label-sm font-semibold text-secondary hover:underline"
+              >
+                <span>Abrir en Google Maps</span>
+                <Icon name="open_in_new" className="text-[14px]" />
+              </a>
             </div>
           </div>
         </div>

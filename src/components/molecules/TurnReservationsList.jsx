@@ -56,6 +56,9 @@ export default function TurnReservationsList({
                   {res.origen === 'admin_sin_cupo' && (
                     <Badge variant="warning">Asignado sin cupo</Badge>
                   )}
+                  {res.origen === 'admin_historico' && (
+                    <Badge variant="neutral">Histórico (sin crédito)</Badge>
+                  )}
                 </div>
               </div>
 

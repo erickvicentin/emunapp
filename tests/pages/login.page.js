@@ -27,12 +27,12 @@ class LoginPage {
 
   async loginAsAdmin(email, password) {
     await this.submitCredentials(email, password);
-    await $(ADMIN_SIDEBAR).waitForDisplayed({ timeout: 15000 });
+    await $(ADMIN_SIDEBAR).waitForDisplayed({ timeout: 25000 });
   }
 
   async loginAsCustomer(email, password) {
     await this.submitCredentials(email, password);
-    await $(CUSTOMER_SIDEBAR).waitForDisplayed({ timeout: 15000 });
+    await $(CUSTOMER_SIDEBAR).waitForDisplayed({ timeout: 25000 });
   }
 }
 

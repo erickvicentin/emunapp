@@ -8,7 +8,11 @@ export const STUDIO_INFO = {
   tagline: 'Estudio Pilates Reformer',
   city: 'Resistencia, Chaco',
   address: 'Fray Luis Beltrán 245, H3500 Resistencia, Chaco',
-  addressReference: 'Frente a plazoleta arbolada • Fácil estacionamiento',
+  addressReference: 'Zona Residencial • Fácil estacionamiento',
+  mapEmbedUrl:
+    'https://maps.google.com/maps?q=Fray+Luis+Beltr%C3%A1n+245,+Resistencia,+Chaco,+Argentina&t=&z=16&ie=UTF8&iwloc=&output=embed',
+  mapUrl:
+    'https://www.google.com/maps/search/?api=1&query=Fray+Luis+Beltr%C3%A1n+245,+Resistencia,+Chaco,+Argentina',
   phone: '+54 (3704) 578354',
   whatsappUrl: 'https://wa.me/543704578354?text=Hola!%20Quisiera%20consultar%20por%20clases%20de%20Pilates%20Reformer%20en%20Emun%C3%A1',
   email: 'info@emunapilates.com',
@@ -209,27 +213,39 @@ export const SCHEDULE_GRID_DATA = {
  */
 export const ASSISTANT_PRESETS = [
   {
-    label: '¿Cuál es la política de cancelación?',
-    query: '¿Con cuánta anticipación puedo cancelar?',
+    label: '¿Cómo es la cancelación?',
+    query: '¿Con cuánta anticipación puedo cancelar un turno?',
     response:
-      'En Emuná podés cancelar tu turno hasta 2 horas antes de la clase para que el crédito se reintegre automáticamente a tu paquete móvil. Las cancelaciones con menos de 2 horas registran la clase como consumida para preservar el cupo físico de 4 camas.',
+      'En Emuná podés cancelar tu turno desde el Portal de Alumno hasta 4 horas antes del inicio de la clase. El crédito se reintegra automáticamente a tu paquete con una ventana de gracia de 7 días. Con menos de 4 horas de anticipación, la clase se registra como consumida para cuidar el cupo de 4 camas.',
   },
   {
     label: '¿Dónde están ubicados?',
-    query: '¿Dónde queda el estudio y cómo llego?',
+    query: '¿Dónde queda el estudio y qué horarios tienen?',
     response:
-      'Nos encontramos en Fray Luis Beltrán 245, Resistencia, Chaco (frente a la plazoleta arbolada). La zona es tranquila, con veredas amplias y cómodo estacionamiento.',
+      'Estamos en Fray Luis Beltrán 245, Resistencia, Chaco (frente a la plazoleta arbolada, con fácil estacionamiento). Practicamos de Lunes a Viernes de 15:30 a 21:20 hs. También podés escribirnos por WhatsApp al +54 (3704) 578354.',
   },
   {
-    label: '¿Cuáles son los paquetes y precios?',
-    query: '¿Qué planes mensuales ofrecen?',
+    label: '¿Cuáles son los paquetes?',
+    query: '¿Qué paquetes y medios de pago ofrecen?',
     response:
-      'Ofrecemos 4 paquetes con vigencia móvil de 30 días corridos desde tu primera clase:\n• 4 Clases: $24.000 / mes (1x sem)\n• 8 Clases: $38.500 / mes (2x sem - Más elegido)\n• 12 Clases: $49.000 / mes (3x sem)\n• 20 Clases: $68.000 / mes (pase diario)\nPago por transferencia manual, débito o crédito sin recargo.',
+      'Ofrecemos planes con créditos libres y vigencia de 30 días corridos:\n• Clase Individual: $7.500 (1 crédito)\n• 4 Clases: $24.000 (1x semana)\n• 8 Clases: $38.500 (2x semana - Más elegido)\n• 12 Clases: $49.000 (3x semana)\nAceptamos transferencia bancaria, débito/crédito y Mercado Pago sin recargo.',
   },
   {
-    label: '¿Cuántos alumnos hay por turno?',
-    query: '¿Cuál es el cupo máximo por turno?',
+    label: '¿Cómo reservo y pago?',
+    query: '¿Cómo funciona el proceso de reserva y acreditación de créditos?',
     response:
-      'Cada turno cuenta con un cupo estricto de hasta 4 camas reformer en madera de guatambú, garantizando corrección postural guiada y atención de nuestras kinesiólogas e instructoras certificadas.',
+      'Ingresás con tu cuenta al Portal de Alumno y reservás hasta 10 minutos antes de la clase (máximo 1 reserva por día, cupo de 4 camas). Si tenés créditos, el turno se confirma al instante. Si comprás un paquete por transferencia, al informar el pago recibís créditos provisorios por 24 hs para reservar enseguida mientras se concilia.',
+  },
+  {
+    label: '¿Cuántas personas hay por clase?',
+    query: '¿Cuál es el cupo máximo y duración de cada clase?',
+    response:
+      'Cada clase dura 50 minutos y tiene un cupo estricto de hasta 4 camas Reformer en madera de guatambú, con atención postural personalizada y seguimiento en ficha clínica.',
+  },
+  {
+    label: '¿Cómo pago sin créditos?',
+    query: '¿Puedo reservar una clase suelta si no tengo créditos?',
+    response:
+      'Sí. Si no tenés créditos disponibles igual podés reservar tu lugar; la reserva queda "Esperando informe de pago" hasta que cargues la fecha de transferencia por el valor de la Clase Individual y se valide.',
   },
 ];

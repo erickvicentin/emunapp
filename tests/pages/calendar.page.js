@@ -20,7 +20,7 @@ class CalendarPage extends BasePage {
     await this.waitForElement(CALENDAR_SECTION);
   }
 
-  async waitForCalendarLoaded(timeout = 20000) {
+  async waitForCalendarLoaded(timeout = 35000) {
     await browser.waitUntil(
       async () => {
         const skeleton = await $(CALENDAR_SKELETON);

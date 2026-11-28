@@ -18,6 +18,10 @@ import {
   sendReservationConfirmedEmail,
   sendWelcomeEmail,
 } from './services/emailService.js';
+import {
+  checkAssistantRateLimit,
+  generateAssistantReply,
+} from './services/assistantService.js';
 
 initializeApp();
 
@@ -1157,4 +1161,80 @@ export const confirmEmailChangeCode = onCall({ cors: true }, async (request) => 
 
   await codeRef.delete();
   return { success: true, email: newEmail };
+});
+
+async function loadPublicStudioContext(databaseId) {
+  try {
+    const db = getFirestore(databaseId);
+    const [studioSnap, cobrosSnap, packagesSnap] = await Promise.all([
+      db.collection('configuracion').doc('estudio').get(),
+      db.collection('configuracion').doc('cobros').get(),
+      db.collection('paquetes_catalogo').get(),
+    ]);
+
+    const studioData = studioSnap.exists ? studioSnap.data() || {} : {};
+    const cobrosData = cobrosSnap.exists ? cobrosSnap.data() || {} : {};
+    const packages = packagesSnap.docs
+      .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+      .filter((pkg) => pkg.active !== false)
+      .sort((a, b) => (Number(a.order) || 99) - (Number(b.order) || 99));
+
+    return {
+      nombreProfesora: studioData.nombreProfesora || '',
+      horasVentanaCancelacion: studioData.horasVentanaCancelacion || 4,
+      alias: cobrosData.alias || cobrosData.aliasCbu || '',
+      titularCuenta: cobrosData.titularCuenta || '',
+      packages,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Asistente virtual de la landing page (contexto directo sobre Emuná Pilates con Gemini API).
+ */
+export const askLandingAssistant = onCall({ cors: true }, async (request) => {
+  const clientIp =
+    request.rawRequest?.ip ||
+    request.rawRequest?.headers?.['x-forwarded-for'] ||
+    request.auth?.uid ||
+    'anonymous';
+
+  if (!checkAssistantRateLimit(clientIp)) {
+    throw new HttpsError(
+      'resource-exhausted',
+      'Alcanzaste el límite temporal de consultas. Esperá un minuto o escribinos por WhatsApp.'
+    );
+  }
+
+  const message = String(request.data?.message || '').trim();
+  const history = Array.isArray(request.data?.history) ? request.data.history : [];
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+
+  if (!message) {
+    throw new HttpsError('invalid-argument', 'Escribí una consulta antes de enviar.');
+  }
+
+  const dynamicContext = await loadPublicStudioContext(databaseId);
+
+  try {
+    const result = await generateAssistantReply({
+      message,
+      history,
+      dynamicContext,
+    });
+    return { reply: result.reply };
+  } catch (err) {
+    if (err?.message === 'GEMINI_API_KEY_MISSING') {
+      throw new HttpsError(
+        'failed-precondition',
+        'El asistente todavía no tiene configurada la clave de API.'
+      );
+    }
+    throw new HttpsError(
+      'internal',
+      'No pudimos procesar tu consulta en este momento. Podés escribirnos por WhatsApp al +54 (3704) 578354.'
+    );
+  }
 });

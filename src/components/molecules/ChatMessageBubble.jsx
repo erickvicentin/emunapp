@@ -1,6 +1,27 @@
 import React from 'react';
 import Icon from '../atoms/Icon';
 
+function renderFormattedText(text = '') {
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  const nodes = [];
+  let offset = 0;
+
+  for (const part of parts) {
+    if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+      nodes.push(
+        <strong key={`bold-${offset}`} className="font-semibold">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    } else if (part) {
+      nodes.push(part);
+    }
+    offset += part.length;
+  }
+
+  return nodes;
+}
+
 /**
  * ChatMessageBubble Molecule
  * For the AI Conversational Assistant
@@ -35,7 +56,7 @@ export default function ChatMessageBubble({ sender = 'assistant', text, time }) 
             : 'bg-primary-container text-on-primary rounded-tr-xs shadow-xs'
         }`}
       >
-        <p className="whitespace-pre-line">{text}</p>
+        <p className="whitespace-pre-line">{renderFormattedText(text)}</p>
         {time && (
           <span
             className={`block text-[10px] mt-1 text-right ${

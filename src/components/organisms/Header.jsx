@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import Icon from '../atoms/Icon';
-import Button from '../atoms/Button';
-import { useAuth } from '../../hooks/useAuth';
-import { resolveAuthenticatedCta } from '../../utils/authRouting';
-import logo from '../../assets/logo.jpeg'
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import Icon from "../atoms/Icon";
+import Button from "../atoms/Button";
+import { useAuth } from "../../hooks/useAuth";
+import { resolveAuthenticatedCta } from "../../utils/authRouting";
+import logo from "../../assets/logo.jpeg";
 
 /**
  * Header Organism
@@ -15,20 +15,20 @@ export default function Header() {
   const { user, userProfile } = useAuth();
   const { isAuthenticated, targetPath, firstName } = resolveAuthenticatedCta(
     user,
-    userProfile
+    userProfile,
   );
   const desktopCtaLabel = isAuthenticated
-    ? `Hola, ${firstName || 'Usuario'}`
-    : 'Iniciar Sesión / Reservar';
+    ? `Hola, ${firstName || "Usuario"}`
+    : "Iniciar Sesión / Reservar";
   const mobileCtaLabel = isAuthenticated
-    ? `Hola, ${firstName || 'Usuario'}`
-    : 'Iniciar Sesión / Reservar Turno';
+    ? `Hola, ${firstName || "Usuario"}`
+    : "Iniciar Sesión / Reservar Turno";
 
   const navLinks = [
-    { label: 'Inicio', href: '#inicio' },
-    { label: 'Metodología', href: '#metodologia' },
-    { label: 'Tarifas', href: '#tarifas' },
-    { label: 'Contacto', href: '#contacto' },
+    { label: "Inicio", href: "#inicio" },
+    { label: "Metodología", href: "#metodologia" },
+    { label: "Tarifas", href: "#tarifas" },
+    { label: "Contacto", href: "#contacto" },
   ];
 
   return (
@@ -79,24 +79,18 @@ export default function Header() {
             {desktopCtaLabel}
           </Button>
 
-          <Link
-            to={targetPath}
-            data-testid="header-account-icon"
-            aria-label={isAuthenticated ? `Ir a la cuenta de ${firstName || 'usuario'}` : 'Perfil y cuenta de alumno'}
-            className="w-9 h-9 rounded-full bg-primary flex items-center justify-center hover:bg-primary-container transition-colors shadow-xs"
-          >
-            <Icon name="person" className="text-on-primary text-[19px]" />
-          </Link>
-
           {/* Mobile Menu Toggle Button */}
           <button
             type="button"
             className="lg:hidden p-2 rounded-xl text-primary hover:bg-surface-container transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={mobileMenuOpen}
           >
-            <Icon name={mobileMenuOpen ? 'close' : 'menu'} className="text-[24px]" />
+            <Icon
+              name={mobileMenuOpen ? "close" : "menu"}
+              className="text-[24px]"
+            />
           </button>
         </div>
       </div>

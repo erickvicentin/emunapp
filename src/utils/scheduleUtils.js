@@ -93,6 +93,47 @@ export function formatDateKey(date) {
 }
 
 /**
+ * Parses a turn's dateKey (YYYY-MM-DD) and startTime (HH:mm) into a local Date.
+ */
+export function parseTurnStartDate(dateKey, startTime = '00:00') {
+  const [year, month, day] = String(dateKey).split('-').map(Number);
+  const [hours, minutes] = String(startTime).split(':').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0, 0, 0);
+}
+
+/**
+ * Finds the currently active turn (start <= now < end) and the next upcoming turn.
+ */
+export function findActiveAndNextTurn(
+  turns = [],
+  now = new Date(),
+  defaultDurationMinutes = DEFAULT_CLASS_DURATION_MINUTES
+) {
+  const nowMs = now.getTime();
+  let activeTurn = null;
+  let nextTurn = null;
+  let nextTurnStartMs = Infinity;
+
+  for (const turn of turns) {
+    if (!turn?.dateKey || !turn?.startTime) continue;
+    if (turn.estado === 'cancelado' || turn.estado === 'cancelado_estudio') continue;
+
+    const startMs = parseTurnStartDate(turn.dateKey, turn.startTime).getTime();
+    const duration = Number(turn.duracionMinutos) || defaultDurationMinutes;
+    const endMs = startMs + duration * 60 * 1000;
+
+    if (startMs <= nowMs && nowMs < endMs) {
+      activeTurn = turn;
+    } else if (startMs > nowMs && startMs < nextTurnStartMs) {
+      nextTurn = turn;
+      nextTurnStartMs = startMs;
+    }
+  }
+
+  return { activeTurn, nextTurn };
+}
+
+/**
  * Returns the Monday (00:00:00 local) for the week containing `date`.
  */
 export function getWeekStartMonday(date = new Date()) {
