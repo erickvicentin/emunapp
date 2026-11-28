@@ -63,3 +63,33 @@ Then(
     expect(statusText).toContain(expectedStatus);
   }
 );
+
+Then(
+  'the customer packages section should display title {string} and the individual package card',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isPackagesSectionDisplayed();
+    const titleText = await CustomerPage.getPackagesTitleText();
+    const isGridDisplayed = await CustomerPage.isPackagesGridDisplayed();
+    const isIndividualDisplayed = await CustomerPage.isIndividualPackageCardDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(isGridDisplayed).toBe(true);
+    expect(isIndividualDisplayed).toBe(true);
+  }
+);
+
+Then(
+  'the customer payments section should display title {string} and the history view',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isPaymentsSectionDisplayed();
+    const titleText = await CustomerPage.getPaymentsTitleText();
+    const isBankDisplayed = await CustomerPage.isPaymentsBankDetailsDisplayed();
+    const isViewDisplayed = await CustomerPage.isPaymentsTableOrEmptyDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(isBankDisplayed).toBe(true);
+    expect(isViewDisplayed).toBe(true);
+  }
+);
