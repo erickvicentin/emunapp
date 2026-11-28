@@ -1,45 +1,22 @@
 import React from "react";
 import Icon from "../atoms/Icon";
 import Button from "../atoms/Button";
-import { parseTurnDateTime } from "../../utils/scheduleUtils";
+import CustomerUpcomingTurnMenu from "./CustomerUpcomingTurnMenu";
+import { buildAdminWhatsappPaymentUrl } from "../../utils/calendarExport";
+import { formatArsPrice, getPackageNumericPrice } from "../../services/packageService";
+import {
+  parseTurnDateTime,
+  UPCOMING_STATUS_META,
+} from "../../utils/scheduleUtils";
 
 const EMPTY_LIST = [];
 
-const STATUS_META = {
-  esperando_comprobante: {
-    label: "Esperando comprobante",
-    badgeClass: "bg-amber-100 text-amber-900 border-amber-300",
-  },
-  confirmada: {
-    label: "Turno confirmado",
-    badgeClass:
-      "bg-secondary-container text-on-secondary-container border-secondary/30",
-  },
-  comprobante_rechazado: {
-    label: "Comprobante rechazado",
-    badgeClass: "bg-error-container text-on-error-container border-error/40",
-  },
-  cancelada: {
-    label: "Turno cancelado",
-    badgeClass:
-      "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",
-  },
-  cancelado_estudio: {
-    label: "Turno cancelado",
-    badgeClass:
-      "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",
-  },
-  cancelado_tiempo: {
-    label: "Turno cancelado",
-    badgeClass:
-      "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",
-  },
-  cancelado_tarde: {
-    label: "Turno cancelado",
-    badgeClass:
-      "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",
-  },
-};
+const CANCELLED_STATES = new Set([
+  'cancelada',
+  'cancelado_estudio',
+  'cancelado_tiempo',
+  'cancelado_tarde',
+]);
 
 function formatReservationDate(dateKey) {
   if (!dateKey) return "";
@@ -58,14 +35,28 @@ function formatReservationDate(dateKey) {
  */
 export default function CustomerUpcomingTurns({
   reservations = EMPTY_LIST,
+  individualPackage = null,
+  isMutating = false,
   onReportPayment,
+  onViewDetail,
+  onAddToCalendar,
+  onCancelTurn,
+  onClearCancelled,
 }) {
+  const individualPrice = getPackageNumericPrice(individualPackage);
+  const amountLabel = individualPrice > 0 ? formatArsPrice(individualPrice) : "$---";
+  const whatsappPaymentUrl = buildAdminWhatsappPaymentUrl({
+    conceptLabel: "la clase individual",
+    amountLabel,
+  });
+  const hasCancelled = reservations.some((r) => CANCELLED_STATES.has(r.estado));
+
   return (
     <section
       data-testid="customer-upcoming-turns"
-      className="p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs space-y-4"
+      className="p-5 sm:p-6 rounded-2xl bg-surface-container-low border border-surface-container-high/60 shadow-xs space-y-4"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-headline-sm text-headline-sm font-semibold text-primary">
             Próximos turnos...
@@ -74,6 +65,21 @@ export default function CustomerUpcomingTurns({
             Ordenados desde el más próximo en adelante.
           </p>
         </div>
+
+        {hasCancelled && onClearCancelled && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isMutating}
+            data-testid="customer-clear-cancelled-btn"
+            onClick={onClearCancelled}
+            className="bg-surface-container-lowest"
+          >
+            <Icon name="cleaning_services" className="text-[16px] mr-1.5" />
+            <span>Limpiar turnos cancelados</span>
+          </Button>
+        )}
       </div>
 
       {reservations.length === 0 ? (
@@ -86,8 +92,10 @@ export default function CustomerUpcomingTurns({
       ) : (
         <ul className="space-y-2.5" data-testid="customer-upcoming-list">
           {reservations.map((res) => {
-            const meta = STATUS_META[res.estado] || STATUS_META.confirmada;
-            const awaitingReceipt = res.estado === "esperando_comprobante";
+            const meta = UPCOMING_STATUS_META[res.estado] || UPCOMING_STATUS_META.confirmada;
+            const canReportPayment =
+              res.estado === "esperando_comprobante" ||
+              res.estado === "comprobante_rechazado";
 
             return (
               <li
@@ -116,7 +124,7 @@ export default function CustomerUpcomingTurns({
                 </div>
 
                 <div className="flex items-center justify-end gap-2 shrink-0">
-                  {awaitingReceipt && (
+                  {canReportPayment && (
                     <Button
                       type="button"
                       variant="outline"
@@ -129,15 +137,13 @@ export default function CustomerUpcomingTurns({
                       <span>Informar pago</span>
                     </Button>
                   )}
-                  <button
-                    type="button"
-                    data-testid={`upcoming-turn-actions-btn-${res.id}`}
-                    aria-label="Acciones del turno"
-                    title="Acciones"
-                    className="w-9 h-9 rounded-full inline-flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
-                  >
-                    <Icon name="more_vert" className="text-[20px]" />
-                  </button>
+                  <CustomerUpcomingTurnMenu
+                    reservation={res}
+                    whatsappPaymentUrl={whatsappPaymentUrl}
+                    onViewDetail={onViewDetail}
+                    onAddToCalendar={onAddToCalendar}
+                    onCancelTurn={onCancelTurn}
+                  />
                 </div>
               </li>
             );

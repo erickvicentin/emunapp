@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   bookTurnAsStudent,
+  cancelReservationAsStudent,
   fetchClosedDaysForKeys,
   fetchUserReservations,
   fetchWeeklyScheduleTemplate,
   fetchWeekTurns,
+  hideCancelledReservationsForStudent,
 } from '../services/scheduleService';
 import {
   DEFAULT_COBROS_CONFIG,
@@ -147,7 +149,10 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
   const [todayKey] = useState(() => formatDateKey(new Date()));
 
   const upcomingReservations = useMemo(
-    () => reservations.filter((r) => String(r.dateKey || '') >= todayKey),
+    () =>
+      reservations.filter(
+        (r) => String(r.dateKey || '') >= todayKey && !r.ocultoParaAlumno
+      ),
     [reservations, todayKey]
   );
 
@@ -213,6 +218,45 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     }
   };
 
+  const cancelReservation = async (reserva) => {
+    if (!uid || !reserva) return false;
+    setIsMutating(true);
+    try {
+      const res = await cancelReservationAsStudent(reserva);
+      await Promise.all([reloadWeek(), loadAccountData()]);
+      showSnackbar?.(
+        'success',
+        res?.credited
+          ? 'Turno cancelado correctamente. Se acreditó 1 crédito en tu saldo.'
+          : 'Turno cancelado correctamente.'
+      );
+      return true;
+    } catch (err) {
+      showSnackbar?.('error', err?.message || 'No se pudo cancelar el turno.');
+      return false;
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const clearCancelledReservations = async () => {
+    if (!uid) return false;
+    setIsMutating(true);
+    try {
+      const count = await hideCancelledReservationsForStudent(upcomingReservations);
+      await loadAccountData();
+      if (count > 0) {
+        showSnackbar?.('success', 'Turnos cancelados limpiados de tu lista.');
+      }
+      return true;
+    } catch (err) {
+      showSnackbar?.('error', err?.message || 'No se pudieron limpiar los turnos cancelados.');
+      return false;
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
   const goToPreviousWeek = () => {
     setIsLoading(true);
     setWeekStart((prev) => addDays(prev, -7));
@@ -245,5 +289,7 @@ export function useCustomerCalendar({ uid, userName, userEmail, isEnabled = true
     goToCurrentWeek,
     bookTurn,
     reportReservationPayment,
+    cancelReservation,
+    clearCancelledReservations,
   };
 }

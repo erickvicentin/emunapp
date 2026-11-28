@@ -5,7 +5,14 @@ import WeeklyCalendarGrid from './WeeklyCalendarGrid';
 import CustomerBookTurnModal from '../molecules/CustomerBookTurnModal';
 import CustomerUpcomingTurns from '../molecules/CustomerUpcomingTurns';
 import CustomerReservationPaymentModal from '../molecules/CustomerReservationPaymentModal';
-import { formatDateKey, getWeekStartMonday } from '../../utils/scheduleUtils';
+import CustomerReservationDetailModal from '../molecules/CustomerReservationDetailModal';
+import CustomerCancelTurnModal from '../molecules/CustomerCancelTurnModal';
+import { addToMyCalendar } from '../../utils/calendarExport';
+import {
+  formatDateKey,
+  getWeekStartMonday,
+  UPCOMING_STATUS_META,
+} from '../../utils/scheduleUtils';
 
 const ACTIVE_BOOKING_STATES = new Set([
   'confirmada',
@@ -21,6 +28,8 @@ const ACTIVE_BOOKING_STATES = new Set([
 export default function CustomerTurnsSection({ calendar }) {
   const bookDialogRef = useRef(null);
   const reportDialogRef = useRef(null);
+  const detailDialogRef = useRef(null);
+  const cancelDialogRef = useRef(null);
   const [selectedTurn, setSelectedTurn] = useState(null);
   const [selectedReservation, setSelectedReservation] = useState(null);
 
@@ -40,6 +49,8 @@ export default function CustomerTurnsSection({ calendar }) {
     goToCurrentWeek,
     bookTurn,
     reportReservationPayment,
+    cancelReservation,
+    clearCancelledReservations,
   } = calendar;
 
   const [todayKey] = useState(() => formatDateKey(new Date()));
@@ -56,7 +67,10 @@ export default function CustomerTurnsSection({ calendar }) {
   );
 
   const hasPendingSinglePayment = useMemo(
-    () => upcomingReservations.some((r) => r.estado === 'esperando_comprobante'),
+    () =>
+      upcomingReservations.some((r) =>
+        ['esperando_comprobante', 'pendiente_confirmacion'].includes(r.estado)
+      ),
     [upcomingReservations]
   );
 
@@ -142,29 +156,47 @@ export default function CustomerTurnsSection({ calendar }) {
         </div>
       )}
 
-      <WeeklyCalendarGrid
-        weekDays={weekDays}
-        todayKey={todayKey}
-        weekSelectorLabel={weekSelectorLabel}
-        closedDaysMap={closedDaysMap}
-        turns={turns}
-        bookedDateKeys={bookedDateKeys}
-        isBookingBlocked={hasPendingSinglePayment}
-        isLoading={isLoading}
-        isAdmin={false}
-        mode="customer"
-        onPrevWeek={goToPreviousWeek}
-        onNextWeek={goToNextWeek}
-        onOpenTurnDetail={handleOpenBookModal}
-      />
+      <div className="flex flex-col gap-5">
+        <div className="order-2 lg:order-1">
+          <WeeklyCalendarGrid
+            weekDays={weekDays}
+            todayKey={todayKey}
+            weekSelectorLabel={weekSelectorLabel}
+            closedDaysMap={closedDaysMap}
+            turns={turns}
+            bookedDateKeys={bookedDateKeys}
+            isBookingBlocked={hasPendingSinglePayment}
+            isLoading={isLoading}
+            isAdmin={false}
+            mode="customer"
+            onPrevWeek={goToPreviousWeek}
+            onNextWeek={goToNextWeek}
+            onOpenTurnDetail={handleOpenBookModal}
+          />
+        </div>
 
-      <CustomerUpcomingTurns
-        reservations={upcomingReservations}
-        onReportPayment={(res) => {
-          setSelectedReservation(res);
-          reportDialogRef.current?.showModal();
-        }}
-      />
+        <div className="order-1 lg:order-2">
+          <CustomerUpcomingTurns
+            reservations={upcomingReservations}
+            individualPackage={individualPackage}
+            isMutating={isMutating}
+            onReportPayment={(res) => {
+              setSelectedReservation(res);
+              reportDialogRef.current?.showModal();
+            }}
+            onViewDetail={(res) => {
+              setSelectedReservation(res);
+              detailDialogRef.current?.showModal();
+            }}
+            onAddToCalendar={(res) => addToMyCalendar(res)}
+            onCancelTurn={(res) => {
+              setSelectedReservation(res);
+              cancelDialogRef.current?.showModal();
+            }}
+            onClearCancelled={clearCancelledReservations}
+          />
+        </div>
+      </div>
 
       <CustomerBookTurnModal
         dialogRef={bookDialogRef}
@@ -188,6 +220,37 @@ export default function CustomerTurnsSection({ calendar }) {
           setSelectedReservation(null);
         }}
         onSubmit={reportReservationPayment}
+      />
+
+      <CustomerReservationDetailModal
+        dialogRef={detailDialogRef}
+        reservation={selectedReservation}
+        statusMeta={
+          selectedReservation
+            ? UPCOMING_STATUS_META[selectedReservation.estado] || UPCOMING_STATUS_META.confirmada
+            : null
+        }
+        onClose={() => {
+          detailDialogRef.current?.close();
+          setSelectedReservation(null);
+        }}
+      />
+
+      <CustomerCancelTurnModal
+        dialogRef={cancelDialogRef}
+        reservation={selectedReservation}
+        isMutating={isMutating}
+        onClose={() => {
+          cancelDialogRef.current?.close();
+          setSelectedReservation(null);
+        }}
+        onConfirm={async (res) => {
+          const ok = await cancelReservation(res);
+          if (ok) {
+            cancelDialogRef.current?.close();
+            setSelectedReservation(null);
+          }
+        }}
       />
     </div>
   );
