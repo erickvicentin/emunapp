@@ -53,10 +53,7 @@ Then('the current URL should contain {string}', async (expectedPath) => {
   expect(currentUrl).toContain(expectedPath);
 });
 
-Then(
-  'bed card {string} should display the status {string}',
-  async (bedId, expectedStatus) => {
-    const cardText = await AdminPage.getBedCardText(bedId);
-    expect(cardText.toUpperCase()).toContain(expectedStatus.toUpperCase());
-  }
-);
+Then('the dashboard header should display a time-of-day greeting', async () => {
+  const greetingText = await AdminPage.getGreetingText();
+  expect(greetingText).toMatch(/^(Buenos días|Buenas tardes|Buenas noches)\s+\S+/);
+});

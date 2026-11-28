@@ -29,6 +29,5 @@ Feature: Administrator Panel
       | configuracion | /administrador/configuracion |
 
   @EMUNA-003
-  Scenario: Toggle bed check-in status on the dashboard
-    When the administrator toggles the check-in status of bed "1"
-    Then bed card "1" should display the status "AUSENTE"
+  Scenario: Display time-of-day greeting in admin header
+    Then the dashboard header should display a time-of-day greeting

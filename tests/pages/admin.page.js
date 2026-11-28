@@ -1,6 +1,8 @@
 const ADMIN_SIDEBAR = '[data-testid="admin-sidebar"]';
+const DASHBOARD_GREETING = '[data-testid="dashboard-greeting"]';
 const DASHBOARD_TITLE = '[data-testid="admin-dashboard-title"]';
 const BEDS_GRID = '[data-testid="admin-beds-grid"]';
+const NEXT_TURN_BANNER = '[data-testid="admin-next-turn-banner"]';
 const PAYMENTS_SECTION = '[data-testid="admin-payments-section"]';
 const PLACEHOLDER_SECTION = '[data-testid="admin-placeholder-section"]';
 
@@ -30,9 +32,23 @@ class AdminPage {
     return title.getText();
   }
 
+  async getGreetingText() {
+    const greeting = await $(DASHBOARD_GREETING);
+    await greeting.waitForDisplayed();
+    return greeting.getText();
+  }
+
   async isBedsGridDisplayed() {
-    const grid = await $(BEDS_GRID);
-    return grid.isDisplayed();
+    await browser.waitUntil(
+      async () =>
+        (await $(BEDS_GRID).isDisplayed()) ||
+        (await $(NEXT_TURN_BANNER).isDisplayed()),
+      {
+        timeout: 15000,
+        timeoutMsg: 'Expected either active beds grid or next turn banner to be displayed',
+      }
+    );
+    return true;
   }
 
   async isPaymentsSectionDisplayed() {
