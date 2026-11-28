@@ -11,6 +11,7 @@ import {
   sendAdminLastMinuteBookingEmail,
   sendAdminNewPaymentEmail,
   sendAdminStudentCancelledEmail,
+  sendBulkNoticeEmail,
   sendClassReminderEmail,
   sendEmailChangeVerificationCodeEmail,
   sendPaymentStatusEmail,
@@ -1284,4 +1285,96 @@ export const askLandingAssistant = onCall({ cors: true }, async (request) => {
       'No pudimos procesar tu consulta en este momento. Podés escribirnos por WhatsApp al +54 (3704) 578354.'
     );
   }
+});
+
+const BULK_EMAIL_BATCH_SIZE = 10;
+
+/**
+ * Envía un aviso por correo electrónico a todos los alumnos con estado activo y email válido.
+ * Solo accesible para cuentas con rol administradora.
+ */
+export const sendActiveStudentsNotice = onCall({ cors: true }, async (request) => {
+  assertAdminCaller(request);
+
+  const subject = String(request.data?.subject || '').trim();
+  const body = String(request.data?.body || '').trim();
+
+  if (!subject || subject.length > 160) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Ingresá un asunto válido (entre 1 y 160 caracteres).'
+    );
+  }
+
+  if (!body || body.length > 5000) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Ingresá el cuerpo del mensaje (entre 1 y 5000 caracteres).'
+    );
+  }
+
+  const databaseId = resolveDatabaseId(request.data?.databaseId);
+  const db = getFirestore(databaseId);
+
+  const snapshot = await db
+    .collection('usuarios')
+    .where('rol', '==', 'customer')
+    .get();
+
+  let totalActive = 0;
+  let skippedNoEmailCount = 0;
+  const recipientsByEmail = new Map();
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data() || {};
+    if (data.active === false) continue;
+
+    totalActive += 1;
+    const rawEmail = String(data.email || '').trim();
+    if (!isValidRecipientEmail(rawEmail)) {
+      skippedNoEmailCount += 1;
+      continue;
+    }
+
+    const normalizedEmail = rawEmail.toLowerCase();
+    if (!recipientsByEmail.has(normalizedEmail)) {
+      recipientsByEmail.set(normalizedEmail, {
+        email: rawEmail,
+        nombre: String(data.nombre || '').trim(),
+      });
+    }
+  }
+
+  const recipients = Array.from(recipientsByEmail.values());
+  let sentCount = 0;
+  let failedCount = 0;
+
+  for (let i = 0; i < recipients.length; i += BULK_EMAIL_BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BULK_EMAIL_BATCH_SIZE);
+    const results = await Promise.all(
+      batch.map((recipient) =>
+        sendBulkNoticeEmail({
+          to: recipient.email,
+          nombre: recipient.nombre,
+          subject,
+          body,
+        })
+      )
+    );
+    for (const res of results) {
+      if (res?.sent) {
+        sentCount += 1;
+      } else {
+        failedCount += 1;
+      }
+    }
+  }
+
+  return {
+    totalActive,
+    eligibleRecipients: recipients.length,
+    sentCount,
+    failedCount,
+    skippedNoEmailCount,
+  };
 });

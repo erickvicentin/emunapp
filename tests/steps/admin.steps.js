@@ -85,3 +85,16 @@ Then(
     expect(titleText).toBe(expectedTitle);
   }
 );
+
+Then(
+  'the admin notice section should display title {string}, recipient summary, form fields, and email preview',
+  async (expectedTitle) => {
+    const isDisplayed = await AdminPage.isNoticeSectionDisplayed();
+    const titleText = await AdminPage.getNoticeTitleText();
+    const elementsDisplayed = await AdminPage.areNoticeElementsDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toBe(expectedTitle);
+    expect(elementsDisplayed).toBe(true);
+  }
+);

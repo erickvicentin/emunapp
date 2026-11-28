@@ -544,3 +544,45 @@ export async function sendAdminDailySummaryEmail({
     }),
   });
 }
+
+function formatJustifiedParagraphsHtml(bodyText) {
+  const paragraphs = String(bodyText || '')
+    .trim()
+    .split(/\r?\n\s*\r?\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) return '';
+
+  return paragraphs
+    .map((paragraph, index) => {
+      const marginBottom = index === paragraphs.length - 1 ? '0' : '12px';
+      const safeHtml = escapeHtml(paragraph).replace(/\r?\n/g, '<br />');
+      return `<p style="margin:0 0 ${marginBottom};text-align:justify;line-height:1.65;color:#4e4542;">${safeHtml}</p>`;
+    })
+    .join('');
+}
+
+export async function sendBulkNoticeEmail({
+  to,
+  nombre,
+  subject,
+  body,
+}) {
+  const firstName = String(nombre || '').trim() || 'alumne';
+  const cleanSubject = String(subject || '').trim();
+  const cleanBody = String(body || '').trim();
+  const paragraphsHtml = formatJustifiedParagraphsHtml(cleanBody);
+
+  return sendEmail({
+    to,
+    subject: cleanSubject,
+    text: `Hola ${firstName},\n\n${cleanBody}\n\nEmuná Pilates`,
+    html: buildEmailLayout({
+      title: cleanSubject,
+      greeting: `Hola ${firstName},`,
+      bodyHtml: `<div style="text-align:justify;">${paragraphsHtml}</div>`,
+      ctaLabel: 'Ir a Emuná Pilates',
+    }),
+  });
+}

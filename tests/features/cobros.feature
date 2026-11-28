@@ -18,6 +18,6 @@ Feature: Payments Reconciliation and Transfer Account Configuration in Administr
     Then the cash payment notice modal should be visible
 
   @EMUNA-028
-  Scenario: Display destination account, studio settings, email notification toggles, and bulk email notice in Configuracion
+  Scenario: Display destination account, studio settings, and email notification toggles in Configuracion
     When the administrator navigates to the "configuracion" section from the sidebar
-    Then the admin configuration section should display cobros, studio settings, and bulk email button
+    Then the admin configuration section should display cobros, studio settings, and email notification toggles

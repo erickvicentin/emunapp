@@ -7,12 +7,9 @@ import CobrosConfigCard from '../molecules/CobrosConfigCard';
 /**
  * AdminConfigSection Organism
  * Centralized admin-only settings: transfer account & cobros config,
- * cancellation window, default instructor name, and bulk email notice CTA.
+ * cancellation window, default instructor name, and email notification preferences.
  */
-export default function AdminConfigSection({
-  paymentsManager,
-  onSendBulkEmailNotice,
-}) {
+export default function AdminConfigSection({ paymentsManager }) {
   const {
     cobrosConfig,
     studioConfig,
@@ -49,7 +46,7 @@ export default function AdminConfigSection({
           Configuración
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Administrá la cuenta destino para transferencias, la ventana de cancelación, el nombre de la profesora y los avisos generales.
+          Administrá la cuenta destino para transferencias, la ventana de cancelación, el nombre de la profesora y las notificaciones por correo.
         </p>
       </section>
 
@@ -122,33 +119,6 @@ export default function AdminConfigSection({
         isMutating={isMutating}
         onSave={saveAdminEmailNotifSettings}
       />
-
-      <section
-        data-testid="admin-bulk-email-card"
-        className="p-5 rounded-2xl bg-surface-container-low border border-surface-container-high flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-      >
-        <div className="space-y-1">
-          <h2 className="font-headline-sm text-headline-sm text-primary font-semibold flex items-center gap-2">
-            <Icon name="campaign" className="text-secondary text-[20px]" />
-            <span>Aviso por email a alumnos</span>
-          </h2>
-          <p className="font-body-sm text-body-sm text-on-surface-variant">
-            Enviá un comunicado general por correo electrónico a todos los alumnos registrados.
-          </p>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          data-testid="admin-config-bulk-email-btn"
-          onClick={onSendBulkEmailNotice}
-          className="bg-surface-container-lowest shrink-0"
-        >
-          <Icon name="mail" className="text-[18px] mr-2" />
-          <span>Enviar aviso por mail</span>
-        </Button>
-      </section>
     </div>
   );
 }

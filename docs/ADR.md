@@ -438,3 +438,28 @@
 ### Pros y Contras
 - **Pros:** Reutilización limpia mediante `EmailNotificationsCard`; opt-out granular por tipo de aviso sin afectar a usuarios existentes (default `true`).
 - **Contras:** Requiere redesplegar Cloud Functions y Firestore Rules para que el filtrado de preferencias en los triggers de backend esté activo en la nube.
+
+---
+
+## ADR-020: Sección "Emitir aviso" en el Panel de Administración y Envío Masivo a Alumnos Activos
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- Se agregó la entrada `avisos` (**Emitir aviso**) en `src/data/adminNavItems.js` (`adminOnly: true`, ruta `/administrador/avisos`).
+- Se creó el organismo `AdminNoticeSection` (`src/components/organisms/AdminNoticeSection.jsx`) con formulario accesible (asunto y cuerpo), conteo de alumnos activos con email válido y vista previa en vivo con texto justificado (`text-justify`) y la paleta/branding de Emuná Pilates.
+- Se creó el servicio cliente `src/services/noticeService.js` (`isDeliverableStudentEmail`, `sendActiveStudentsNotice`) reutilizando `mapCallableError` de `studentService.js`.
+- Se implementó `sendBulkNoticeEmail` en `functions/services/emailService.js` usando `buildEmailLayout` (colores `#fff8f0`, `#2c2422`, `#82533e`, `#f6b99f`, `#fbf3e4` y `logo-email.jpg`), escape HTML y párrafos con `text-align:justify`.
+- Se implementó la Cloud Function `sendActiveStudentsNotice` en `functions/index.js`, restringida a `administradora` (`assertAdminCaller`), que filtra usuarios `rol === 'customer'` con `active !== false`, valida emails entregables, deduplica destinatarios y envía en lotes de 10.
+- Se agregaron pruebas unitarias en `functions/tests/emailService.test.js` y cobertura E2E en `tests/features/administrador.feature` (`@EMUNA-002` y `@EMUNA-035`), `tests/pages/admin.page.js` y `tests/steps/admin.steps.js`.
+
+### Qué se quitó
+- Se retiró la tarjeta placeholder `admin-bulk-email-card` ("Enviar aviso por mail") de `AdminConfigSection.jsx` y se actualizó `@EMUNA-028` en `tests/features/cobros.feature`, `tests/pages/cobros.page.js` y `tests/steps/cobros.steps.js`.
+
+### Por qué
+- Centralizar la redacción y envío de comunicados institucionales en una página dedicada del sidebar con vista previa en vivo, garantizando que solo los alumnos con estado activo reciban el correo con formato justificado y diseño oficial del estudio.
+
+### Pros y Contras
+- **Pros:** Mejor experiencia de edición y previsualización para la administradora; validación y deduplicación en backend; reutilización de `buildEmailLayout` y Nodemailer/Brevo ya configurados.
+- **Contras:** El envío masivo síncrono dentro de la Cloud Function en lotes de 10 es adecuado para decenas o pocos cientos de alumnos activos; si la base creciera a miles, convendría migrar a una cola asíncrona.
