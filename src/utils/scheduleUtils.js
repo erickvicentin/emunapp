@@ -102,6 +102,14 @@ export function parseTurnStartDate(dateKey, startTime = '00:00') {
 }
 
 /**
+ * Returns true if the turn has already started (in progress or past).
+ */
+export function hasTurnStarted(dateKey, startTime = '00:00', now = new Date()) {
+  if (!dateKey) return false;
+  return parseTurnStartDate(dateKey, startTime).getTime() <= now.getTime();
+}
+
+/**
  * Finds the currently active turn (start <= now < end) and the next upcoming turn.
  */
 export function findActiveAndNextTurn(

@@ -37,6 +37,40 @@ export function validateProfileFields(formData) {
 }
 
 /**
+ * Validates admin/staff "Mi perfil" form data.
+ * Nombre and Apellido are required; DNI and Fecha de Nacimiento are optional.
+ * @param {Object} formData
+ * @returns {Object} errors map
+ */
+export function validateAdminProfileFields(formData) {
+  const errors = {};
+
+  if (!String(formData.nombre || '').trim()) {
+    errors.nombre = 'El nombre es obligatorio.';
+  }
+  if (!String(formData.apellido || '').trim()) {
+    errors.apellido = 'El apellido es obligatorio.';
+  }
+
+  const compactDni = String(formData.dni || '').replace(/\D/g, '').trim();
+  if (compactDni) {
+    const dniError = validateDniField(formData.dni);
+    if (dniError) errors.dni = dniError;
+  }
+
+  if (formData.fechaNacimiento) {
+    const age = calculateAge(formData.fechaNacimiento);
+    if (age === null) {
+      errors.fechaNacimiento = 'Ingresá una fecha de nacimiento válida (año de 4 dígitos).';
+    } else if (age < 14 || age >= 90) {
+      errors.fechaNacimiento = 'Ingresá una fecha de nacimiento válida.';
+    }
+  }
+
+  return errors;
+}
+
+/**
  * Validates email format and presence.
  * @param {string} email
  * @returns {string|null} error message or null

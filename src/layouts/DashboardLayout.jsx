@@ -88,6 +88,7 @@ export default function DashboardLayout({
     userEmail || userProfile?.email || user?.email || roleName;
   const effectiveBadge = userProfile?.rol || roleBadge;
   const photoURL = userProfile?.photoURL || user?.photoURL;
+  const shortName = user?.displayName.split(" ")[0];
 
   const handleLogout = async () => {
     try {
@@ -128,7 +129,7 @@ export default function DashboardLayout({
                   data-testid="dashboard-greeting"
                   className="font-headline-sm text-[15px] sm:text-[17px] font-semibold text-primary tracking-tight whitespace-nowrap truncate"
                 >
-                  {greeting} {effectiveName}
+                  {greeting} {shortName}
                 </span>
                 <span className="hidden sm:block font-label-sm text-[10px] uppercase text-secondary tracking-widest font-semibold whitespace-nowrap">
                   Emuná Pilates • Panel de Gestión
@@ -208,8 +209,7 @@ export default function DashboardLayout({
         ref={footerRef}
         className="w-full py-4 text-center font-label-sm text-label-sm text-on-surface-variant border-t border-surface-container-high/40"
       >
-        © {new Date().getFullYear()} Emuná Estudio Pilates • Desarrollado por
-        Clutch Studio Software
+        © {new Date().getFullYear()} Emuná Estudio Pilates
       </footer>
     </div>
   );

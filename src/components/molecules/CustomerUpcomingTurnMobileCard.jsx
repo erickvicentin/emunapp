@@ -1,43 +1,46 @@
-import React from 'react';
-import Icon from '../atoms/Icon';
-import Button from '../atoms/Button';
-import { STUDIO_INFO } from '../../data/landingData';
+import React from "react";
+import Icon from "../atoms/Icon";
+import Button from "../atoms/Button";
+import { STUDIO_INFO } from "../../data/landingData";
 import {
   canCancelWithRefund,
   DEFAULT_CLASS_DURATION_MINUTES,
   formatBlockEndLabel,
-} from '../../utils/scheduleUtils';
+} from "../../utils/scheduleUtils";
 
 const CANCELLABLE_STATES = new Set([
-  'confirmada',
-  'esperando_comprobante',
-  'comprobante_rechazado',
+  "confirmada",
+  "esperando_comprobante",
+  "comprobante_rechazado",
 ]);
 
 const CANCELLED_STATES = new Set([
-  'cancelada',
-  'cancelado_estudio',
-  'cancelado_tiempo',
-  'cancelado_tarde',
+  "cancelada",
+  "cancelado_estudio",
+  "cancelado_tiempo",
+  "cancelado_tarde",
 ]);
 
 function getMobileTurnMeta(reservation) {
-  const duration = Number(reservation.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES;
+  const duration =
+    Number(reservation.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES;
   const endLabel = formatBlockEndLabel(reservation.startTime, duration);
   const canReportPayment =
-    reservation.estado === 'esperando_comprobante' ||
-    reservation.estado === 'comprobante_rechazado';
+    reservation.estado === "esperando_comprobante" ||
+    reservation.estado === "comprobante_rechazado";
   const isCancelled = CANCELLED_STATES.has(reservation.estado);
-  const isPendingReview = reservation.estado === 'pendiente_confirmacion';
+  const isPendingReview = reservation.estado === "pendiente_confirmacion";
   const withinRefundWindow = canCancelWithRefund(
     reservation.dateKey,
-    reservation.startTime
+    reservation.startTime,
   );
-  const canCancel = CANCELLABLE_STATES.has(reservation.estado) && withinRefundWindow;
+  const canCancel =
+    CANCELLABLE_STATES.has(reservation.estado) && withinRefundWindow;
 
-  let cancelNote = '';
-  if (isPendingReview) cancelNote = 'Pago en revisión';
-  else if (!isCancelled && !withinRefundWindow) cancelNote = 'Disponible hasta 4 hs antes';
+  let cancelNote = "";
+  if (isPendingReview) cancelNote = "Pago en revisión";
+  else if (!isCancelled && !withinRefundWindow)
+    cancelNote = "Disponible hasta 4 hs antes";
 
   return {
     duration,
@@ -46,7 +49,8 @@ function getMobileTurnMeta(reservation) {
     isCancelled,
     canCancel,
     cancelNote,
-    reasonText: reservation.motivoRechazo || reservation.motivoCancelacion || '',
+    reasonText:
+      reservation.motivoRechazo || reservation.motivoCancelacion || "",
   };
 }
 
@@ -65,10 +69,10 @@ function MobileTurnDetailPanel({
       <div className="space-y-2.5 text-body-sm">
         <div>
           <span className="block text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-            Profesor/a
+            Profesora
           </span>
           <span className="text-on-surface font-medium">
-            {reservation.instructorName || 'Profesora Titular'}
+            {reservation.instructorName || "Profesora Titular"}
           </span>
         </div>
 
@@ -86,7 +90,7 @@ function MobileTurnDetailPanel({
             Ubicación
           </span>
           <span className="text-on-surface font-medium">
-            {STUDIO_INFO.address || 'Emuná Pilates'}
+            {STUDIO_INFO.address || "Emuná Pilates"}
           </span>
         </div>
 
@@ -141,7 +145,7 @@ function MobileTurnDetailPanel({
             <span>
               {metaInfo.cancelNote
                 ? `Cambiar turno (${metaInfo.cancelNote})`
-                : 'Cambiar / cancelar turno'}
+                : "Cambiar / cancelar turno"}
             </span>
           </Button>
         </div>
@@ -192,7 +196,7 @@ export default function CustomerUpcomingTurnMobileCard({
         </div>
 
         <Icon
-          name={isExpanded ? 'expand_less' : 'expand_more'}
+          name={isExpanded ? "expand_less" : "expand_more"}
           className="text-[20px] text-on-surface-variant shrink-0 mt-0.5"
         />
       </button>

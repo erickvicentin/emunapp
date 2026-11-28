@@ -7,6 +7,7 @@ import CustomerPackagesSection from '../components/organisms/CustomerPackagesSec
 import CustomerPaymentsSection from '../components/organisms/CustomerPaymentsSection';
 import CustomerHistorySection from '../components/organisms/CustomerHistorySection';
 import CustomerProfileSection from '../components/organisms/CustomerProfileSection';
+import CustomerNotificationsSection from '../components/organisms/CustomerNotificationsSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
@@ -127,6 +128,9 @@ export default function CustomerPage() {
     }
     if (activeNavItem.id === 'perfil') {
       return <CustomerProfileSection showSnackbar={showSnackbar} />;
+    }
+    if (activeNavItem.id === 'notificaciones') {
+      return <CustomerNotificationsSection showSnackbar={showSnackbar} />;
     }
     return <CustomerPlaceholderSection activeNavItem={activeNavItem} />;
   };

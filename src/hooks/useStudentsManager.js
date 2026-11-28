@@ -3,10 +3,10 @@ import { MOCK_STUDENTS } from '../data/mockStudents';
 import {
   createStudentViaAdmin,
   deleteStudentViaAdmin,
-  fetchCustomerStudents,
   formatDni,
   mapStudentProfileToRow,
   resetStudentPasswordViaAdmin,
+  subscribeCustomerStudents,
   updateStudentActiveStatus,
   updateStudentProfile,
 } from '../services/studentService';
@@ -49,31 +49,22 @@ export function useStudentsManager() {
       return undefined;
     }
 
-    let isMounted = true;
-
-    async function loadStudents() {
-      try {
-        const remoteStudents = await fetchCustomerStudents();
-        if (isMounted) {
-          setStudents(
-            remoteStudents.length > 0 ? remoteStudents : INITIAL_MOCK_STUDENTS
-          );
-        }
-      } catch (error) {
+    const unsubscribe = subscribeCustomerStudents(
+      (remoteStudents) => {
+        setStudents(
+          remoteStudents.length > 0 ? remoteStudents : INITIAL_MOCK_STUDENTS
+        );
+        setIsLoadingStudents(false);
+      },
+      (error) => {
         console.warn('No se pudieron cargar los alumnos desde Firestore:', error.message);
-        if (isMounted) {
-          setStudents(INITIAL_MOCK_STUDENTS);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingStudents(false);
-        }
+        setStudents(INITIAL_MOCK_STUDENTS);
+        setIsLoadingStudents(false);
       }
-    }
+    );
 
-    loadStudents();
     return () => {
-      isMounted = false;
+      unsubscribe();
     };
   }, []);
 
