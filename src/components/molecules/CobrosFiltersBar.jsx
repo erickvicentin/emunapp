@@ -5,6 +5,7 @@ import SelectChevron from '../atoms/SelectChevron';
 
 const FILTER_OPTIONS = [
   { id: 'todos', label: 'Todos los estados' },
+  { id: 'pendiente_informar', label: 'Esperando informe' },
   { id: 'pendiente_conciliacion', label: 'Pendientes' },
   { id: 'aprobado', label: 'Acreditados' },
   { id: 'cerrados', label: 'Rechazados / Vencidos' },

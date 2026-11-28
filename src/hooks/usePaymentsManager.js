@@ -11,6 +11,7 @@ import {
   reportPaymentNotice,
   saveCobrosConfig,
   saveStudioConfig,
+  subscribeAllPayments,
   sweepExpiredProvisionalPayments,
 } from '../services/paymentService';
 
@@ -53,30 +54,42 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
         active = false;
       };
     }
-    Promise.all([fetchAllPayments(), fetchCobrosConfig(), fetchStudioConfig()])
-      .then(([list, config, studio]) => {
+
+    const unsubscribePayments = subscribeAllPayments(
+      (list) => {
         if (!active) return;
         setPayments(list);
+        setIsLoading(false);
+      },
+      (error) => {
+        if (!active) return;
+        showSnackbar?.('error', error.message || 'No se pudieron cargar los cobros.');
+        setIsLoading(false);
+      }
+    );
+
+    Promise.all([fetchCobrosConfig(), fetchStudioConfig()])
+      .then(([config, studio]) => {
+        if (!active) return;
         setCobrosConfig(config);
         setStudioConfig(studio);
       })
       .catch((error) => {
         if (!active) return;
         showSnackbar?.('error', error.message || 'No se pudieron cargar los cobros.');
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
       });
+
     return () => {
       active = false;
+      unsubscribePayments();
     };
   }, [isEnabled, showSnackbar]);
 
-  const runMutation = async (fn, successMsg) => {
+  const runMutation = async (fn, successMsg, onSuccess) => {
     setIsMutating(true);
     try {
       const result = await fn();
-      await loadData();
+      onSuccess?.(result);
       if (successMsg) showSnackbar?.('success', successMsg);
       return result ?? true;
     } catch (error) {
@@ -97,27 +110,44 @@ export function usePaymentsManager({ isEnabled = true, showSnackbar }) {
     saveConfig: (nextConfig) =>
       runMutation(
         () => saveCobrosConfig(nextConfig),
-        'Configuración de cobros actualizada.'
+        'Configuración de cobros actualizada.',
+        (saved) => setCobrosConfig((prev) => ({ ...prev, ...saved }))
       ),
     saveStudioSettings: (nextStudio) =>
       runMutation(
         () => saveStudioConfig(nextStudio),
-        'Configuración del estudio actualizada.'
+        'Configuración del estudio actualizada.',
+        (saved) => setStudioConfig((prev) => ({ ...prev, ...saved }))
       ),
     approvePayment: (pago) =>
       runMutation(
         () => approvePaymentByAdmin(pago),
-        `Pago de ${pago.alumnoNombre} acreditado definitivamente.`
+        `Pago de ${pago.alumnoNombre} acreditado definitivamente.`,
+        () =>
+          setPayments((prev) =>
+            prev.map((item) =>
+              item.id === pago.id ? { ...item, estado: 'aprobado' } : item
+            )
+          )
       ),
     rejectPayment: (pago, motivo) =>
       runMutation(
         () => rejectPaymentByAdmin(pago, motivo),
-        `Pago de ${pago.alumnoNombre} rechazado y créditos provisorios revocados.`
+        `Pago de ${pago.alumnoNombre} rechazado y créditos provisorios revocados.`,
+        () =>
+          setPayments((prev) =>
+            prev.map((item) =>
+              item.id === pago.id
+                ? { ...item, estado: 'rechazado', motivoRechazo: motivo }
+                : item
+            )
+          )
       ),
     deletePayment: (pago) =>
       runMutation(
         () => deleteRejectedPaymentByAdmin(pago),
-        `Registro de pago rechazado de ${pago.alumnoNombre} eliminado.`
+        `Registro de pago rechazado de ${pago.alumnoNombre} eliminado.`,
+        () => setPayments((prev) => prev.filter((item) => item.id !== pago.id))
       ),
     registerCashNotice: ({ student, pkg, montoInformado }) =>
       runMutation(
