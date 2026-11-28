@@ -367,3 +367,74 @@
 ### Pros y Contras
 - **Pros:** Sin infraestructura vectorial ni costos de embeddings; clave de API protegida en Cloud Functions; chips rápidos con 0 latencia y 0 consumo de tokens; actualización automática de profesora, alias y precios desde Firestore.
 - **Contras:** Requiere configurar `GEMINI_API_KEY` en `functions/.env` (o Secrets de Firebase) y desplegar la función `askLandingAssistant` para respuestas de texto libre en producción.
+
+---
+
+## ADR-017: Sección "Historial de Clases" en el Portal de Alumna
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Moléculas (`CustomerHistoryTable`, `CustomerHistoryMobileCard`):** Vista responsive diferenciada (tabla desktop `hidden md:block` y tarjetas móviles `md:hidden`) mostrando exclusivamente **Fecha**, **Hora del turno** y estado de **Asistencia** (`Presente`, `Ausente` o `Sin registrar`).
+- **Organismo (`CustomerHistorySection`) y Ruta (`CustomerPage.jsx`):** Se reemplazó el placeholder de `/customer/historial` por `CustomerHistorySection`, reutilizando la suscripción en tiempo real `calendar.reservations`, filtrando las clases confirmadas no canceladas que ya ocurrieron (o ya tienen asistencia registrada) y calculando el porcentaje de presentismo sobre la cabecera mediante `calculateAttendancePercentage` (`src/utils/scheduleUtils.js`) con paginación `PaginationBar`.
+
+### Qué se quitó
+- El uso del placeholder `"Próximo a implementar"` para la ruta `/customer/historial`.
+
+### Por qué
+- Permitir que cada alumna consulte de forma clara y responsive su historial real de clases realizadas y su porcentaje de presentismo sin depender de consultas adicionales a Firestore.
+
+### Pros y Contras
+- **Pros:** Reutiliza el listener `onSnapshot` ya activo en `useCustomerCalendar` y el helper `calculateAttendancePercentage`; diseño responsive limpio de 3 campos por fila.
+- **Contras:** El filtrado de clases pasadas toma como referencia el horario del turno respecto al instante de renderizado del cliente.
+
+
+---
+
+## ADR-018: Sección "Mi perfil" en el Panel de Administración
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- Se agregó la entrada `perfil` (**Mi perfil**) en `src/data/adminNavItems.js` (visible para `administradora` y `staff`) enlazada a `/administrador/perfil`.
+- Se creó el organismo `AdminProfileSection` (`src/components/organisms/AdminProfileSection.jsx`) y se integró en `src/pages/AdministratorPage.jsx`.
+- Se agregó `validateAdminProfileFields` en `src/utils/registrationValidator.js` exigiendo **Nombre** y **Apellido** obligatorios y manteniendo **DNI** y **Fecha de Nacimiento** como campos opcionales (validando formato/rango solo si se completan).
+- Se reutilizó `CustomerAccountSecurityCards` (parametrizando `emailDescription`), `EmailChangeModal`, `ChangePasswordModal` y los métodos de `AuthContext` (`updateOwnProfile`, `linkGoogleAccount`, `unlinkGoogleAccount`, `requestEmailChange`, `confirmEmailChange`, `changeOwnPassword`), preservando `telefono` y `genero` existentes del usuario al guardar.
+- Se agregaron pruebas E2E en `tests/features/administrador.feature` (`@EMUNA-002` y `@EMUNA-004`), `tests/pages/admin.page.js` y `tests/steps/admin.steps.js`.
+
+### Qué se quitó
+- Nada eliminado.
+
+### Por qué
+- Permitir que administradoras e instructoras (`staff`) actualicen sus datos personales, confirmen un nuevo email mediante código de 6 dígitos enviado por correo, vinculen o desvinculen Google y cambien su contraseña sin depender de otro administrador ni duplicar la lógica de seguridad ya implementada para alumnas.
+
+### Pros y Contras
+- **Pros:** Reutilización total de las Cloud Functions (`requestEmailChangeCode`, `confirmEmailChangeCode`), `accountProfileService` y moléculas de seguridad existentes; reglas de validación diferenciadas para campos opcionales de admin/staff.
+- **Contras:** El DNI y la fecha de nacimiento opcionales no tienen campos de teléfono ni género en esta vista; si se requieren en el futuro bastará agregarlos a `AdminProfileSection`.
+
+
+---
+
+## ADR-019: Sección "Notificaciones" por Email en el Portal de Alumna
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- Se extrajo la molécula reutilizable `EmailNotificationsCard` (`src/components/molecules/EmailNotificationsCard.jsx`) y se refactorizó `AdminEmailNotifCard` para usarla sin duplicar JSX ni lógica de toggles.
+- Se agregó la entrada `notificaciones` (**Notificaciones**) en `src/data/customerNavItems.js` (`/customer/notificaciones`) y se creó el organismo `CustomerNotificationsSection` (`src/components/organisms/CustomerNotificationsSection.jsx`), integrado en `src/pages/CustomerPage.jsx`.
+- Se agregaron `DEFAULT_CUSTOMER_EMAIL_NOTIF_CONFIG`, `normalizeCustomerEmailNotifConfig` y `updateStudentEmailNotifications` en `src/services/accountProfileService.js` y `updateEmailNotifications` en `src/context/AuthContext.jsx` para persistir `notificacionesEmail` en `/usuarios/{uid}` (habilitado en `firestore.rules`).
+- Se actualizó `resolveStudentRecipient` y los triggers de envío de emails en `functions/index.js` (`confirmacionReserva`, `cancelacionReserva`, `estadoPago` y `recordatorioClase`) para respetar las preferencias de cada alumna (con valor por defecto `true` si no configuró preferencias aún).
+- Se agregó el escenario `@EMUNA-106` en `tests/features/customerPanel.feature`, `tests/pages/customer.page.js` y `tests/steps/customerPanel.steps.js`.
+
+### Qué se quitó
+- Se eliminó la duplicación interna de UI en `AdminEmailNotifCard` al delegarla a `EmailNotificationsCard`.
+
+### Por qué
+- Permitir que cada alumna elija qué avisos automáticos desea recibir por correo electrónico, manteniendo los correos de seguridad (código de cambio de email y recuperación de contraseña) siempre activos.
+
+### Pros y Contras
+- **Pros:** Reutilización limpia mediante `EmailNotificationsCard`; opt-out granular por tipo de aviso sin afectar a usuarios existentes (default `true`).
+- **Contras:** Requiere redesplegar Cloud Functions y Firestore Rules para que el filtrado de preferencias en los triggers de backend esté activo en la nube.
