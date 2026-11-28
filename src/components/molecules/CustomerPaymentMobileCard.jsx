@@ -1,7 +1,9 @@
 import React from 'react';
 import Button from '../atoms/Button';
+import Icon from '../atoms/Icon';
 import { formatArsPrice } from '../../services/packageService';
 import {
+  buildPaymentWhatsappNoticeUrl,
   formatPaymentDateTime,
   PAYMENT_STATUS_META,
 } from '../../services/paymentService';
@@ -12,6 +14,7 @@ import {
  */
 export default function CustomerPaymentMobileCard({
   payment,
+  studentName = '',
   isMutating = false,
   onInformPayment,
 }) {
@@ -19,6 +22,7 @@ export default function CustomerPaymentMobileCard({
     PAYMENT_STATUS_META[payment.estado] || PAYMENT_STATUS_META.pendiente_conciliacion;
   const methodLabel = payment.metodoPago === 'efectivo' ? 'Efectivo' : 'Transferencia';
   const canInform = payment.estado === 'pendiente_informar';
+  const isPendingConfirmation = payment.estado === 'pendiente_conciliacion';
 
   return (
     <article
@@ -71,6 +75,19 @@ export default function CustomerPaymentMobileCard({
           className="w-full justify-center"
         >
           <span>Informar pago</span>
+        </Button>
+      ) : isPendingConfirmation ? (
+        <Button
+          href={buildPaymentWhatsappNoticeUrl(payment, studentName)}
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="outline"
+          size="sm"
+          data-testid={`customer-whatsapp-notice-mobile-btn-${payment.id}`}
+          className="w-full justify-center"
+        >
+          <Icon name="chat" className="text-[16px] mr-1.5" />
+          <span>Dar aviso por Whatsapp</span>
         </Button>
       ) : null}
     </article>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Navigate, useParams, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import AdminSidebar from '../components/organisms/AdminSidebar';
@@ -24,13 +24,6 @@ import { usePackagesManager } from '../hooks/usePackagesManager';
 import { useCalendarManager } from '../hooks/useCalendarManager';
 import { usePaymentsManager } from '../hooks/usePaymentsManager';
 import { ADMIN_NAV_ITEMS } from '../data/adminNavItems';
-
-const INITIAL_BEDS = [
-  { id: 1, name: 'Cama 1', alumno: 'Sofía Martínez', status: 'presente' },
-  { id: 2, name: 'Cama 2', alumno: 'Lucía González', status: 'pendiente' },
-  { id: 3, name: 'Cama 3', alumno: null, status: 'disponible' },
-  { id: 4, name: 'Cama 4', alumno: 'Valentina Romero', status: 'presente' },
-];
 
 /**
  * AdministratorPage View
@@ -255,7 +248,6 @@ export default function AdministratorPage() {
   const { user, userProfile } = useAuth();
   const { section, action } = useParams();
   const [searchParams] = useSearchParams();
-  const [beds, setBeds] = useState(INITIAL_BEDS);
   const isAdmin = userProfile?.rol === 'administradora';
   const {
     students,
@@ -312,18 +304,6 @@ export default function AdministratorPage() {
   const userId = searchParams.get('userId');
   const selectedStaff = staffUsers.find((member) => member.id === userId) || null;
   const { staffName, staffEmail } = getStaffIdentity(user, userProfile);
-
-  const toggleCheckIn = (bedId) => {
-    setBeds((prev) =>
-      prev.map((bed) => {
-        if (bed.id !== bedId || !bed.alumno) return bed;
-        return {
-          ...bed,
-          status: bed.status === 'presente' ? 'ausente' : 'presente',
-        };
-      })
-    );
-  };
 
   return (
     <DashboardLayout
@@ -403,11 +383,16 @@ export default function AdministratorPage() {
         )}
         renderDashboard={() => (
           <AdminDashboardOverview
-            beds={beds}
+            turns={calendar.turns}
+            reservations={calendar.reservations}
+            isLoadingCalendar={calendar.isLoading}
+            isMutatingCalendar={calendar.isMutating}
             pendingPayments={pendingPayments}
             isAdmin={isAdmin}
-            onToggleCheckIn={toggleCheckIn}
+            isMutatingPayments={paymentsManager.isMutating}
+            onMarkAttendance={calendar.markAttendance}
             onApprovePayment={paymentsManager.approvePayment}
+            onRejectPayment={paymentsManager.rejectPayment}
           />
         )}
       />

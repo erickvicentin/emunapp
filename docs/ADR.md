@@ -324,3 +324,24 @@
 ### Pros y Contras
 - **Pros:** Verificación de correo con código de 6 dígitos dentro de la app compatible con cuentas DNI; reutilización de moléculas y validadores de registro; protección contra bloqueo al desvincular Google.
 - **Contras:** Requiere desplegar Cloud Functions (`requestEmailChangeCode` y `confirmEmailChangeCode`) y contar con variables SMTP en `functions/.env`.
+
+---
+
+## ADR-015: Code Splitting por Rutas con `React.lazy`, `Suspense` y `PageLoader`
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Molécula `PageLoader` (`src/components/molecules/PageLoader.jsx`):** Se extrajo el indicador de carga a pantalla completa con identidad de Emuná (`data-testid="page-loader"`) desde `ProtectedRoute.jsx` para reutilizarlo como fallback de navegación y de verificación de sesión.
+- **Enrutamiento en `src/App.jsx`:** Se reemplazaron los imports estáticos de todas las páginas (`LandingPage`, `LoginPage`, `RegisterPage`, `ForgotPasswordPage`, `ForcePasswordChangePage`, `AuthActionPage`, `CustomerPage`, `AdministratorPage`) por `React.lazy(() => import(...))` envueltos en `<Suspense fallback={<PageLoader />}>`.
+
+### Qué se quitó
+- Los imports estáticos de las páginas en el bundle inicial (`src/App.jsx`) y el markup duplicado de carga en `ProtectedRoute.jsx`.
+
+### Por qué
+- El chunk principal (`dist/assets/index-*.js`) superaba los 500 kB (`516.52 kB`), disparando la advertencia de Vite/Rollup en `npm run build` y obligando a descargar tanto el portal de alumna como el panel de administración y `libphonenumber-js` al entrar a rutas públicas.
+
+### Pros y Contras
+- **Pros:** Elimina el warning de chunks > 500 kB; reduce el bundle inicial `index-*.js` de `516.52 kB` a `20.10 kB` (gzip `7.06 kB`); carga bajo demanda cada página y dependencias pesadas.
+- **Contras:** Introduce una breve transición con `PageLoader` la primera vez que el usuario navega a una ruta aún no cacheada.

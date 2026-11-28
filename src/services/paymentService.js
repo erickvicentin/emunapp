@@ -16,7 +16,8 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { databaseId, db, functions } from '../config/firebase';
-import { getPackageNumericPrice } from './packageService';
+import { formatArsPrice, getPackageNumericPrice } from './packageService';
+import { STUDIO_INFO } from '../data/landingData';
 
 const PAYMENTS_COLLECTION = 'pagos';
 const MEMBERSHIPS_COLLECTION = 'membresias_usuario';
@@ -34,6 +35,16 @@ export const DEFAULT_COBROS_CONFIG = {
   cuilCuit: '',
   horasVencimientoProvisorio: 24,
 };
+
+export function buildPaymentWhatsappNoticeUrl(payment, fallbackStudentName = '') {
+  const rawPhone = STUDIO_INFO.whatsappUrl.match(/wa\.me\/(\d+)/)?.[1] || '543704578354';
+  const studentName = String(payment?.alumnoNombre || fallbackStudentName || '').trim();
+  const greeting = studentName ? `Hola, soy ${studentName}!` : 'Hola!';
+  const monto = formatArsPrice(payment?.monto || 0);
+  const item = payment?.paqueteNombre || 'Pago';
+  const message = `${greeting} Queria avisarte que transferi ${monto} en concepto de ${item} y está a la espera de confirmación. Cuando puedas revisar si te llegó la transferencia. Saludos`;
+  return `https://wa.me/${rawPhone}?text=${encodeURIComponent(message)}`;
+}
 
 export const PAYMENT_STATUS_META = {
   pendiente_informar: {

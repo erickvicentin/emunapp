@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import Icon from '../atoms/Icon';
+import PageLoader from './PageLoader';
 
 /**
  * ProtectedRoute Molecule
@@ -13,15 +13,7 @@ export default function ProtectedRoute({ children, requiredRole }) {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-surface p-4">
-        <div className="w-12 h-12 rounded-full border-3 border-secondary/30 border-t-secondary animate-spin" />
-        <p className="mt-4 font-body-md text-on-surface-variant flex items-center gap-2">
-          <Icon name="spa" className="text-secondary text-[18px]" />
-          <span>Cargando tu espacio en Emuná...</span>
-        </p>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   // Not logged in or account deactivated -> redirect to /login

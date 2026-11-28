@@ -1,8 +1,15 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/atoms/Icon";
 import logo from "../assets/logo.jpeg";
 import { useAuth } from "../hooks/useAuth";
+
+function getTimeOfDayGreeting(now = new Date()) {
+  const hour = now.getHours();
+  if (hour >= 6 && hour < 12) return "Buenos días";
+  if (hour >= 12 && hour < 20) return "Buenas tardes";
+  return "Buenas noches";
+}
 
 function DashboardHeaderBadge({ badgeLabel, badgeIcon, effectiveBadge }) {
   const iconName =
@@ -48,6 +55,14 @@ export default function DashboardLayout({
   const openBtnRef = useRef(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [greeting, setGreeting] = useState(() => getTimeOfDayGreeting());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setGreeting(getTimeOfDayGreeting());
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDrawerOpenChange = useCallback((nextOpen) => {
     setIsDrawerOpen(nextOpen);
@@ -107,21 +122,19 @@ export default function DashboardLayout({
               </button>
             )}
 
-            <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
-              <img
-                src={logo}
-                alt="Logo Emuná"
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-full object-cover shadow-xs transition-transform group-hover:scale-105 shrink-0"
-              />
+            <div className="flex items-center gap-2 sm:gap-3 group min-w-0">
               <div className="flex flex-col min-w-0">
-                <span className="font-headline-sm text-[15px] sm:text-[17px] font-semibold text-primary tracking-tight whitespace-nowrap truncate">
-                  Emuná Pilates
+                <span
+                  data-testid="dashboard-greeting"
+                  className="font-headline-sm text-[15px] sm:text-[17px] font-semibold text-primary tracking-tight whitespace-nowrap truncate"
+                >
+                  {greeting} {effectiveName}
                 </span>
                 <span className="hidden sm:block font-label-sm text-[10px] uppercase text-secondary tracking-widest font-semibold whitespace-nowrap">
-                  Panel de Gestión
+                  Emuná Pilates • Panel de Gestión
                 </span>
               </div>
-            </Link>
+            </div>
           </div>
 
           {/* User info & role/credits badge */}
