@@ -46,4 +46,12 @@ export const ADMIN_NAV_ITEMS = [
     description: 'Administración de instructoras, roles y permisos del equipo.',
     adminOnly: true,
   },
+  {
+    id: 'configuracion',
+    path: '/administrador/configuracion',
+    label: 'Configuración',
+    icon: 'settings',
+    description: 'Cuenta destino, ventana de cancelación, profesora y avisos generales.',
+    adminOnly: true,
+  },
 ];
