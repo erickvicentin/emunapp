@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getDocs,
+  onSnapshot,
   query,
   serverTimestamp,
   updateDoc,
@@ -75,6 +76,24 @@ export async function fetchCustomerStudents() {
   const snapshot = await getDocs(customersQuery);
   return snapshot.docs.map((docSnap) =>
     mapStudentProfileToRow(docSnap.data(), docSnap.id)
+  );
+}
+
+export function subscribeCustomerStudents(onData, onError) {
+  const usersRef = collection(db, 'usuarios');
+  const customersQuery = query(usersRef, where('rol', '==', 'customer'));
+  return onSnapshot(
+    customersQuery,
+    (snapshot) => {
+      onData(
+        snapshot.docs.map((docSnap) =>
+          mapStudentProfileToRow(docSnap.data(), docSnap.id)
+        )
+      );
+    },
+    (error) => {
+      onError?.(error);
+    }
   );
 }
 

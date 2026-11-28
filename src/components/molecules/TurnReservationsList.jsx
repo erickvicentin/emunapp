@@ -22,14 +22,25 @@ export default function TurnReservationsList({
   activeReservations,
   occupiedCount,
   isMutating = false,
+  canMarkAttendance = true,
   onMarkAttendance,
   onRemoveReservation,
 }) {
   return (
     <div className="space-y-2">
-      <h3 className="font-label-md text-label-md text-primary font-semibold">
-        Alumnos inscriptos ({occupiedCount})
-      </h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-label-md text-label-md text-primary font-semibold">
+          Alumnos inscriptos ({occupiedCount})
+        </h3>
+        {!canMarkAttendance && occupiedCount > 0 && (
+          <span
+            data-testid="turn-attendance-future-notice"
+            className="text-label-sm text-on-surface-variant"
+          >
+            Asistencia disponible al iniciar el turno
+          </span>
+        )}
+      </div>
       {activeReservations.length === 0 ? (
         <p
           data-testid="turn-empty-reservations"
@@ -65,10 +76,19 @@ export default function TurnReservationsList({
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  disabled={isMutating}
+                  disabled={isMutating || !canMarkAttendance}
                   data-testid={`turn-present-btn-${res.id}`}
+                  title={
+                    canMarkAttendance
+                      ? 'Marcar presente'
+                      : 'Disponible cuando inicie el turno'
+                  }
                   onClick={() => onMarkAttendance(res, 'presente')}
-                  className={`px-2.5 py-1 rounded-full text-label-sm font-semibold cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-full text-label-sm font-semibold transition-opacity ${
+                    canMarkAttendance
+                      ? 'cursor-pointer'
+                      : 'opacity-45 cursor-not-allowed'
+                  } ${
                     res.asistencia === 'presente'
                       ? 'bg-emerald-600 text-white'
                       : 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
@@ -78,10 +98,19 @@ export default function TurnReservationsList({
                 </button>
                 <button
                   type="button"
-                  disabled={isMutating}
+                  disabled={isMutating || !canMarkAttendance}
                   data-testid={`turn-absent-btn-${res.id}`}
+                  title={
+                    canMarkAttendance
+                      ? 'Marcar ausente'
+                      : 'Disponible cuando inicie el turno'
+                  }
                   onClick={() => onMarkAttendance(res, 'ausente')}
-                  className={`px-2.5 py-1 rounded-full text-label-sm font-semibold cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-full text-label-sm font-semibold transition-opacity ${
+                    canMarkAttendance
+                      ? 'cursor-pointer'
+                      : 'opacity-45 cursor-not-allowed'
+                  } ${
                     res.asistencia === 'ausente'
                       ? 'bg-rose-600 text-white'
                       : 'bg-rose-100 text-rose-800 hover:bg-rose-200'

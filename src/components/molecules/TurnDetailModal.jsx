@@ -4,7 +4,7 @@ import Button from '../atoms/Button';
 import TurnCancelledNotice from './TurnCancelledNotice';
 import TurnAssignForm from './TurnAssignForm';
 import TurnReservationsList from './TurnReservationsList';
-import { DEFAULT_MAX_CAPACITY } from '../../utils/scheduleUtils';
+import { DEFAULT_MAX_CAPACITY, hasTurnStarted } from '../../utils/scheduleUtils';
 
 const EMPTY_LIST = [];
 
@@ -51,6 +51,9 @@ export default function TurnDetailModal({
   const occupiedCount = activeReservations.length;
   const isFull = occupiedCount >= maxCapacity;
   const isCancelled = turn?.estado === 'cancelado';
+  const canMarkAttendance = Boolean(
+    turn?.dateKey && hasTurnStarted(turn.dateKey, turn.startTime)
+  );
 
   return (
     <dialog
@@ -110,6 +113,7 @@ export default function TurnDetailModal({
             activeReservations={activeReservations}
             occupiedCount={occupiedCount}
             isMutating={isMutating}
+            canMarkAttendance={canMarkAttendance}
             onMarkAttendance={onMarkAttendance}
             onRemoveReservation={onRemoveReservation}
           />

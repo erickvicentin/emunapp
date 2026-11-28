@@ -24,6 +24,7 @@ import {
   DEFAULT_MAX_CAPACITY,
   formatDateKey,
   hasTimeOverlap,
+  hasTurnStarted,
   isTurnBookingOpen,
 } from '../utils/scheduleUtils';
 
@@ -799,6 +800,10 @@ export async function removeReservationByAdmin(reserva) {
 }
 
 export async function markReservationAttendance({ reserva, nextAttendance }) {
+  if (reserva?.dateKey && !hasTurnStarted(reserva.dateKey, reserva.startTime)) {
+    throw new Error('Solo podés marcar asistencia en turnos en curso o finalizados.');
+  }
+
   await updateDoc(doc(db, RESERVATIONS_COLLECTION, reserva.id), {
     asistencia: nextAttendance,
     actualizadoEn: serverTimestamp(),
