@@ -24,6 +24,9 @@ const PROFILE_SECURITY_CARD = '[data-testid="customer-profile-security-card"]';
 const PROFILE_OPEN_PASSWORD_BTN = '[data-testid="customer-profile-open-password-modal-btn"]';
 const CHANGE_PASSWORD_MODAL = '[data-testid="change-password-modal"]';
 const CHANGE_PASSWORD_MODAL_TITLE = '[data-testid="change-password-modal-title"]';
+const NOTIFICATIONS_SECTION = '[data-testid="customer-notifications-section"]';
+const NOTIFICATIONS_TITLE = '[data-testid="customer-notifications-title"]';
+const NOTIFICATIONS_CARD = '[data-testid="customer-email-notif-card"]';
 
 const NAV_ITEM_BY_SECTION = {
   turnos: '[data-testid="customer-nav-turnos"]',
@@ -31,6 +34,7 @@ const NAV_ITEM_BY_SECTION = {
   pagos: '[data-testid="customer-nav-pagos"]',
   historial: '[data-testid="customer-nav-historial"]',
   perfil: '[data-testid="customer-nav-perfil"]',
+  notificaciones: '[data-testid="customer-nav-notificaciones"]',
 };
 
 class CustomerPage {
@@ -190,6 +194,24 @@ class CustomerPage {
     const title = await $(CHANGE_PASSWORD_MODAL_TITLE);
     await title.waitForDisplayed();
     return title.getText();
+  }
+
+  async isNotificationsSectionDisplayed() {
+    const section = await $(NOTIFICATIONS_SECTION);
+    await section.waitForDisplayed();
+    return section.isDisplayed();
+  }
+
+  async getNotificationsTitleText() {
+    const title = await $(NOTIFICATIONS_TITLE);
+    await title.waitForDisplayed();
+    return title.getText();
+  }
+
+  async isNotificationsCardDisplayed() {
+    const card = await $(NOTIFICATIONS_CARD);
+    await card.waitForDisplayed();
+    return card.isDisplayed();
   }
 }
 

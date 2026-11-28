@@ -41,3 +41,9 @@ Feature: Customer Panel Navigation
     And the customer profile section should display title "Mi perfil" with personal, email, Google, and security cards
     When the customer opens the change password modal
     Then the change password modal should be visible with title "Cambiar contraseña"
+
+  @EMUNA-106
+  Scenario: Customer can view Notificaciones section and email preferences card
+    When the customer navigates to the "notificaciones" section from the sidebar
+    Then the customer URL should contain "/customer/notificaciones"
+    And the customer notifications section should display title "Notificaciones" and the email preferences card

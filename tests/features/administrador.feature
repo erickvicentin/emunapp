@@ -27,7 +27,16 @@ Feature: Administrator Panel
       | precios       | /administrador/precios       |
       | usuarios      | /administrador/usuarios      |
       | configuracion | /administrador/configuracion |
+      | perfil        | /administrador/perfil        |
 
   @EMUNA-003
   Scenario: Display time-of-day greeting in admin header
     Then the dashboard header should display a time-of-day greeting
+
+  @EMUNA-004
+  Scenario: Administrator can view Mi perfil section and open change password modal
+    When the administrator navigates to the "perfil" section from the sidebar
+    Then the current URL should contain "/administrador/perfil"
+    And the admin profile section should display title "Mi perfil" with personal, email, Google, and security cards
+    When the administrator opens the change password modal
+    Then the admin change password modal should be visible with title "Cambiar contraseña"

@@ -121,3 +121,16 @@ Then(
     expect(titleText).toContain(expectedTitle);
   }
 );
+
+Then(
+  'the customer notifications section should display title {string} and the email preferences card',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isNotificationsSectionDisplayed();
+    const titleText = await CustomerPage.getNotificationsTitleText();
+    const cardDisplayed = await CustomerPage.isNotificationsCardDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(cardDisplayed).toBe(true);
+  }
+);
