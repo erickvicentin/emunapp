@@ -20,6 +20,9 @@ export default function MainLayout({ children }) {
       
       {/* Footer */}
       <Footer />
+
+      {/* Landing Virtual Assistant */}
+      <ChatbotDrawer />
     </div>
   );
 }

@@ -345,3 +345,25 @@
 ### Pros y Contras
 - **Pros:** Elimina el warning de chunks > 500 kB; reduce el bundle inicial `index-*.js` de `516.52 kB` a `20.10 kB` (gzip `7.06 kB`); carga bajo demanda cada página y dependencias pesadas.
 - **Contras:** Introduce una breve transición con `PageLoader` la primera vez que el usuario navega a una ruta aún no cacheada.
+
+---
+
+## ADR-016: Asistente Virtual en Landing Page con Contexto Directo (Gemini API + Presets Locales)
+
+- **Fecha:** 2026-11-28
+- **Estado:** Aceptada
+
+### Qué se cambió / Qué se agregó
+- **Base de Conocimiento (`docs/KNOWLEDGE_BASE_ASISTENTE.md`, `functions/knowledge/emuna-knowledge.md`):** Se documentaron todas las reglas vigentes del estudio (dirección, teléfono/WhatsApp, horarios, paquetes, reservas, pagos, créditos y cancelación con 4 hs de anticipación y 7 días de gracia).
+- **Backend (`functions/services/assistantService.js`, `functions/index.js`, `functions/tests/assistantService.test.js`):** Se implementó la Cloud Function `askLandingAssistant` (`onCall`) que combina la base de conocimiento Markdown con datos públicos dinámicos de Firestore (`configuracion/estudio`, `configuracion/cobros` y `paquetes_catalogo`), aplica rate limiting por IP (15 consultas/min) y consulta a `gemini-2.5-flash` vía REST (`temperature: 0.1`) manteniendo la `GEMINI_API_KEY` aislada en el backend.
+- **Frontend (`src/services/assistantService.js`, `src/components/organisms/ChatbotDrawer.jsx`, `src/layouts/MainLayout.jsx`, `src/data/landingData.js`):** Se montó `ChatbotDrawer` en `MainLayout`, se actualizaron los chips `ASSISTANT_PRESETS` con las políticas reales (respuestas locales instantáneas sin consumo de cuota) y se conectó el chat libre a `askLandingAssistant` con fallback a WhatsApp y atributos `data-testid`.
+
+### Qué se quitó
+- La simulación hardcodeada con `setTimeout` y textos desactualizados (2 horas / plan de 20 clases) en `ChatbotDrawer.jsx` y `ASSISTANT_PRESETS`.
+
+### Por qué
+- Permitir que los visitantes de la landing resuelvan dudas frecuentes en lenguaje natural usando únicamente las fuentes provistas del estudio, manteniendo costo cero mediante el *free tier* de Google AI Studio y respuestas locales para preguntas frecuentes.
+
+### Pros y Contras
+- **Pros:** Sin infraestructura vectorial ni costos de embeddings; clave de API protegida en Cloud Functions; chips rápidos con 0 latencia y 0 consumo de tokens; actualización automática de profesora, alias y precios desde Firestore.
+- **Contras:** Requiere configurar `GEMINI_API_KEY` en `functions/.env` (o Secrets de Firebase) y desplegar la función `askLandingAssistant` para respuestas de texto libre en producción.
