@@ -10,6 +10,13 @@ export const CUSTOMER_NAV_ITEMS = [
     description: 'Reservá y gestioná tus próximos turnos en las 4 camas reformer.',
   },
   {
+    id: 'paquetes',
+    path: '/customer/paquetes',
+    label: 'Paquetes',
+    icon: 'inventory_2',
+    description: 'Explorá los paquetes de clases disponibles y reservá créditos.',
+  },
+  {
     id: 'pagos',
     path: '/customer/pagos',
     label: 'Pagos',
@@ -24,10 +31,10 @@ export const CUSTOMER_NAV_ITEMS = [
     description: 'Revisá el detalle de tus asistencias y clases realizadas.',
   },
   {
-    id: 'configuracion',
-    path: '/customer/configuracion',
-    label: 'Configuración',
-    icon: 'settings',
-    description: 'Visualizá y actualizá tus datos personales y de contacto.',
+    id: 'perfil',
+    path: '/customer/perfil',
+    label: 'Mi perfil',
+    icon: 'manage_accounts',
+    description: 'Visualizá y actualizá tus datos personales, correo, Google y contraseña.',
   },
 ];

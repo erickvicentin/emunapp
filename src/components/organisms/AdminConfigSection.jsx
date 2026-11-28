@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Button from '../atoms/Button';
 import Icon from '../atoms/Icon';
+import AdminEmailNotifCard from '../molecules/AdminEmailNotifCard';
 import CobrosConfigCard from '../molecules/CobrosConfigCard';
 
 /**
@@ -15,9 +16,11 @@ export default function AdminConfigSection({
   const {
     cobrosConfig,
     studioConfig,
+    adminEmailNotifConfig,
     isMutating,
     saveConfig,
     saveStudioSettings,
+    saveAdminEmailNotifSettings,
   } = paymentsManager;
 
   const [studioDraft, setStudioDraft] = useState(null);
@@ -113,6 +116,12 @@ export default function AdminConfigSection({
           </Button>
         </div>
       </form>
+
+      <AdminEmailNotifCard
+        config={adminEmailNotifConfig}
+        isMutating={isMutating}
+        onSave={saveAdminEmailNotifSettings}
+      />
 
       <section
         data-testid="admin-bulk-email-card"

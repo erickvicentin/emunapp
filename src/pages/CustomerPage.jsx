@@ -3,10 +3,14 @@ import { Navigate, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import DashboardSidebar from '../components/organisms/DashboardSidebar';
 import CustomerTurnsSection from '../components/organisms/CustomerTurnsSection';
+import CustomerPackagesSection from '../components/organisms/CustomerPackagesSection';
+import CustomerPaymentsSection from '../components/organisms/CustomerPaymentsSection';
+import CustomerProfileSection from '../components/organisms/CustomerProfileSection';
 import Snackbar from '../components/molecules/Snackbar';
 import Icon from '../components/atoms/Icon';
 import { useAuth } from '../hooks/useAuth';
 import { useCustomerCalendar } from '../hooks/useCustomerCalendar';
+import { useCustomerPayments } from '../hooks/useCustomerPayments';
 import { CUSTOMER_NAV_ITEMS } from '../data/customerNavItems';
 
 function CustomerPlaceholderSection({ activeNavItem }) {
@@ -68,9 +72,60 @@ export default function CustomerPage() {
     showSnackbar,
   });
 
+  const customerPayments = useCustomerPayments({
+    uid: user?.uid,
+    userName: fullName,
+    userEmail: email,
+    reservations: calendar.reservations,
+    onAccountUpdated: calendar.reloadAccountData,
+    showSnackbar,
+  });
+
+  if (section === 'configuracion') {
+    return <Navigate to="/customer/perfil" replace />;
+  }
+
   if (!activeNavItem) {
     return <Navigate to="/customer/turnos" replace />;
   }
+
+  const renderSection = () => {
+    if (activeNavItem.id === 'turnos') {
+      return <CustomerTurnsSection calendar={calendar} />;
+    }
+    if (activeNavItem.id === 'paquetes') {
+      return (
+        <CustomerPackagesSection
+          packages={calendar.packages}
+          cobrosConfig={calendar.cobrosConfig}
+          isPackageReservationBlocked={customerPayments.isPackageReservationBlocked}
+          hasPendingConfirmation={customerPayments.hasPendingConfirmation}
+          hasPendingReservationPayment={customerPayments.hasPendingReservationPayment}
+          isMutating={customerPayments.isMutating}
+          onSubmitPackagePayment={customerPayments.submitPackagePayment}
+        />
+      );
+    }
+    if (activeNavItem.id === 'pagos') {
+      return (
+        <CustomerPaymentsSection
+          payments={customerPayments.payments}
+          reservations={calendar.reservations}
+          cobrosConfig={calendar.cobrosConfig}
+          totalCredits={calendar.totalCredits}
+          rejectedCount={customerPayments.rejectedCount}
+          isLoading={customerPayments.isLoading}
+          isMutating={customerPayments.isMutating}
+          onInformPackagePayment={customerPayments.informPackagePayment}
+          onClearRejected={customerPayments.clearRejectedPayments}
+        />
+      );
+    }
+    if (activeNavItem.id === 'perfil') {
+      return <CustomerProfileSection showSnackbar={showSnackbar} />;
+    }
+    return <CustomerPlaceholderSection activeNavItem={activeNavItem} />;
+  };
 
   return (
     <DashboardLayout
@@ -93,11 +148,7 @@ export default function CustomerPage() {
         />
       )}
     >
-      {activeNavItem.id === 'turnos' ? (
-        <CustomerTurnsSection calendar={calendar} />
-      ) : (
-        <CustomerPlaceholderSection activeNavItem={activeNavItem} />
-      )}
+      {renderSection()}
 
       <Snackbar
         open={snackbar.open}

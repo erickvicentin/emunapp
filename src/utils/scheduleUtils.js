@@ -182,14 +182,28 @@ export function isTurnBookingOpen(dateKey, startTime, now = new Date()) {
  * `turnos_clase` documents with virtual turns from `horarios_base` for today
  * and future non-closed days.
  */
+export function resolveInstructorName(storedName, configuredProfessorName) {
+  const fallback = String(configuredProfessorName || '').trim() || 'Profesora Titular';
+  const cleanStored = String(storedName || '').trim();
+  if (!cleanStored || cleanStored === 'Profesora Titular') {
+    return fallback;
+  }
+  return cleanStored;
+}
+
 export function buildCustomerWeekTurns(
   weekDays = [],
   baseSlots = [],
   closedDaysMap = {},
-  existingTurns = []
+  existingTurns = [],
+  configuredProfessorName = 'Profesora Titular'
 ) {
   const todayKey = formatDateKey(new Date());
-  const existingById = new Set(existingTurns.map((t) => t.id));
+  const normalizedExisting = existingTurns.map((t) => ({
+    ...t,
+    instructorName: resolveInstructorName(t.instructorName, configuredProfessorName),
+  }));
+  const existingById = new Set(normalizedExisting.map((t) => t.id));
   const virtualTurns = [];
 
   for (const day of weekDays) {
@@ -203,7 +217,7 @@ export function buildCustomerWeekTurns(
       const deterministicId = `${day.dateKey}_${slot.id}`;
       if (existingById.has(deterministicId)) continue;
 
-      const hasMatchingTime = existingTurns.some(
+      const hasMatchingTime = normalizedExisting.some(
         (t) =>
           t.dateKey === day.dateKey &&
           t.startTime === slot.startTime &&
@@ -218,7 +232,7 @@ export function buildCustomerWeekTurns(
         durationMinutes: Number(slot.durationMinutes) || DEFAULT_CLASS_DURATION_MINUTES,
         maxCapacity: Number(slot.maxCapacity) || DEFAULT_MAX_CAPACITY,
         cuposOcupados: 0,
-        instructorName: slot.instructorName || 'Profesora Titular',
+        instructorName: resolveInstructorName(slot.instructorName, configuredProfessorName),
         baseSlotId: slot.id,
         estado: 'programado',
         isVirtual: true,
@@ -226,7 +240,7 @@ export function buildCustomerWeekTurns(
     }
   }
 
-  return [...existingTurns, ...virtualTurns].sort((a, b) => {
+  return [...normalizedExisting, ...virtualTurns].sort((a, b) => {
     if (a.dateKey !== b.dateKey) return a.dateKey.localeCompare(b.dateKey);
     return String(a.startTime).localeCompare(String(b.startTime));
   });

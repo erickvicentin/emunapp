@@ -61,7 +61,7 @@ export default function Input({
   const paddingRight = endAction ? 'pr-11' : 'pr-space-md';
   const borderState = error
     ? 'border-error focus:ring-error/40'
-    : 'border-transparent focus:ring-secondary/40';
+    : 'border-outline-variant focus:border-secondary focus:ring-secondary/30';
 
   return (
     <div className={`space-y-space-xs ${className}`}>
@@ -88,7 +88,7 @@ export default function Input({
           max={max}
           aria-invalid={Boolean(error)}
           aria-describedby={errorId || helperId}
-          className={`w-full bg-surface-container-low focus:bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 rounded-xl py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 shadow-sm border ${paddingLeft} ${paddingRight} ${borderState}`}
+          className={`w-full bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant/60 rounded-xl py-3 font-body-md text-body-md transition-colors outline-none focus:ring-2 shadow-xs border ${paddingLeft} ${paddingRight} ${borderState}`}
           {...props}
         />
 

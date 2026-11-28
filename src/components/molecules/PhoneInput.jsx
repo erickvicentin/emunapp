@@ -116,7 +116,7 @@ export default function PhoneInput({
             onChange={handleCountryChange}
             disabled={disabled}
             className={`
-              w-full appearance-none bg-surface-container-low focus:bg-surface-container-lowest
+              w-full appearance-none bg-surface-container-lowest
               text-on-surface rounded-xl pl-3 pr-10 py-3 text-body-md transition-all
               outline-none border shadow-2xs cursor-pointer
               ${
@@ -153,7 +153,7 @@ export default function PhoneInput({
             required={required}
             disabled={disabled}
             className={`
-              w-full bg-surface-container-low focus:bg-surface-container-lowest
+              w-full bg-surface-container-lowest
               text-on-surface placeholder:text-on-surface-variant/60
               rounded-xl pl-11 pr-4 py-3 text-body-md transition-all
               outline-none border shadow-2xs

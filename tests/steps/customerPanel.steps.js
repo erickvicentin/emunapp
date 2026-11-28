@@ -63,3 +63,61 @@ Then(
     expect(statusText).toContain(expectedStatus);
   }
 );
+
+Then(
+  'the customer packages section should display title {string} and the individual package card',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isPackagesSectionDisplayed();
+    const titleText = await CustomerPage.getPackagesTitleText();
+    const isGridDisplayed = await CustomerPage.isPackagesGridDisplayed();
+    const isIndividualDisplayed = await CustomerPage.isIndividualPackageCardDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(isGridDisplayed).toBe(true);
+    expect(isIndividualDisplayed).toBe(true);
+  }
+);
+
+Then(
+  'the customer payments section should display title {string} and the history view',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isPaymentsSectionDisplayed();
+    const titleText = await CustomerPage.getPaymentsTitleText();
+    const isBankDisplayed = await CustomerPage.isPaymentsBankDetailsDisplayed();
+    const isViewDisplayed = await CustomerPage.isPaymentsTableOrEmptyDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(isBankDisplayed).toBe(true);
+    expect(isViewDisplayed).toBe(true);
+  }
+);
+
+Then(
+  'the customer profile section should display title {string} with personal, email, Google, and security cards',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isProfileSectionDisplayed();
+    const titleText = await CustomerPage.getProfileTitleText();
+    const cardsDisplayed = await CustomerPage.areProfileCardsDisplayed();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+    expect(cardsDisplayed).toBe(true);
+  }
+);
+
+When('the customer opens the change password modal', async () => {
+  await CustomerPage.openChangePasswordModal();
+});
+
+Then(
+  'the change password modal should be visible with title {string}',
+  async (expectedTitle) => {
+    const isDisplayed = await CustomerPage.isChangePasswordModalDisplayed();
+    const titleText = await CustomerPage.getChangePasswordModalTitleText();
+
+    expect(isDisplayed).toBe(true);
+    expect(titleText).toContain(expectedTitle);
+  }
+);

@@ -20,6 +20,7 @@ Then(
     expect(await CobrosPage.isAdminConfigSectionDisplayed()).toBe(true);
     expect(await CobrosPage.isConfigCardDisplayed()).toBe(true);
     expect(await CobrosPage.areAccountConfigFieldsDisplayed()).toBe(true);
+    expect(await CobrosPage.areAdminEmailNotificationTogglesDisplayed()).toBe(true);
   }
 );
 

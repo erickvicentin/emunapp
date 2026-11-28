@@ -1,39 +1,7 @@
 import React from 'react';
 import Button from '../atoms/Button';
 import Icon from '../atoms/Icon';
-
-const STATUS_MAP = {
-  pendiente_conciliacion: {
-    label: 'Pendiente conciliación',
-    classes: 'bg-amber-100 text-amber-800 border-amber-300',
-  },
-  aprobado: {
-    label: 'Acreditado',
-    classes: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-  },
-  rechazado: {
-    label: 'Rechazado',
-    classes: 'bg-error-container text-on-error-container border-error/30',
-  },
-  vencido: {
-    label: 'Vencido',
-    classes: 'bg-surface-container-high text-on-surface-variant border-outline-variant',
-  },
-};
-
-function formatPaymentCreatedAt(value) {
-  if (!value) return '-';
-  const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return `${date.toLocaleString('es-AR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })} hs`;
-}
+import { formatPaymentDateTime, PAYMENT_STATUS_META } from '../../services/paymentService';
 
 /**
  * CobrosTable Molecule
@@ -86,10 +54,11 @@ export default function CobrosTable({
         </thead>
         <tbody className="divide-y divide-surface-container">
           {payments.map((pay) => {
-            const badge = STATUS_MAP[pay.estado] || STATUS_MAP.pendiente_conciliacion;
+            const badge =
+              PAYMENT_STATUS_META[pay.estado] || PAYMENT_STATUS_META.pendiente_conciliacion;
             const isPending = pay.estado === 'pendiente_conciliacion';
             const isRejected = pay.estado === 'rechazado';
-            const reportedAtLabel = formatPaymentCreatedAt(pay.creadoEn);
+            const reportedAtLabel = formatPaymentDateTime(pay.creadoEn);
 
             return (
               <tr
@@ -127,7 +96,7 @@ export default function CobrosTable({
                   <span
                     className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badge.classes}`}
                   >
-                    {badge.label}
+                    {badge.adminLabel || badge.label}
                   </span>
                 </td>
                 <td className="py-3.5 px-4 whitespace-nowrap">

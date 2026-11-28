@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -24,6 +25,7 @@ const TURNS_COLLECTION = 'turnos_clase';
 const CONFIG_COLLECTION = 'configuracion';
 const COBROS_CONFIG_DOC = 'cobros';
 const STUDIO_CONFIG_DOC = 'estudio';
+const ADMIN_EMAIL_NOTIF_DOC = 'notificaciones_admin';
 
 export const DEFAULT_COBROS_CONFIG = {
   alias: 'emuna.pilates.mp',
@@ -33,10 +35,71 @@ export const DEFAULT_COBROS_CONFIG = {
   horasVencimientoProvisorio: 24,
 };
 
+export const PAYMENT_STATUS_META = {
+  pendiente_informar: {
+    label: 'Pendiente de informar pago',
+    adminLabel: 'Esperando informe',
+    classes: 'bg-amber-100 text-amber-800 border-amber-300',
+  },
+  pendiente_conciliacion: {
+    label: 'Pendiente de confirmación',
+    adminLabel: 'Pendiente conciliación',
+    classes: 'bg-amber-100 text-amber-800 border-amber-300',
+  },
+  aprobado: {
+    label: 'Acreditado',
+    adminLabel: 'Acreditado',
+    classes: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+  },
+  rechazado: {
+    label: 'Rechazado',
+    adminLabel: 'Rechazado',
+    classes: 'bg-error-container text-on-error-container border-error/30',
+  },
+  vencido: {
+    label: 'Vencido',
+    adminLabel: 'Vencido',
+    classes: 'bg-surface-container-high text-on-surface-variant border-outline-variant',
+  },
+};
+
+export function formatPaymentDateTime(value) {
+  if (!value) return '-';
+  const date = typeof value?.toDate === 'function' ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return `${date.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })} hs`;
+}
+
 export const DEFAULT_STUDIO_CONFIG = {
   horasVentanaCancelacion: 4,
   nombreProfesora: 'Profesora Titular',
 };
+
+export const DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG = {
+  nuevoPagoPendiente: true,
+  cancelacionAlumno: true,
+  reservaUltimoMomento: true,
+  resumenDiario: true,
+};
+
+function normalizeAdminEmailNotifConfig(data = {}) {
+  return {
+    nuevoPagoPendiente:
+      data.nuevoPagoPendiente ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.nuevoPagoPendiente,
+    cancelacionAlumno:
+      data.cancelacionAlumno ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.cancelacionAlumno,
+    reservaUltimoMomento:
+      data.reservaUltimoMomento ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.reservaUltimoMomento,
+    resumenDiario: data.resumenDiario ?? DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG.resumenDiario,
+  };
+}
 
 function toMillis(value) {
   if (!value) return 0;
@@ -118,6 +181,26 @@ export async function fetchStudioConfig() {
   };
 }
 
+export function subscribeStudioConfig(onData, onError) {
+  return onSnapshot(
+    doc(db, CONFIG_COLLECTION, STUDIO_CONFIG_DOC),
+    (snap) => {
+      if (!snap.exists()) {
+        onData({ ...DEFAULT_STUDIO_CONFIG });
+        return;
+      }
+      const data = snap.data() || {};
+      onData({
+        horasVentanaCancelacion:
+          Number(data.horasVentanaCancelacion) || DEFAULT_STUDIO_CONFIG.horasVentanaCancelacion,
+        nombreProfesora:
+          String(data.nombreProfesora || '').trim() || DEFAULT_STUDIO_CONFIG.nombreProfesora,
+      });
+    },
+    onError
+  );
+}
+
 export async function saveStudioConfig(config = {}) {
   const hours = Math.max(1, Math.min(48, Number(config.horasVentanaCancelacion) || 4));
   const professorName =
@@ -130,6 +213,27 @@ export async function saveStudioConfig(config = {}) {
   };
   await setDoc(doc(db, CONFIG_COLLECTION, STUDIO_CONFIG_DOC), payload, { merge: true });
   return payload;
+}
+
+export async function fetchAdminEmailNotifConfig() {
+  const snap = await getDoc(doc(db, CONFIG_COLLECTION, ADMIN_EMAIL_NOTIF_DOC));
+  if (!snap.exists()) return { ...DEFAULT_ADMIN_EMAIL_NOTIF_CONFIG };
+  return normalizeAdminEmailNotifConfig(snap.data() || {});
+}
+
+export async function saveAdminEmailNotifConfig(config = {}) {
+  const normalized = normalizeAdminEmailNotifConfig({
+    nuevoPagoPendiente: Boolean(config.nuevoPagoPendiente),
+    cancelacionAlumno: Boolean(config.cancelacionAlumno),
+    reservaUltimoMomento: Boolean(config.reservaUltimoMomento),
+    resumenDiario: Boolean(config.resumenDiario),
+  });
+  const payload = {
+    ...normalized,
+    actualizadoEn: serverTimestamp(),
+  };
+  await setDoc(doc(db, CONFIG_COLLECTION, ADMIN_EMAIL_NOTIF_DOC), payload, { merge: true });
+  return normalized;
 }
 
 export async function fetchAllPayments() {
@@ -160,6 +264,56 @@ export async function fetchUserMemberships(userId) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
+export function subscribeAllPayments(onData, onError) {
+  const q = query(collection(db, PAYMENTS_COLLECTION), orderBy('creadoEn', 'desc'));
+  return onSnapshot(
+    q,
+    (snap) => {
+      onData(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    },
+    onError
+  );
+}
+
+export function subscribeUserPayments(userId, onData, onError) {
+  if (!userId) {
+    onData([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, PAYMENTS_COLLECTION),
+    where('usuarioId', '==', userId)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      const list = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => toMillis(b.creadoEn) - toMillis(a.creadoEn));
+      onData(list);
+    },
+    onError
+  );
+}
+
+export function subscribeUserMemberships(userId, onData, onError) {
+  if (!userId) {
+    onData([]);
+    return () => {};
+  }
+  const q = query(
+    collection(db, MEMBERSHIPS_COLLECTION),
+    where('usuarioId', '==', userId)
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      onData(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    },
+    onError
+  );
+}
+
 /**
  * Registers a payment notice (transfer or cash) and grants provisional credits immediately
  * while awaiting manual reconciliation by an administrator.
@@ -174,16 +328,34 @@ export async function reportPaymentNotice({
   montoInformado,
   comprobanteNombre = '',
   comprobanteDataUrl = '',
+  initialEstado = 'pendiente_conciliacion',
 }) {
   if (!userId || !pkg) {
     throw new Error('Seleccioná un alumno y un paquete válido.');
   }
 
+  const safeInitialEstado =
+    initialEstado === 'pendiente_informar' ? 'pendiente_informar' : 'pendiente_conciliacion';
+
   const existingPayments = await fetchUserPayments(userId);
-  const hasPending = existingPayments.some((p) => p.estado === 'pendiente_conciliacion');
+  const hasPending = existingPayments.some((p) =>
+    ['pendiente_conciliacion', 'pendiente_informar'].includes(p.estado)
+  );
   if (hasPending) {
     throw new Error(
-      'Ya existe un aviso de pago pendiente de conciliación. Esperá su confirmación antes de reportar otro.'
+      'Ya existe un pago pendiente de informar o confirmar. Completá o esperá su confirmación antes de reservar otro paquete.'
+    );
+  }
+
+  const pendingResQ = query(
+    collection(db, RESERVATIONS_COLLECTION),
+    where('usuarioId', '==', userId),
+    where('estado', 'in', ['esperando_comprobante', 'pendiente_confirmacion'])
+  );
+  const pendingResSnap = await getDocs(pendingResQ);
+  if (!pendingResSnap.empty) {
+    throw new Error(
+      'Tenés una reserva pendiente de informar o confirmar el pago. Completá o esperá su confirmación antes de reservar un paquete.'
     );
   }
 
@@ -226,7 +398,7 @@ export async function reportPaymentNotice({
     comprobanteNombre: String(comprobanteNombre || '').trim(),
     comprobanteDataUrl: String(comprobanteDataUrl || ''),
     membresiaId: memRef.id,
-    estado: 'pendiente_conciliacion',
+    estado: safeInitialEstado,
     expiresAt,
     creadoEn: serverTimestamp(),
   });
@@ -411,4 +583,53 @@ export async function deleteRejectedPaymentByAdmin(pago) {
   }
   await deleteDoc(doc(db, PAYMENTS_COLLECTION, pago.id));
   return { success: true, id: pago.id };
+}
+
+/**
+ * Hides rejected payments from the student's payment history without deleting admin records.
+ */
+export async function hideRejectedPaymentsForStudent(payments = []) {
+  const toHide = payments.filter(
+    (p) => p?.id && p.estado === 'rechazado' && !p.ocultoParaAlumno
+  );
+  if (toHide.length === 0) return 0;
+
+  const batch = writeBatch(db);
+  for (const pay of toHide) {
+    batch.update(doc(db, PAYMENTS_COLLECTION, pay.id), {
+      ocultoParaAlumno: true,
+      actualizadoEn: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return toHide.length;
+}
+
+/**
+ * Updates a reserved package payment from `pendiente_informar` to `pendiente_conciliacion`
+ * once the student reports the transfer details/receipt.
+ */
+export async function informPackagePaymentNotice({
+  pagoId,
+  numeroOperacion = '',
+  montoInformado,
+  comprobanteNombre = '',
+  comprobanteDataUrl = '',
+}) {
+  if (!pagoId) {
+    throw new Error('No se encontró el pago a informar.');
+  }
+  const amount = Number(montoInformado) || 0;
+  if (amount <= 0) {
+    throw new Error('Ingresá un importe válido.');
+  }
+  await updateDoc(doc(db, PAYMENTS_COLLECTION, pagoId), {
+    estado: 'pendiente_conciliacion',
+    numeroOperacion: String(numeroOperacion || '').trim(),
+    monto: amount,
+    comprobanteNombre: String(comprobanteNombre || '').trim(),
+    comprobanteDataUrl: String(comprobanteDataUrl || ''),
+    informadoEn: serverTimestamp(),
+    actualizadoEn: serverTimestamp(),
+  });
 }
