@@ -144,8 +144,10 @@ export default function CustomerHistorySection({ reservations = EMPTY_LIST }) {
             currentPage={pagination.currentPage}
             totalPages={pagination.totalPages}
             totalItems={pagination.totalItems}
-            pageSize={pagination.pageSize}
-            onPageChange={pagination.setCurrentPage}
+            startIndex={pagination.startIndex}
+            endIndex={pagination.endIndex}
+            onPrevPage={pagination.prevPage}
+            onNextPage={pagination.nextPage}
             testIdPrefix="customer-history"
           />
         </>
